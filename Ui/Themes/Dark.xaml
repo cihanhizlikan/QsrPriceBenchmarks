@@ -1,0 +1,353 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ── Colour palette matching cmd.exe (legacy conhost) default scheme ────
+         The CLI prints ANSI codes; cmd.exe renders them with these exact RGB
+         values. The in-app log colouriser renders ANSI 2;96 (dim cyan) as a
+         genuinely dimmer cyan, so ColorDimCyan matches it (#00B3B3) — used for
+         secondary cyan (hover, selection, separators, the logo's dim bars).
+         A separate ColorChromeCyan is used for UI chrome (tab underline, button
+         accents) so the app furniture stays visually layered. -->
+    <Color x:Key="ColorBg">#1A1A1A</Color>
+    <Color x:Key="ColorBg2">#252525</Color>
+    <Color x:Key="ColorBg3">#1C1C1C</Color>           <!-- ANSI 48;5;234 step/widget bg -->
+    <Color x:Key="ColorBorder">#3A3A3A</Color>
+    <Color x:Key="ColorLightCyan">#00FFFF</Color>     <!-- ANSI 96   bright cyan -->
+    <Color x:Key="ColorDimCyan">#00B3B3</Color>       <!-- ANSI 2;96 dimmed cyan -->
+    <Color x:Key="ColorText">#FFFFFF</Color>          <!-- ANSI 97  bright white -->
+    <Color x:Key="ColorTextDim">#9E9E9E</Color>
+    <Color x:Key="ColorAccentBg">#004D5C</Color>
+    <Color x:Key="ColorSelected">#00838F</Color>
+    <Color x:Key="ColorDanger">#C62828</Color>
+    <Color x:Key="ColorPurple">#FF00FF</Color>        <!-- ANSI 95  bright magenta -->
+    <Color x:Key="ColorChromeCyan">#33C4CC</Color>    <!-- UI furniture only, not log text -->
+
+    <SolidColorBrush x:Key="BrushBg"        Color="{StaticResource ColorBg}"/>
+    <SolidColorBrush x:Key="BrushBg2"       Color="{StaticResource ColorBg2}"/>
+    <SolidColorBrush x:Key="BrushBg3"       Color="{StaticResource ColorBg3}"/>
+    <SolidColorBrush x:Key="BrushBorder"    Color="{StaticResource ColorBorder}"/>
+    <SolidColorBrush x:Key="BrushLightCyan" Color="{StaticResource ColorLightCyan}"/>
+    <SolidColorBrush x:Key="BrushDimCyan"   Color="{StaticResource ColorDimCyan}"/>
+    <SolidColorBrush x:Key="BrushText"      Color="{StaticResource ColorText}"/>
+    <SolidColorBrush x:Key="BrushTextDim"   Color="{StaticResource ColorTextDim}"/>
+    <SolidColorBrush x:Key="BrushAccentBg"  Color="{StaticResource ColorAccentBg}"/>
+    <SolidColorBrush x:Key="BrushSelected"  Color="{StaticResource ColorSelected}"/>
+    <SolidColorBrush x:Key="BrushDanger"    Color="{StaticResource ColorDanger}"/>
+    <SolidColorBrush x:Key="BrushPurple"    Color="{StaticResource ColorPurple}"/>
+    <SolidColorBrush x:Key="BrushChromeCyan" Color="{StaticResource ColorChromeCyan}"/>
+
+    <!-- ── Base control styles ─────────────────────────────────────────────── -->
+
+    <Style TargetType="Window">
+        <Setter Property="Background" Value="{StaticResource BrushBg}"/>
+        <Setter Property="Foreground" Value="{StaticResource BrushText}"/>
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+        <Setter Property="FontSize"   Value="13"/>
+    </Style>
+
+    <Style TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource BrushText}"/>
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+    </Style>
+
+    <Style TargetType="TextBox">
+        <Setter Property="Background"  Value="{StaticResource BrushBg3}"/>
+        <Setter Property="Foreground"  Value="{StaticResource BrushText}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BrushBorder}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding"     Value="6 4"/>
+        <Setter Property="CaretBrush"  Value="{StaticResource BrushLightCyan}"/>
+        <Setter Property="SelectionBrush" Value="{StaticResource BrushDimCyan}"/>
+        <Setter Property="FontFamily"  Value="Segoe UI"/>
+        <Style.Triggers>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.4"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Standard button -->
+    <Style x:Key="ButtonBase" TargetType="Button">
+        <Setter Property="Background"   Value="{StaticResource BrushBg3}"/>
+        <Setter Property="Foreground"   Value="{StaticResource BrushText}"/>
+        <Setter Property="BorderBrush"  Value="{StaticResource BrushBorder}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding"      Value="14 6"/>
+        <Setter Property="MinHeight"    Value="32"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Cursor"       Value="Hand"/>
+        <Setter Property="FontFamily"   Value="Segoe UI"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{StaticResource BrushAccentBg}"/>
+                            <Setter Property="BorderBrush" Value="{StaticResource BrushDimCyan}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Background" Value="{StaticResource BrushSelected}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style TargetType="Button" BasedOn="{StaticResource ButtonBase}"/>
+
+    <!-- Run button — prominent cyan accent -->
+    <Style x:Key="ButtonRun" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
+        <Setter Property="Background"   Value="{StaticResource BrushAccentBg}"/>
+        <Setter Property="BorderBrush"  Value="{StaticResource BrushLightCyan}"/>
+        <Setter Property="Foreground"   Value="{StaticResource BrushLightCyan}"/>
+        <Setter Property="FontWeight"   Value="SemiBold"/>
+        <Setter Property="Padding"      Value="16 6"/>
+    </Style>
+
+    <!-- Danger button — delete actions -->
+    <Style x:Key="ButtonDanger" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
+        <Setter Property="Background"  Value="#3B0000"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BrushDanger}"/>
+        <Setter Property="Foreground"  Value="{StaticResource BrushDanger}"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource BrushDanger}"/>
+                <Setter Property="Foreground" Value="{StaticResource BrushText}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Chain selector radio-button restyled as a card -->
+    <Style x:Key="ChainCard" TargetType="RadioButton">
+        <Setter Property="Background"    Value="{StaticResource BrushBg2}"/>
+        <Setter Property="Foreground"    Value="{StaticResource BrushText}"/>
+        <Setter Property="BorderBrush"   Value="{StaticResource BrushBorder}"/>
+        <Setter Property="Cursor"        Value="Hand"/>
+        <Setter Property="Margin"        Value="0 0 0 6"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="1" CornerRadius="6" Padding="10 8">
+                        <ContentPresenter/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background"  Value="{StaticResource BrushBg3}"/>
+                            <Setter Property="BorderBrush" Value="{StaticResource BrushDimCyan}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter Property="Background"  Value="{StaticResource BrushAccentBg}"/>
+                            <Setter Property="BorderBrush" Value="{StaticResource BrushLightCyan}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- TabControl — fully retemplated so the header strip uses the dark
+         window background (the default template paints it white/system colour)
+         and the tab headers render as rounded pill buttons like the rest of
+         the app. -->
+    <Style TargetType="TabControl">
+        <Setter Property="Background"   Value="{StaticResource BrushBg}"/>
+        <Setter Property="BorderBrush"  Value="{StaticResource BrushBorder}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabControl">
+                    <Grid Background="{StaticResource BrushBg}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <!-- Header strip: dark, with a baseline the tabs sit on -->
+                        <Border Grid.Row="0" Background="{StaticResource BrushBg}"
+                                BorderBrush="{StaticResource BrushBorder}" BorderThickness="0 0 0 1"
+                                Padding="16 6 16 0">
+                            <TabPanel IsItemsHost="True" Background="Transparent"/>
+                        </Border>
+                        <!-- Content area -->
+                        <Border Grid.Row="1" Background="{StaticResource BrushBg}">
+                            <ContentPresenter ContentSource="SelectedContent"/>
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="TabItem">
+        <Setter Property="Background"    Value="{StaticResource BrushBg3}"/>
+        <Setter Property="Foreground"    Value="{StaticResource BrushText}"/>
+        <Setter Property="Padding"       Value="16 7"/>
+        <Setter Property="Margin"        Value="0 0 6 0"/>
+        <Setter Property="FontFamily"    Value="Segoe UI"/>
+        <Setter Property="FontSize"      Value="13"/>
+        <Setter Property="Cursor"        Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabItem">
+                    <!-- Outlined tab handle: a visible border with a rounded top
+                         and open bottom, so it sits on the strip's baseline and
+                         reads as a tab (not a free-floating pill button). -->
+                    <Border Name="Tab" Background="{TemplateBinding Background}"
+                            BorderBrush="{StaticResource BrushBorder}"
+                            BorderThickness="1 1 1 0" CornerRadius="6 6 0 0"
+                            Padding="{TemplateBinding Padding}"
+                            Margin="{TemplateBinding Margin}">
+                        <ContentPresenter ContentSource="Header"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Tab" Property="BorderBrush" Value="{StaticResource BrushDimCyan}"/>
+                            <Setter Property="Foreground" Value="{StaticResource BrushLightCyan}"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Tab" Property="Background"  Value="{StaticResource BrushAccentBg}"/>
+                            <Setter TargetName="Tab" Property="BorderBrush" Value="{StaticResource BrushLightCyan}"/>
+                            <Setter Property="Foreground" Value="{StaticResource BrushLightCyan}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- DataGrid -->
+    <Style TargetType="DataGrid">
+        <Setter Property="Background"          Value="{StaticResource BrushBg2}"/>
+        <Setter Property="Foreground"          Value="{StaticResource BrushText}"/>
+        <Setter Property="BorderBrush"         Value="{StaticResource BrushBorder}"/>
+        <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource BrushBorder}"/>
+        <Setter Property="VerticalGridLinesBrush"   Value="{StaticResource BrushBorder}"/>
+        <Setter Property="RowBackground"       Value="{StaticResource BrushBg2}"/>
+        <Setter Property="AlternatingRowBackground" Value="{StaticResource BrushBg3}"/>
+        <Setter Property="SelectionMode"       Value="Single"/>
+        <Setter Property="AutoGenerateColumns" Value="False"/>
+        <Setter Property="CanUserAddRows"      Value="False"/>
+        <Setter Property="MinRowHeight"        Value="34"/>
+        <Setter Property="FontFamily"          Value="Consolas"/>
+    </Style>
+
+    <Style TargetType="DataGridColumnHeader">
+        <Setter Property="Background"  Value="{StaticResource BrushBg3}"/>
+        <Setter Property="Foreground"  Value="{StaticResource BrushLightCyan}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BrushBorder}"/>
+        <Setter Property="BorderThickness" Value="0 0 1 1"/>
+        <Setter Property="Padding"     Value="10 6"/>
+        <Setter Property="FontWeight"  Value="SemiBold"/>
+        <Setter Property="FontFamily"  Value="Segoe UI"/>
+    </Style>
+
+    <Style TargetType="DataGridCell">
+        <Setter Property="Foreground"               Value="{StaticResource BrushText}"/>
+        <Setter Property="BorderThickness"          Value="0"/>
+        <Setter Property="Padding"                  Value="10 6"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Style.Triggers>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="#3F3F3F"/>
+                <Setter Property="Foreground" Value="{StaticResource BrushText}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Cell text: vertically centred with a left indent so values don't sit
+         flush against the column edge. -->
+    <Style x:Key="GridCellText" TargetType="TextBlock">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="10 0 0 0"/>
+    </Style>
+
+    <!-- Scroll bars -->
+    <Style TargetType="ScrollBar">
+        <Setter Property="Background" Value="{StaticResource BrushBg2}"/>
+        <Setter Property="Width" Value="8"/>
+    </Style>
+
+    <!-- CheckBox -->
+    <Style TargetType="CheckBox">
+        <Setter Property="Foreground"  Value="{StaticResource BrushText}"/>
+        <Setter Property="FontFamily"  Value="Segoe UI"/>
+        <Setter Property="Margin"      Value="0 0 0 4"/>
+        <Setter Property="Cursor"      Value="Hand"/>
+        <Style.Triggers>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.4"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Label -->
+    <Style TargetType="Label">
+        <Setter Property="Foreground"  Value="{StaticResource BrushTextDim}"/>
+        <Setter Property="FontFamily"  Value="Segoe UI"/>
+        <Setter Property="Padding"     Value="0 0 0 2"/>
+    </Style>
+
+    <!-- Separator -->
+    <Style TargetType="Separator">
+        <Setter Property="Background" Value="{StaticResource BrushBorder}"/>
+        <Setter Property="Margin"     Value="0 8"/>
+    </Style>
+
+    <!-- Progress bar: rounded track + cyan gradient fill that gently pulses -->
+    <Style TargetType="ProgressBar">
+        <Setter Property="Height"          Value="12"/>
+        <Setter Property="Background"      Value="{StaticResource BrushBg3}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ProgressBar">
+                    <Border CornerRadius="6" Background="{TemplateBinding Background}"
+                            BorderBrush="{StaticResource BrushBorder}" BorderThickness="1"
+                            SnapsToDevicePixels="True">
+                        <Grid ClipToBounds="True">
+                            <Border Name="PART_Track"/>
+                            <Border Name="PART_Indicator" HorizontalAlignment="Left" CornerRadius="5">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                        <GradientStop Color="{StaticResource ColorChromeCyan}" Offset="0"/>
+                                        <GradientStop Color="{StaticResource ColorLightCyan}"  Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                            </Border>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- A subtle, slow opacity pulse gives the fill some life.
+                             No Storyboard.TargetName: inside ControlTemplate.Triggers
+                             a name-less target animates the templated ProgressBar
+                             itself. Targeting "PART_Indicator" by name here throws
+                             'name cannot be found in namescope' on Loaded and crashes
+                             startup, so we animate the control's own Opacity instead. -->
+                        <EventTrigger RoutedEvent="Loaded">
+                            <BeginStoryboard>
+                                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                     From="0.6" To="1.0" Duration="0:0:0.9"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>

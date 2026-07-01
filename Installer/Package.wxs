@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  MSI authoring for QSR Price Benchmarks (WiX Toolset v5).
+
+  This packages the *self-contained* WPF publish output, so the target PC needs
+  NO .NET runtime installed. The publish folder is harvested wholesale via the
+  <Files> element, which also picks up the bundled Chromium ("ms-playwright"
+  folder) produced by build-installer.ps1 — making the install fully turnkey.
+
+  PublishDir is supplied by the .wixproj (default ..\publish\ui, overridable
+  with -p:PublishDir=...). UpgradeCode MUST stay constant across versions so
+  upgrades replace the old install instead of installing side-by-side.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <Package Name="QSR Price Benchmarks"
+           Manufacturer="Yelje"
+           Version="1.0.0.0"
+           UpgradeCode="7F3A2C18-9B4E-4D6A-8E21-3C5D9A1B2E40"
+           Scope="perMachine"
+           Compressed="yes">
+
+    <!-- Replace any older version on install; block downgrades with a message. -->
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Show a standard install wizard: Welcome -> License -> choose folder ->
+         progress -> Finish. Without a UI the MSI installs silently and just
+         flashes a progress bar, which looks like nothing happened. -->
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+
+    <!-- Add/Remove Programs icon. Sourced from the real multi-resolution .ico
+         (not extracted from the exe) so ARP shows the crisp 256px variant. -->
+    <Icon Id="AppIcon.ico" SourceFile="..\Ui\Assets\app.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon.ico" />
+
+    <!-- Install under Program Files; Start-menu folder + Desktop shortcut. -->
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="QSR Price Benchmarks" />
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="AppMenuDir" Name="QSR Price Benchmarks" />
+    </StandardDirectory>
+    <StandardDirectory Id="DesktopFolder" />
+
+    <Feature Id="Main" Title="QSR Price Benchmarks" Level="1">
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentRef Id="Shortcuts" />
+    </Feature>
+
+    <!-- Harvest the entire self-contained publish tree (app + .NET runtime +
+         Playwright driver + bundled Chromium). -->
+    <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
+      <Files Include="$(var.PublishDir)\**" />
+    </ComponentGroup>
+
+    <Component Id="Shortcuts" Directory="AppMenuDir" Guid="A1B2C3D4-E5F6-47A8-9B0C-1D2E3F4A5B60">
+      <Shortcut Id="StartMenuShortcut"
+                Name="QSR Price Benchmarks"
+                Target="[INSTALLFOLDER]qsr-ui.exe"
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="AppIcon.ico" />
+      <Shortcut Id="DesktopShortcut"
+                Directory="DesktopFolder"
+                Name="QSR Price Benchmarks"
+                Target="[INSTALLFOLDER]qsr-ui.exe"
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="AppIcon.ico" />
+      <RemoveFolder Id="RemoveAppMenuDir" Directory="AppMenuDir" On="uninstall" />
+      <!-- Per-user keypath for the non-advertised shortcut component. -->
+      <RegistryValue Root="HKCU"
+                     Key="Software\QsrPriceBenchmarks"
+                     Name="installed" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+  </Package>
+</Wix>

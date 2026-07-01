@@ -1,0 +1,24 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+  <PropertyGroup>
+    <OutputName>QsrPriceBenchmarks-Setup</OutputName>
+    <OutputType>Package</OutputType>
+
+    <!-- Folder harvested into the MSI. Defaults to the path build-installer.ps1
+         publishes to; override with: dotnet build ... -p:PublishDir=C:\path -->
+    <PublishDir Condition="'$(PublishDir)' == ''">$(MSBuildProjectDirectory)\..\publish\ui</PublishDir>
+
+    <!-- Build a 64-bit package by default so harvested components are authored
+         as 64-bit and agree with INSTALLFOLDER (under ProgramFiles64Folder).
+         Without this WiX defaults to x86 and every file trips ICE80. The build
+         script overrides this to match the publish RID (x64 or arm64). -->
+    <InstallerPlatform Condition="'$(InstallerPlatform)' == ''">x64</InstallerPlatform>
+
+    <!-- Expose PublishDir to the WiX preprocessor as $(var.PublishDir). -->
+    <DefineConstants>PublishDir=$(PublishDir)</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Provides the WixUI dialog sets (Welcome / InstallDir / Finish wizard). -->
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+  </ItemGroup>
+</Project>
