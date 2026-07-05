@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>qsr-ui</AssemblyName>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <!-- No <Platforms> here: setting it to x64 forces output to bin\x64\Debug\
+         which breaks VS debug profiles generated before a build. WPF on .NET 10
+         defaults to the host architecture. Use <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+         at publish time instead when a specific architecture is required. -->
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Core\QsrPriceBenchmarks.Core.csproj" />
+    <!-- Provider chosen by the host (not Core): the SQLite that ships with
+         Windows. No native binary shipped, OS-maintained, no 3rd-party CVE. -->
+    <PackageReference Include="SQLitePCLRaw.bundle_winsqlite3" Version="2.1.*" />
+  </ItemGroup>
+</Project>

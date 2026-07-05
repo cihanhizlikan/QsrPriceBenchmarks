@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>qsr</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Core\QsrPriceBenchmarks.Core.csproj" />
+    <!-- Provider chosen by the host (not Core): the SQLite that ships with
+         Windows. No native binary shipped, OS-maintained, no 3rd-party CVE. -->
+    <PackageReference Include="SQLitePCLRaw.bundle_winsqlite3" Version="2.1.*" />
+  </ItemGroup>
+</Project>
