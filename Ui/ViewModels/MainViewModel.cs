@@ -798,7 +798,11 @@ public sealed class MainViewModel : ViewModelBase
         try
         {
             using SqliteConnection conn = Database.Open(DbPath);
-            foreach (ChainViewModel vm in Chains)
+            // Iterate a snapshot: the loop replaces items in Chains, and replacing
+            // an item mid-enumeration throws "Collection was modified" — which
+            // the catch below would swallow after the first logo.
+            ChainViewModel[] snapshot = [.. Chains];
+            foreach (ChainViewModel vm in snapshot)
             {
                 long qsrId = Repository.QsrId(conn, vm.Name);
                 byte[]? bytes = Repository.GetLogoBlob(conn, qsrId);
