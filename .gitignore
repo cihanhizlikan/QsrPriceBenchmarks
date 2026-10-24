@@ -361,3 +361,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# Claude Code: per-session worktrees and local settings
+.claude/worktrees/
+.claude/settings.local.json
