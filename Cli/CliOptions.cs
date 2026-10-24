@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 namespace QsrPriceBenchmarks.Cli;
 
 public sealed class CliOptions
@@ -14,10 +15,21 @@ public sealed class CliOptions
     public bool ListScrapeRuns { get; set; }
     public bool Help { get; set; }
 
-    public bool IsMaintenance =>
-        ListScrapeRuns || DeleteScrapeRun is not null || DeleteScrapeRunsBeforeId is not null;
+    public bool IsMaintenance
+    {
+        get
+        {
+            return ListScrapeRuns || DeleteScrapeRun is not null || DeleteScrapeRunsBeforeId is not null;
+        }
+    }
 
-    public bool IsSelective => ForceCrawl || Geocode || GeocodeRematch || Export || ExportSince is not null;
+    public bool IsSelective
+    {
+        get
+        {
+            return ForceCrawl || Geocode || GeocodeRematch || Export || ExportSince is not null;
+        }
+    }
 }
 
 public static class CliParser
@@ -28,6 +40,7 @@ public static class CliParser
     /// any invalid combination — mirrors argparse.error()'s exit-with-message
     /// behaviour from the Python prototype.
     /// </summary>
+    [SuppressMessage("Maintainability", "CA1502", Justification = "Measured 26: one flat case per flag plus one check per refused combination, which reads better in one place than split.")]
     public static CliOptions Parse(string[] args)
     {
         CliOptions opts = new();

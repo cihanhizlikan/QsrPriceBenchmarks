@@ -1,4 +1,4 @@
-using System;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Windows;
@@ -45,7 +45,7 @@ public partial class App : System.Windows.Application
             {
                 string path = Path.Combine(dir, "qsr-startup-error.log");
                 StringBuilder report = new();
-                report.AppendLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ({source})");
+                report.AppendLine(CultureInfo.InvariantCulture, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ({source})");
                 report.AppendLine(ex?.ToString() ?? "(no exception object)");
                 report.AppendLine(new string('-', 70));
                 File.AppendAllText(path, report.ToString());

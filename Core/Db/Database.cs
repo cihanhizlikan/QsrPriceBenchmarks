@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using Microsoft.Data.Sqlite;
 using QsrPriceBenchmarks.Core.Models;
 
@@ -27,7 +29,7 @@ public static class Database
 
     // Tables that identify a database as ours: QSR is in every schema version,
     // CITIES only in pre-v1.1 legacy files (see MigrateLegacySchema).
-    private static readonly string[] RecognisedTables = { "QSR", "CITIES" };
+    private static readonly string[] RecognisedTables = ["QSR", "CITIES"];
 
     public static SqliteConnection Open(string path)
     {
@@ -36,7 +38,7 @@ public static class Database
         // directory first so opening a path in a fresh location (e.g. the
         // per-user app-data folder) succeeds. Skipped for special in-memory
         // sources (":memory:", "file::memory:…") which have no real directory.
-        if (!path.StartsWith(":", StringComparison.Ordinal) && !path.Contains(":memory:"))
+        if (!path.StartsWith(":", StringComparison.Ordinal) && !path.Contains(":memory:", StringComparison.Ordinal))
         {
             string? dir = Path.GetDirectoryName(Path.GetFullPath(path));
             if (!string.IsNullOrEmpty(dir))
@@ -113,7 +115,7 @@ public static class Database
     {
         try
         {
-            if (path.StartsWith(":", StringComparison.Ordinal) || path.Contains(":memory:"))
+            if (path.StartsWith(":", StringComparison.Ordinal) || path.Contains(":memory:", StringComparison.Ordinal))
             {
                 return null;
             }
@@ -168,7 +170,7 @@ public static class Database
     /// </summary>
     private static string? ClassifySchema(SqliteConnection conn)
     {
-        List<string> tables = new();
+        List<string> tables = [];
         using (SqliteCommand cmd = conn.CreateCommand())
         {
             cmd.CommandText =
@@ -200,6 +202,7 @@ public static class Database
         return $"The file is an SQLite database, but not a QSR Price Benchmarks one (tables found: {sample}).";
     }
 
+    [SuppressMessage("Security", "CA2100", Justification = "Runs schema and migration SQL; every caller passes a compile-time constant.")]
     private static void Execute(SqliteConnection conn, string sql)
     {
         using SqliteCommand cmd = conn.CreateCommand();
@@ -458,6 +461,7 @@ public static class Database
     }
 
     /// <summary>True when <paramref name="table"/> has zero rows.</summary>
+    [SuppressMessage("Security", "CA2100", Justification = "A table name cannot be bound as a parameter; every caller passes a constant name, never user input.")]
     private static bool TableIsEmpty(SqliteConnection conn, SqliteTransaction tx, string table)
     {
         using SqliteCommand cmd = conn.CreateCommand();
@@ -465,7 +469,7 @@ public static class Database
         // Identifier, not a bindable parameter; table names here are
         // compile-time constants, never user input.
         cmd.CommandText = $"SELECT COUNT(*) FROM {table};";
-        return Convert.ToInt64(cmd.ExecuteScalar()) == 0;
+        return Convert.ToInt64(cmd.ExecuteScalar(), CultureInfo.InvariantCulture) == 0;
     }
 
     /// <summary>True when <paramref name="table"/> has a column named <paramref name="column"/>.</summary>
@@ -474,6 +478,7 @@ public static class Database
         return ColumnExists(conn, null, table, column);
     }
 
+    [SuppressMessage("Security", "CA2100", Justification = "A table name cannot be bound as a parameter; every caller passes a constant name, never user input.")]
     private static bool ColumnExists(SqliteConnection conn, SqliteTransaction? tx, string table, string column)
     {
         using SqliteCommand cmd = conn.CreateCommand();
@@ -492,6 +497,7 @@ public static class Database
         return false;
     }
 
+    [SuppressMessage("Security", "CA2100", Justification = "Runs schema and migration SQL; every caller passes a compile-time constant.")]
     private static void ExecuteInTx(SqliteConnection conn, SqliteTransaction tx, string sql)
     {
         using SqliteCommand cmd = conn.CreateCommand();
@@ -552,6 +558,7 @@ public static class Database
     /// columns; if absent, inserts using <paramref name="insertValues"/>.
     /// Returns the row's ID either way.
     /// </summary>
+    [SuppressMessage("Security", "CA2100", Justification = "Interpolates table and column names from the migration's own constants; values are bound as parameters.")]
     private static long GetOrCreate(
         SqliteConnection conn, SqliteTransaction tx, string table,
         Dictionary<string, object> lookup, Dictionary<string, object> insertValues)
@@ -567,16 +574,16 @@ public static class Database
             }
 
             object? existing = find.ExecuteScalar();
-            if (existing is not null && existing is not DBNull)
+            if (existing is not null and not DBNull)
             {
-                return Convert.ToInt64(existing);
+                return Convert.ToInt64(existing, CultureInfo.InvariantCulture);
             }
         }
 
         using (SqliteCommand insert = conn.CreateCommand())
         {
             insert.Transaction = tx;
-            List<string> cols = insertValues.Keys.ToList();
+            List<string> cols = [.. insertValues.Keys];
             IEnumerable<string> paramNames = cols.Select(c => $"${c}");
             insert.CommandText =
                 $"INSERT INTO {table} ({string.Join(", ", cols)}) " +
@@ -587,7 +594,7 @@ public static class Database
                 insert.Parameters.AddWithValue($"${key}", value);
             }
 
-            return Convert.ToInt64(insert.ExecuteScalar());
+            return Convert.ToInt64(insert.ExecuteScalar(), CultureInfo.InvariantCulture);
         }
     }
 

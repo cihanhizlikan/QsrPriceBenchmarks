@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Data.Sqlite;
 using Microsoft.Playwright;
 using AngleSharp.Dom;
@@ -23,6 +24,7 @@ namespace QsrPriceBenchmarks.Core.Scraping;
 /// </summary>
 public static class ChainCrawler
 {
+    [SuppressMessage("Maintainability", "CA1502", Justification = "Measured 30. Decomposing the crawl loop must keep its per-item catches and cancellation checks; plan WP-M1.")]
     public static async Task CrawlAsync(
         ChainConfig chain, SqliteConnection conn,
         IProgress<string>? progress = null, CancellationToken ct = default,
@@ -59,7 +61,7 @@ public static class ChainCrawler
         // handles that fine, but counting each sighting inflated the reported
         // total well past the real number of locations in the database.
         HashSet<string> seenSlugs = new(StringComparer.OrdinalIgnoreCase);
-        List<string> failed = new(); // province/district pages we had to skip
+        List<string> failed = []; // province/district pages we had to skip
 
         // Upsert each card and report how many distinct locations were stored.
         // Cards ProcessCard rejects (test slugs, unparseable URLs) are skipped
@@ -121,13 +123,12 @@ public static class ChainCrawler
             // district navigation links rendered with the same
             // markup as a restaurant card but carrying a slogan or no
             // address at all instead of a street address.
-            HashSet<string> structuredUrls = direct
+            HashSet<string> structuredUrls = [.. direct
                 .Where(IsRestaurantCard)
-                .Select(r => r.Url)
-                .ToHashSet();
+                .Select(r => r.Url)];
 
-            direct = direct.Where(r => structuredUrls.Contains(r.Url)).ToList();
-            districtUrls = districtUrls.Where(u => !structuredUrls.Contains(u)).ToList();
+            direct = [.. direct.Where(r => structuredUrls.Contains(r.Url))];
+            districtUrls = [.. districtUrls.Where(u => !structuredUrls.Contains(u))];
 
             total += RecordCards(direct);
 
@@ -216,7 +217,7 @@ public static class ChainCrawler
         {
             return "navigation timed out";
         }
-        int nl = msg.IndexOf('\n');
+        int nl = msg.IndexOf('\n', StringComparison.Ordinal);
         return (nl > 0 ? msg[..nl] : msg).Trim();
     }
 
@@ -228,8 +229,10 @@ public static class ChainCrawler
     /// card sets so navigation links are never stored as restaurants (which had
     /// produced one NULL-name/NULL-address row per district).
     /// </summary>
-    public static bool IsRestaurantCard(RestaurantCard rec) =>
-        rec.Name is not null && TextNormalization.IsRealAddress(rec.Address);
+    public static bool IsRestaurantCard(RestaurantCard rec)
+    {
+        return rec.Name is not null && TextNormalization.IsRealAddress(rec.Address);
+    }
 
     /// <summary>
     /// Convert one parsed restaurant card into LOCATIONS rows. Returns false

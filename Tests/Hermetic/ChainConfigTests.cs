@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using QsrPriceBenchmarks.Core.Models;
 using Xunit;
 
@@ -38,7 +37,7 @@ public sealed class ChainConfigTests
         Assert.Single(c.PlatformSlugs);
         Assert.True(c.PlatformSlugs.ContainsKey("Tıkla Gelsin"),
             $"{name}: the one platform must be 'Tıkla Gelsin'.");
-        foreach (var slug in c.PlatformSlugs.Values)
+        foreach (string slug in c.PlatformSlugs.Values)
         {
             Assert.Matches("^[a-z0-9-]+$", slug); // URL-path-safe
         }
@@ -58,7 +57,7 @@ public sealed class ChainConfigTests
         }
 
         // Each slug resolves back to this chain.
-        foreach (var slug in c.PlatformSlugs.Values)
+        foreach (string slug in c.PlatformSlugs.Values)
         {
             Assert.Same(c, Chains.FindByPlatformSlug(slug));
         }
@@ -67,7 +66,7 @@ public sealed class ChainConfigTests
     [Fact(DisplayName = "Chain names and platform slugs are globally unique")]
     public void Names_And_Slugs_AreUnique()
     {
-        var names = Chains.All.Select(c => c.Name).ToList();
+        List<string> names = [.. Chains.All.Select(c => c.Name)];
         Assert.Equal(names.Count, names.Distinct().Count());
 
         IReadOnlyList<string> slugs = Chains.AllPlatformSlugs();

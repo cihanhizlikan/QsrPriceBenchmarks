@@ -89,7 +89,7 @@ public sealed class RepositoryTests
 
         Repository.UpdateLocationDetails(db.Conn, "k2", "Lezzet Durağı", "Her An Yanında!", qsr);
 
-        var row = ReadLocation(db, "k2", qsr);
+        (string? Name, string? Address, double? Lat, double? Lon) row = ReadLocation(db, "k2", qsr);
         Assert.Equal("Lezzet Durağı", row.Name);
         Assert.Null(row.Address); // slogan dropped, not stored
     }
@@ -101,7 +101,7 @@ public sealed class RepositoryTests
         (long qsr, long plat) = Ids(db);
 
         Repository.PlatformCensusResult first = Repository.UpsertPlatformLocationsBulk(
-            db.Conn, qsr, plat, new[] { "a", "b", "test-x", "c" });
+            db.Conn, qsr, plat, ["a", "b", "test-x", "c"]);
         Assert.Equal(3, first.Inserted);
         Assert.Equal(0, first.Reactivated);
         Assert.Empty(first.Delisted);
@@ -109,7 +109,7 @@ public sealed class RepositoryTests
         // Next census: "c" is gone (delisted), "d" is new. One transaction,
         // full reconciliation — "c" survives as a soft-deleted row.
         Repository.PlatformCensusResult second = Repository.UpsertPlatformLocationsBulk(
-            db.Conn, qsr, plat, new[] { "a", "b", "d" });
+            db.Conn, qsr, plat, ["a", "b", "d"]);
         Assert.Equal(1, second.Inserted);
         Assert.Equal(new[] { "c" }, second.Delisted.ToArray());
         Assert.Equal(4L, Convert.ToInt64(db.Scalar(
@@ -121,7 +121,7 @@ public sealed class RepositoryTests
 
         // "c" comes back: reactivated in place (same row, history kept).
         Repository.PlatformCensusResult third = Repository.UpsertPlatformLocationsBulk(
-            db.Conn, qsr, plat, new[] { "a", "b", "c", "d" });
+            db.Conn, qsr, plat, ["a", "b", "c", "d"]);
         Assert.Equal(0, third.Inserted);
         Assert.Equal(1, third.Reactivated);
         Assert.Empty(third.Delisted);
@@ -131,7 +131,7 @@ public sealed class RepositoryTests
 
         // An EMPTY census is a fetch anomaly, never a mass delisting.
         Repository.PlatformCensusResult empty = Repository.UpsertPlatformLocationsBulk(
-            db.Conn, qsr, plat, new[] { "test-y" });
+            db.Conn, qsr, plat, ["test-y"]);
         Assert.Empty(empty.Delisted);
         Assert.Equal(4L, Convert.ToInt64(db.Scalar(
             "SELECT COUNT(*) FROM PLATFORM_LOCATIONS WHERE QSR_ID=$q AND PLATFORM_ID=$p AND ACTIVE=1;",
@@ -182,7 +182,7 @@ public sealed class RepositoryTests
 
         Assert.Contains(Repository.ListScrapeRuns(db.Conn), x => x.Id == run && x.FinishedAt is not null);
 
-        var (found, qsrId, _, count) = Repository.GetScrapeRunForDeletion(db.Conn, run);
+        (bool found, long qsrId, _, int count) = Repository.GetScrapeRunForDeletion(db.Conn, run);
         Assert.True(found);
         Assert.Equal(qsr, qsrId);
         Assert.Equal(1, count);
@@ -202,10 +202,10 @@ public sealed class RepositoryTests
         long r2 = Repository.StartScrapeRun(db.Conn, qsr);
         long r3 = Repository.StartScrapeRun(db.Conn, qsr);
 
-        var affected = Repository.DeleteScrapeRunsBefore(db.Conn, r3);
+        int affected = Repository.DeleteScrapeRunsBefore(db.Conn, r3);
 
         Assert.Equal(2, affected); // r1 + r2
-        var remaining = Repository.ListScrapeRuns(db.Conn).Select(x => x.Id).ToList();
+        List<long> remaining = [.. Repository.ListScrapeRuns(db.Conn).Select(x => x.Id)];
         Assert.DoesNotContain(r1, remaining);
         Assert.DoesNotContain(r2, remaining);
         Assert.Contains(r3, remaining);
@@ -218,7 +218,7 @@ public sealed class RepositoryTests
         (long qsr, long _) = Ids(db);
 
         Assert.Null(Repository.GetLogoBlob(db.Conn, qsr));
-        byte[] bytes = { 1, 2, 3, 4, 5 };
+        byte[] bytes = [1, 2, 3, 4, 5];
         Repository.SetLogoBlob(db.Conn, qsr, bytes);
         Assert.Equal(bytes, Repository.GetLogoBlob(db.Conn, qsr));
     }

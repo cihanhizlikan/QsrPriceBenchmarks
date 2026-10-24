@@ -14,11 +14,11 @@ public sealed class ExcelExporterTests
         using TempDb db = new();
         ReportSeed.Seed(db.Conn, first: 100m, second: 120m);
 
-        var outDir = System.IO.Path.Combine(
+        string outDir = System.IO.Path.Combine(
             System.IO.Path.GetTempPath(), $"qsr_xlsx_{Guid.NewGuid():N}");
         try
         {
-            var path = ExcelExporter.Export(ReportSeed.Chain, db.Conn, outDir);
+            string path = ExcelExporter.Export(ReportSeed.Chain, db.Conn, outDir);
             Assert.True(File.Exists(path), $"Export did not create a file at {path}");
 
             using XLWorkbook wb = new(path);
@@ -31,7 +31,7 @@ public sealed class ExcelExporterTests
         }
         finally
         {
-            try { if (Directory.Exists(outDir)) Directory.Delete(outDir, recursive: true); } catch { }
+            try { if (Directory.Exists(outDir)) { Directory.Delete(outDir, recursive: true); } } catch { }
         }
     }
 }

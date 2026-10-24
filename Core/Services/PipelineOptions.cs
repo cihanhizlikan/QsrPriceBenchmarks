@@ -12,11 +12,11 @@ public sealed class PipelineOptions
     public required Models.ChainConfig Chain { get; init; }
 
     // Step flags — same semantics as CLI flags:
-    public bool ForceCrawl      { get; init; }
-    public bool Geocode         { get; init; }
-    public bool GeocodeRematch  { get; init; }
-    public bool Export          { get; init; }
-    public long? ExportSince    { get; init; }
+    public bool ForceCrawl { get; init; }
+    public bool Geocode { get; init; }
+    public bool GeocodeRematch { get; init; }
+    public bool Export { get; init; }
+    public long? ExportSince { get; init; }
 
     /// <summary>
     /// Optional subset of TG menu tab names to scrape during a full run
@@ -29,8 +29,13 @@ public sealed class PipelineOptions
     /// True when any step flag is set (selective run).
     /// False = normal full run (Steps 1->2->3).
     /// </summary>
-    public bool IsSelective =>
-        ForceCrawl || Geocode || GeocodeRematch || Export || ExportSince is not null;
+    public bool IsSelective
+    {
+        get
+        {
+            return ForceCrawl || Geocode || GeocodeRematch || Export || ExportSince is not null;
+        }
+    }
 
     /// <summary>Output folder for Excel files. Defaults to "output" beside the DB.</summary>
     public string OutputDir { get; init; } = "output";

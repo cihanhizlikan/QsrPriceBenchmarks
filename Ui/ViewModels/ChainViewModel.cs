@@ -12,8 +12,21 @@ namespace QsrPriceBenchmarks.Ui.ViewModels;
 public sealed class ChainViewModel(ChainConfig chain, byte[]? logoBytes) : ViewModelBase
 {
     public ChainConfig Chain { get; } = chain;
-    public string Name => Chain.Name;
-    public string Slug => Chain.PlatformSlugs.Values.First();
+    public string Name
+    {
+        get
+        {
+            return Chain.Name;
+        }
+    }
+
+    public string Slug
+    {
+        get
+        {
+            return Chain.PlatformSlugs.Values.First();
+        }
+    }
 
     /// <summary>
     /// Initials to show in the placeholder badge (up to 2 chars from the
@@ -26,7 +39,13 @@ public sealed class ChainViewModel(ChainConfig chain, byte[]? logoBytes) : ViewM
     /// chain name so each chain always gets the same colour.
     /// </summary>
     public Color BadgeColor { get; } = BuildBadgeColor(chain.Name);
-    public SolidColorBrush BadgeBrush => new(BadgeColor);
+    public SolidColorBrush BadgeBrush
+    {
+        get
+        {
+            return new(BadgeColor);
+        }
+    }
 
     /// <summary>
     /// Decoded logo image, or null if no logo is stored (placeholder shown
@@ -43,7 +62,7 @@ public sealed class ChainViewModel(ChainConfig chain, byte[]? logoBytes) : ViewM
     }
 
     private static readonly Color[] Palette =
-    {
+    [
         Color.FromRgb(0, 77, 92),   // teal
         Color.FromRgb(49, 27, 146), // indigo
         Color.FromRgb(74, 20, 140), // purple
@@ -51,7 +70,7 @@ public sealed class ChainViewModel(ChainConfig chain, byte[]? logoBytes) : ViewM
         Color.FromRgb(0, 96, 100),  // dark-cyan
         Color.FromRgb(27, 94, 32),  // green
         Color.FromRgb(100, 21, 21), // red
-    };
+    ];
 
     /// <summary>
     /// Each chain's badge uses its real-life brand colour from the shared
@@ -79,7 +98,7 @@ public sealed class ChainViewModel(ChainConfig chain, byte[]? logoBytes) : ViewM
     /// </summary>
     public SolidColorBrush BadgeForeground { get; } = PickReadableText(BuildBadgeColor(chain.Name));
 
-    private static readonly SolidColorBrush DarkText  = Frozen(Color.FromRgb(0x14, 0x14, 0x14));
+    private static readonly SolidColorBrush DarkText = Frozen(Color.FromRgb(0x14, 0x14, 0x14));
     private static readonly SolidColorBrush LightText = Frozen(Color.FromRgb(0xFF, 0xFF, 0xFF));
 
     private static SolidColorBrush PickReadableText(Color bg)
@@ -98,7 +117,11 @@ public sealed class ChainViewModel(ChainConfig chain, byte[]? logoBytes) : ViewM
 
     private static BitmapSource? DecodeLogo(byte[]? bytes)
     {
-        if (bytes is null || bytes.Length == 0) return null;
+        if (bytes is null || bytes.Length == 0)
+        {
+            return null;
+        }
+
         using System.IO.MemoryStream ms = new(bytes);
         BitmapImage bmp = new();
         bmp.BeginInit();

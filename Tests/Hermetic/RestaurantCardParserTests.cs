@@ -1,3 +1,4 @@
+using AngleSharp.Dom;
 using QsrPriceBenchmarks.Core.Models;
 using QsrPriceBenchmarks.Core.Scraping;
 using Xunit;
@@ -17,14 +18,14 @@ public sealed class RestaurantCardParserTests
 
     private static async Task<List<RestaurantCard>> ParseAsync(string bodyHtml)
     {
-        var doc = await PageFetcher.ParseHtmlAsync($"<html><body>{bodyHtml}</body></html>", Base);
+        IDocument doc = await PageFetcher.ParseHtmlAsync($"<html><body>{bodyHtml}</body></html>", Base);
         return RestaurantCardParser.Parse(doc, Base);
     }
 
     [Fact(DisplayName = "An expand '+' link is never recorded as a name")]
     public async Task PlusToggle_IsNotAName()
     {
-        var card = (await ParseAsync("<a href=\"/restoranlar/istanbul/arnavutkoy\">+</a>")).Single();
+        RestaurantCard card = (await ParseAsync("<a href=\"/restoranlar/istanbul/arnavutkoy\">+</a>")).Single();
         Assert.Null(card.Name);    // was "+" before the fix
         Assert.Null(card.Address);
     }
@@ -33,7 +34,7 @@ public sealed class RestaurantCardParserTests
     public async Task NumericBadge_IsNotAddress()
     {
         // Usta Dönerci style: a count badge "<p>2</p>" precedes the real address.
-        var card = (await ParseAsync("""
+        RestaurantCard card = (await ParseAsync("""
             <a href="/restoranlar/adana/seyhan">
               <h3>Seyhan Şube</h3>
               <p>2</p>
@@ -48,7 +49,7 @@ public sealed class RestaurantCardParserTests
     [Fact(DisplayName = "Only a numeric <p> yields a null address, never the number")]
     public async Task OnlyNumericParagraph_NullAddress()
     {
-        var card = (await ParseAsync("""
+        RestaurantCard card = (await ParseAsync("""
             <a href="/restoranlar/adana/yuregir">
               <h3>Yüreğir</h3>
               <p>1</p>
@@ -62,7 +63,7 @@ public sealed class RestaurantCardParserTests
     [Fact(DisplayName = "A well-formed card extracts both name and address")]
     public async Task WellFormedCard_Extracted()
     {
-        var card = (await ParseAsync("""
+        RestaurantCard card = (await ParseAsync("""
             <a href="/restoranlar/istanbul/arnavutkoy-subesi">
               <h3>Arnavutköy Şubesi</h3>
               <p>Eski Edirne Asfaltı No: 1211/A</p>

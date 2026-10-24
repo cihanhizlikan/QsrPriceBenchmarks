@@ -12,14 +12,31 @@ public sealed class RelayCommand(Action<object?> execute, Func<object?, bool>? c
 {
     public event EventHandler? CanExecuteChanged
     {
-        add    => CommandManager.RequerySuggested += value;
-        remove => CommandManager.RequerySuggested -= value;
+        add
+        {
+            CommandManager.RequerySuggested += value;
+        }
+
+        remove
+        {
+            CommandManager.RequerySuggested -= value;
+        }
     }
 
-    public bool CanExecute(object? p) => canExecute?.Invoke(p) ?? true;
-    public void Execute(object? p)    => execute(p);
+    public bool CanExecute(object? p)
+    {
+        return canExecute?.Invoke(p) ?? true;
+    }
 
-    public static void RaiseRequery() => CommandManager.InvalidateRequerySuggested();
+    public void Execute(object? p)
+    {
+        execute(p);
+    }
+
+    public static void RaiseRequery()
+    {
+        CommandManager.InvalidateRequerySuggested();
+    }
 }
 
 public sealed class AsyncRelayCommand(Func<object?, Task> execute, Func<object?, bool>? canExecute = null)
@@ -29,17 +46,27 @@ public sealed class AsyncRelayCommand(Func<object?, Task> execute, Func<object?,
 
     public event EventHandler? CanExecuteChanged
     {
-        add    => CommandManager.RequerySuggested += value;
-        remove => CommandManager.RequerySuggested -= value;
+        add
+        {
+            CommandManager.RequerySuggested += value;
+        }
+
+        remove
+        {
+            CommandManager.RequerySuggested -= value;
+        }
     }
 
-    public bool CanExecute(object? p) => !_running && (canExecute?.Invoke(p) ?? true);
+    public bool CanExecute(object? p)
+    {
+        return !_running && (canExecute?.Invoke(p) ?? true);
+    }
 
     public async void Execute(object? p)
     {
         _running = true;
         CommandManager.InvalidateRequerySuggested();
-        try   { await execute(p); }
+        try { await execute(p); }
         finally
         {
             _running = false;

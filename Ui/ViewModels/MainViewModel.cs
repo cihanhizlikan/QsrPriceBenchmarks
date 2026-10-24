@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -12,6 +14,7 @@ using QsrPriceBenchmarks.Core.Services;
 
 namespace QsrPriceBenchmarks.Ui.ViewModels;
 
+[SuppressMessage("Reliability", "CA1001", Justification = "The one MainViewModel lives as long as the process; its CancellationTokenSources are released at exit.")]
 public sealed class MainViewModel : ViewModelBase
 {
     /// <summary>
@@ -32,7 +35,7 @@ public sealed class MainViewModel : ViewModelBase
         {
             version = assembly.GetName().Version?.ToString(3) ?? "?";
         }
-        int metadataStart = version.IndexOf('+');
+        int metadataStart = version.IndexOf('+', StringComparison.Ordinal);
         if (metadataStart > 0)
         {
             version = version[..metadataStart];
@@ -41,46 +44,54 @@ public sealed class MainViewModel : ViewModelBase
     }
 
     // ── State ─────────────────────────────────────────────────────────────────
-    private string       _dbPath      = DefaultDbPath();
+    private string _dbPath = DefaultDbPath();
     private ChainViewModel? _selected;
-    private bool         _isRunning;
-    private bool         _forceCrawl;
-    private bool         _geocode;
-    private bool         _geocodeRematch;
-    private bool         _export;
-    private string       _exportSince = "";
-    private string       _deleteBeforeId = "";
-    private string?      _lastOutputPath;
-    private int          _progressDone;
-    private int          _progressTotal;
-    private string       _progressText = "";
+    private bool _isRunning;
+    private bool _forceCrawl;
+    private bool _geocode;
+    private bool _geocodeRematch;
+    private bool _export;
+    private string _exportSince = "";
+    private string _deleteBeforeId = "";
+    private string? _lastOutputPath;
+    private int _progressDone;
+    private int _progressTotal;
+    private string _progressText = "";
     private CancellationTokenSource? _cts;
 
     // Export runs on its own cancellation source, independent of a pipeline run.
     private CancellationTokenSource? _exportCts;
-    private int          _exportDone;
-    private int          _exportTotal;
-    private string       _exportText = "";
+    private int _exportDone;
+    private int _exportTotal;
+    private string _exportText = "";
 
     // ── Observable collections ────────────────────────────────────────────────
-    public ObservableCollection<ChainViewModel>    Chains    { get; } = new();
-    public ObservableCollection<string>            LogLines  { get; } = new();
-    public ObservableCollection<ScrapeRunViewModel> Runs     { get; } = new();
-    public ObservableCollection<MapCellViewModel> MapCells { get; } = new();
+    public ObservableCollection<ChainViewModel> Chains { get; } = [];
+    public ObservableCollection<string> LogLines { get; } = [];
+    public ObservableCollection<ScrapeRunViewModel> Runs { get; } = [];
+    public ObservableCollection<MapCellViewModel> MapCells { get; } = [];
 
     // Total LOCATIONS for the selected chain, shown atop the Locations tab.
     private int _locationTotal;
     public int LocationTotal
     {
-        get => _locationTotal;
+        get
+        {
+            return _locationTotal;
+        }
+
         private set { Set(ref _locationTotal, value); }
     }
-    public ObservableCollection<TabOptionViewModel> ScrapeTabs { get; } = new();
+    public ObservableCollection<TabOptionViewModel> ScrapeTabs { get; } = [];
 
     // ── Properties ────────────────────────────────────────────────────────────
     public string DbPath
     {
-        get => _dbPath;
+        get
+        {
+            return _dbPath;
+        }
+
         set { Set(ref _dbPath, value); ReloadRunsCommand.Execute(null); _ = RebuildMapAsync(); _ = RebuildScrapeTabsAsync(); }
     }
 
@@ -126,13 +137,21 @@ public sealed class MainViewModel : ViewModelBase
 
     public ChainViewModel? SelectedChain
     {
-        get => _selected;
+        get
+        {
+            return _selected;
+        }
+
         set { Set(ref _selected, value); _ = RebuildScrapeTabsAsync(); NotifyRunModeChanged(); RelayCommand.RaiseRequery(); _ = RebuildMapAsync(); }
     }
 
     public bool IsRunning
     {
-        get => _isRunning;
+        get
+        {
+            return _isRunning;
+        }
+
         private set { Set(ref _isRunning, value); Notify(nameof(IsRematchEnabled)); Notify(nameof(ProgressVisible)); Notify(nameof(IsBusy)); RelayCommand.RaiseRequery(); }
     }
 
@@ -140,7 +159,11 @@ public sealed class MainViewModel : ViewModelBase
     /// <summary>True while an Excel export is being prepared on a background thread.</summary>
     public bool IsExporting
     {
-        get => _isExporting;
+        get
+        {
+            return _isExporting;
+        }
+
         private set { Set(ref _isExporting, value); Notify(nameof(IsBusy)); Notify(nameof(ExportProgressVisible)); RelayCommand.RaiseRequery(); }
     }
 
@@ -149,74 +172,209 @@ public sealed class MainViewModel : ViewModelBase
     /// in progress. The Scrape Runs row actions (Export / Resume / Delete) bind
     /// their enabled state to this so none can be triggered while busy.
     /// </summary>
-    public bool IsBusy => IsRunning || IsExporting;
+    public bool IsBusy
+    {
+        get
+        {
+            return IsRunning || IsExporting;
+        }
+    }
 
     // ── Step-3 geocoding progress bar ─────────────────────────────────────────
-    public int ProgressDone  { get => _progressDone;  private set { Set(ref _progressDone, value);  Notify(nameof(ProgressVisible)); } }
-    public int ProgressTotal { get => _progressTotal; private set { Set(ref _progressTotal, value); Notify(nameof(ProgressVisible)); } }
-    public string ProgressText { get => _progressText; private set => Set(ref _progressText, value); }
+    public int ProgressDone { get { return _progressDone; } private set { Set(ref _progressDone, value); Notify(nameof(ProgressVisible)); } }
+    public int ProgressTotal { get { return _progressTotal; } private set { Set(ref _progressTotal, value); Notify(nameof(ProgressVisible)); } }
+    public string ProgressText
+    {
+        get
+        {
+            return _progressText;
+        }
+
+        private set
+        {
+            Set(ref _progressText, value);
+        }
+    }
 
     /// <summary>The bar shows only while a run is active and a phase has reported a total.</summary>
-    public bool ProgressVisible => IsRunning && _progressTotal > 0;
+    public bool ProgressVisible
+    {
+        get
+        {
+            return IsRunning && _progressTotal > 0;
+        }
+    }
 
     // ── Excel export progress bar (Scrape Runs tab) ───────────────────────────
-    public int ExportDone  { get => _exportDone;  private set => Set(ref _exportDone, value); }
-    public int ExportTotal { get => _exportTotal; private set => Set(ref _exportTotal, value); }
-    public string ExportText { get => _exportText; private set => Set(ref _exportText, value); }
+    public int ExportDone
+    {
+        get
+        {
+            return _exportDone;
+        }
+
+        private set
+        {
+            Set(ref _exportDone, value);
+        }
+    }
+    public int ExportTotal
+    {
+        get
+        {
+            return _exportTotal;
+        }
+
+        private set
+        {
+            Set(ref _exportTotal, value);
+        }
+    }
+    public string ExportText
+    {
+        get
+        {
+            return _exportText;
+        }
+
+        private set
+        {
+            Set(ref _exportText, value);
+        }
+    }
 
     /// <summary>The export bar/Cancel show for the whole duration of an export.</summary>
-    public bool ExportProgressVisible => IsExporting;
+    public bool ExportProgressVisible
+    {
+        get
+        {
+            return IsExporting;
+        }
+    }
 
     // Step flags — mutually exclusive pairs enforced via property setters
-    public bool ForceCrawl      { get => _forceCrawl;      set { Set(ref _forceCrawl, value); NotifyRunModeChanged(); } }
+    public bool ForceCrawl
+    {
+        get
+        {
+            return _forceCrawl;
+        }
+        set { Set(ref _forceCrawl, value); NotifyRunModeChanged(); }
+    }
     public bool Geocode
     {
-        get => _geocode;
+        get
+        {
+            return _geocode;
+        }
+
         set
         {
             Set(ref _geocode, value);
             // Rematch is a modifier of Geocode — it's meaningless on its own,
             // so clearing Geocode also clears Rematch and disables its checkbox.
-            if (!value) Set(ref _geocodeRematch, false, nameof(GeocodeRematch));
+            if (!value)
+            {
+                Set(ref _geocodeRematch, false, nameof(GeocodeRematch));
+            }
+
             Notify(nameof(IsRematchEnabled));
             NotifyRunModeChanged();
         }
     }
 
     /// <summary>Rematch checkbox is only enabled while Geocode is checked.</summary>
-    public bool IsRematchEnabled => Geocode && !IsRunning;
+    public bool IsRematchEnabled
+    {
+        get
+        {
+            return Geocode && !IsRunning;
+        }
+    }
 
     public bool GeocodeRematch
     {
-        get => _geocodeRematch;
+        get
+        {
+            return _geocodeRematch;
+        }
         // Rematch can only be turned on when Geocode is already on.
         set { Set(ref _geocodeRematch, value && Geocode); NotifyRunModeChanged(); }
     }
     public bool Export
     {
-        get => _export;
-        set { Set(ref _export, value); if (!value) ExportSince = ""; NotifyRunModeChanged(); }
+        get
+        {
+            return _export;
+        }
+
+        set { Set(ref _export, value); if (!value) { ExportSince = ""; } NotifyRunModeChanged(); }
     }
-    public string ExportSince { get => _exportSince; set { Set(ref _exportSince, value); NotifyRunModeChanged(); } }
-    public string DeleteBeforeId { get => _deleteBeforeId; set => Set(ref _deleteBeforeId, value); }
+    public string ExportSince
+    {
+        get
+        {
+            return _exportSince;
+        }
+        set { Set(ref _exportSince, value); NotifyRunModeChanged(); }
+    }
+    public string DeleteBeforeId
+    {
+        get
+        {
+            return _deleteBeforeId;
+        }
+
+        set
+        {
+            Set(ref _deleteBeforeId, value);
+        }
+    }
 
     private ScrapeRunViewModel? _selectedRun;
-    public ScrapeRunViewModel? SelectedRun { get => _selectedRun; set => Set(ref _selectedRun, value); }
+    public ScrapeRunViewModel? SelectedRun
+    {
+        get
+        {
+            return _selectedRun;
+        }
+
+        set
+        {
+            Set(ref _selectedRun, value);
+        }
+    }
 
     public string? LastOutputPath
     {
-        get => _lastOutputPath;
+        get
+        {
+            return _lastOutputPath;
+        }
+
         private set { Set(ref _lastOutputPath, value); RelayCommand.RaiseRequery(); }
     }
 
     // True when at least one step flag is set (selective run mode)
-    public bool IsSelective => ForceCrawl || Geocode || GeocodeRematch || Export || !string.IsNullOrWhiteSpace(ExportSince);
+    public bool IsSelective
+    {
+        get
+        {
+            return ForceCrawl || Geocode || GeocodeRematch || Export || !string.IsNullOrWhiteSpace(ExportSince);
+        }
+    }
 
     /// <summary>
     /// Tab checkboxes are shown only for a full run (no individual step picked)
     /// with a chain selected — that's the only mode that reaches Step 2.
     /// </summary>
-    public bool ShowTabSelection => !IsSelective && SelectedChain is not null;
+    public bool ShowTabSelection
+    {
+        get
+        {
+            return !IsSelective && SelectedChain is not null;
+        }
+    }
 
     private void NotifyRunModeChanged()
     {
@@ -253,7 +411,7 @@ public sealed class MainViewModel : ViewModelBase
         }
         catch (Exception)
         {
-            tabNames = new List<string>(); // unreadable database — same as "none yet"
+            tabNames = []; // unreadable database — same as "none yet"
         }
 
         // The user may have switched chains while the database was being read —
@@ -279,45 +437,52 @@ public sealed class MainViewModel : ViewModelBase
     /// </summary>
     public bool ShowNoTabsHint
     {
-        get => _showNoTabsHint;
-        private set => Set(ref _showNoTabsHint, value);
+        get
+        {
+            return _showNoTabsHint;
+        }
+
+        private set
+        {
+            Set(ref _showNoTabsHint, value);
+        }
     }
     private bool _showNoTabsHint;
 
     // ── Commands ──────────────────────────────────────────────────────────────
     public AsyncRelayCommand RunCommand { get; }
-    public RelayCommand      CancelCommand { get; }
-    public RelayCommand      BrowseDbCommand { get; }
+    public RelayCommand CancelCommand { get; }
+    public RelayCommand BrowseDbCommand { get; }
     public AsyncRelayCommand ReloadRunsCommand { get; }
-    public RelayCommand      OpenUrlCommand { get; }
+    public RelayCommand OpenUrlCommand { get; }
     public AsyncRelayCommand DeleteRunCommand { get; }
     public AsyncRelayCommand ExportRunCommand { get; }
-    public RelayCommand      CancelExportCommand { get; }
+    public RelayCommand CancelExportCommand { get; }
     public AsyncRelayCommand ResumeRunCommand { get; }
     public AsyncRelayCommand DeleteBeforeIdCommand { get; }
-    public RelayCommand      OpenOutputCommand { get; }
-    public RelayCommand      OpenFolderCommand { get; }
+    public RelayCommand OpenOutputCommand { get; }
+    public RelayCommand OpenFolderCommand { get; }
 
     // ── Constructor ───────────────────────────────────────────────────────────
     public MainViewModel()
     {
-        RunCommand          = new AsyncRelayCommand(_ => RunAsync(),     _ => !IsRunning && SelectedChain is not null);
-        CancelCommand       = new RelayCommand(_ => RequestCancel(),
+        RunCommand = new AsyncRelayCommand(_ => RunAsync(), _ => !IsRunning && SelectedChain is not null);
+        CancelCommand = new RelayCommand(_ => RequestCancel(),
             _ => IsRunning && _cts is { IsCancellationRequested: false });
-        BrowseDbCommand     = new RelayCommand(_ => BrowseDb(), _ => !IsRunning);
-        ReloadRunsCommand   = new AsyncRelayCommand(_ => ReloadRunsAsync());
-        OpenUrlCommand      = new RelayCommand(p => OpenUrl(p as string), p => p is string s && s.Length > 0);
+        BrowseDbCommand = new RelayCommand(_ => BrowseDb(), _ => !IsRunning);
+        ReloadRunsCommand = new AsyncRelayCommand(_ => ReloadRunsAsync());
+        OpenUrlCommand = new RelayCommand(p => OpenUrl(p as string), p => p is string s && s.Length > 0);
         // Export/Delete of a completed run are allowed while a scrape run is in
         // progress (WAL makes concurrent read/write safe); only a second export
         // is blocked, since exports share one cancellation source and progress UI.
-        DeleteRunCommand    = new AsyncRelayCommand(p  => DeleteRunAsync(p), _ => !IsExporting);
-        ExportRunCommand    = new AsyncRelayCommand(p  => ExportRunAsync(p), _ => !IsExporting);
+        DeleteRunCommand = new AsyncRelayCommand(p => DeleteRunAsync(p), _ => !IsExporting);
+        ExportRunCommand = new AsyncRelayCommand(p => ExportRunAsync(p), _ => !IsExporting);
         CancelExportCommand = new RelayCommand(_ => CancelExport(),
             _ => IsExporting && _exportCts is { IsCancellationRequested: false });
-        ResumeRunCommand    = new AsyncRelayCommand(p  => ResumeRunAsync(p), _ => !IsBusy);
+        ResumeRunCommand = new AsyncRelayCommand(p => ResumeRunAsync(p), _ => !IsBusy);
         DeleteBeforeIdCommand = new AsyncRelayCommand(_ => DeleteBeforeIdAsync(), _ => !IsBusy);
-        OpenOutputCommand   = new RelayCommand(_ => OpenOutput(), _ => !string.IsNullOrEmpty(LastOutputPath));
-        OpenFolderCommand   = new RelayCommand(_ => OpenFolder());
+        OpenOutputCommand = new RelayCommand(_ => OpenOutput(), _ => !string.IsNullOrEmpty(LastOutputPath));
+        OpenFolderCommand = new RelayCommand(_ => OpenFolder());
 
         // Seed the chain list from the registry, sorted alphabetically by name.
         foreach (ChainConfig chain in ChainRegistry.All.OrderBy(c => c.Name, StringComparer.CurrentCulture))
@@ -337,7 +502,11 @@ public sealed class MainViewModel : ViewModelBase
     // ── Run pipeline ──────────────────────────────────────────────────────────
     private async Task RunAsync()
     {
-        if (SelectedChain is null) return;
+        if (SelectedChain is null)
+        {
+            return;
+        }
+
         IsRunning = true;
         LastOutputPath = null;
         LogLines.Clear();
@@ -352,8 +521,8 @@ public sealed class MainViewModel : ViewModelBase
         Progress<StepProgress> progressCount = new(p =>
         {
             ProgressTotal = p.Total;
-            ProgressDone  = p.Done;
-            ProgressText  = p.Total > 0 ? $"{p.Phase}  {p.Done} / {p.Total}" : "";
+            ProgressDone = p.Done;
+            ProgressText = p.Total > 0 ? $"{p.Phase}  {p.Done} / {p.Total}" : "";
         });
         // Fires (on the UI thread) as Step 1 commits location batches, so the
         // Locations tab can refresh live while a crawl is in progress.
@@ -372,14 +541,14 @@ public sealed class MainViewModel : ViewModelBase
 
         PipelineOptions opts = new()
         {
-            Chain          = SelectedChain.Chain,
-            ForceCrawl     = ForceCrawl,
-            Geocode        = Geocode,
+            Chain = SelectedChain.Chain,
+            ForceCrawl = ForceCrawl,
+            Geocode = Geocode,
             GeocodeRematch = GeocodeRematch,
-            Export         = Export,
-            ExportSince    = exportSinceId,
-            Tabs           = selectedTabs,
-            OutputDir      = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(DbPath))!, "output"),
+            Export = Export,
+            ExportSince = exportSinceId,
+            Tabs = selectedTabs,
+            OutputDir = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(DbPath))!, "output"),
         };
 
         CancellationToken token = _cts.Token;
@@ -428,7 +597,11 @@ public sealed class MainViewModel : ViewModelBase
     /// </summary>
     private void RequestCancel()
     {
-        if (_cts is null || _cts.IsCancellationRequested) return;
+        if (_cts is null || _cts.IsCancellationRequested)
+        {
+            return;
+        }
+
         LogLines.Add("  ⚠ Cancelling … (finishing current operation)");
         _cts.Cancel();
         RelayCommand.RaiseRequery();   // disable the Cancel button immediately
@@ -520,10 +693,10 @@ public sealed class MainViewModel : ViewModelBase
         return Task.Run(() =>
         {
             // province match-key -> (total, district lines)
-            Dictionary<string, (int Total, List<string> Districts)> byProvince = new();
+            Dictionary<string, (int Total, List<string> Districts)> byProvince = [];
             int locationTotal = 0;
 
-            if (chainName is not null && (File.Exists(dbPath) || dbPath.StartsWith(":")))
+            if (chainName is not null && (File.Exists(dbPath) || dbPath.StartsWith(':')))
             {
                 try
                 {
@@ -549,7 +722,7 @@ public sealed class MainViewModel : ViewModelBase
                             // the segment before the first hyphen so both halves map
                             // to the single province on the map.
                             string provinceName = row.Province;
-                            int dash = provinceName.IndexOf('-');
+                            int dash = provinceName.IndexOf('-', StringComparison.Ordinal);
                             if (dash > 0)
                             {
                                 provinceName = provinceName[..dash];
@@ -558,7 +731,7 @@ public sealed class MainViewModel : ViewModelBase
                             string key = TurkeyMap.Normalize(provinceName);
                             if (!byProvince.TryGetValue(key, out (int Total, List<string> Districts) agg))
                             {
-                                agg = (0, new List<string>());
+                                agg = (0, []);
                             }
                             agg.Total += row.Count;
                             agg.Districts.Add($"{row.District} ({row.Count})");
@@ -577,19 +750,18 @@ public sealed class MainViewModel : ViewModelBase
                 }
             }
 
-            List<MapCellViewModel> cells = new();
+            List<MapCellViewModel> cells = [];
             foreach ((string name, Geometry shape, double cx, double cy) in MapGeometries())
             {
                 byProvince.TryGetValue(TurkeyMap.Normalize(name), out (int Total, List<string> Districts) agg);
                 cells.Add(new MapCellViewModel
                 {
-                    ProvinceName  = name, // the map's proper Turkish district name
-                    Shape     = shape,
-                    DotLeft   = cx - MapCellViewModel.DotBox / 2,
-                    DotTop    = cy - MapCellViewModel.DotBox / 2,
-                    Total     = agg.Total,
-                    Districts = (agg.Districts ?? new List<string>())
-                                .OrderBy(d => d, StringComparer.CurrentCulture).ToList(),
+                    ProvinceName = name, // the map's proper Turkish district name
+                    Shape = shape,
+                    DotLeft = cx - MapCellViewModel.DotBox / 2,
+                    DotTop = cy - MapCellViewModel.DotBox / 2,
+                    Total = agg.Total,
+                    Districts = [.. (agg.Districts ?? []).OrderBy(d => d, StringComparer.CurrentCulture)],
                 });
             }
 
@@ -628,9 +800,15 @@ public sealed class MainViewModel : ViewModelBase
     }
 
     // ── Scrape-runs management ────────────────────────────────────────────────
-    private Task ReloadRunsAsync() => Task.Run(() =>
+    private Task ReloadRunsAsync()
     {
-        if (!File.Exists(DbPath) && !DbPath.StartsWith(":")) return;
+        return Task.Run(() =>
+    {
+        if (!File.Exists(DbPath) && !DbPath.StartsWith(':'))
+        {
+            return;
+        }
+
         try
         {
             using SqliteConnection conn = Database.Open(DbPath);
@@ -645,7 +823,7 @@ public sealed class MainViewModel : ViewModelBase
                 using SqliteCommand cmd = conn.CreateCommand();
                 cmd.CommandText = "SELECT COUNT(*) FROM MENU_SNAPSHOTS WHERE SCRAPE_RUN_ID = $id;";
                 cmd.Parameters.AddWithValue("$id", r.Id);
-                return Convert.ToInt32(cmd.ExecuteScalar());
+                return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
             });
 
             Application.Current.Dispatcher.Invoke(() =>
@@ -667,6 +845,7 @@ public sealed class MainViewModel : ViewModelBase
                 LogLines.Add($"  ⚠ Scrape runs could not be read from '{DbPath}': {ex.Message}"));
         }
     });
+    }
 
     private async Task ExportRunAsync(object? parameter)
     {
@@ -780,7 +959,10 @@ public sealed class MainViewModel : ViewModelBase
         MessageBoxResult result = MessageBox.Show(
             $"Delete all scrape runs with ID < {id} and their snapshots?",
             "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-        if (result != MessageBoxResult.Yes) return;
+        if (result != MessageBoxResult.Yes)
+        {
+            return;
+        }
 
         await Task.Run(() =>
         {
@@ -792,9 +974,15 @@ public sealed class MainViewModel : ViewModelBase
     }
 
     // ── Logo management ───────────────────────────────────────────────────────
-    private async Task LoadChainLogosAsync() => await Task.Run(() =>
+    private async Task LoadChainLogosAsync()
     {
-        if (!File.Exists(DbPath)) return;
+        await Task.Run(() =>
+    {
+        if (!File.Exists(DbPath))
+        {
+            return;
+        }
+
         try
         {
             using SqliteConnection conn = Database.Open(DbPath);
@@ -818,6 +1006,7 @@ public sealed class MainViewModel : ViewModelBase
         }
         catch { }
     });
+    }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
     private void BrowseDb()
@@ -847,12 +1036,12 @@ public sealed class MainViewModel : ViewModelBase
 
         Microsoft.Win32.OpenFileDialog dlg = new()
         {
-            Title            = "Select or create database file",
-            Filter           = "SQLite (*.sqlite)|*.sqlite|All files (*.*)|*.*",
-            CheckFileExists  = false,
+            Title = "Select or create database file",
+            Filter = "SQLite (*.sqlite)|*.sqlite|All files (*.*)|*.*",
+            CheckFileExists = false,
             // Pre-filled so browsing to any folder and pressing Open creates
             // a database file there — no file has to exist yet.
-            FileName         = currentFile,
+            FileName = currentFile,
             InitialDirectory = currentDir,
         };
         if (dlg.ShowDialog() != true)
@@ -884,7 +1073,11 @@ public sealed class MainViewModel : ViewModelBase
 
     private void OpenOutput()
     {
-        if (string.IsNullOrEmpty(LastOutputPath)) return;
+        if (string.IsNullOrEmpty(LastOutputPath))
+        {
+            return;
+        }
+
         string? dir = Path.GetDirectoryName(LastOutputPath);
         if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
         {
@@ -976,7 +1169,7 @@ public sealed class MainViewModel : ViewModelBase
             _cts?.Dispose();
             _cts = null;
             await ReloadRunsAsync();
-                await RebuildMapAsync();
+            await RebuildMapAsync();
         }
     }
 }

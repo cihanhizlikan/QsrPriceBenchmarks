@@ -5,17 +5,22 @@ namespace QsrPriceBenchmarks.Ui.ViewModels;
 /// is selected. <see cref="IsSelected"/> is two-way bound so the user can
 /// exclude tabs from the scrape; unticked tabs are dropped from the run.
 /// </summary>
-public sealed class TabOptionViewModel : ViewModelBase
+public sealed class TabOptionViewModel(string name) : ViewModelBase
 {
     private bool _isSelected = true;
 
-    public TabOptionViewModel(string name) => Name = name;
-
-    public string Name { get; }
+    public string Name { get; } = name;
 
     public bool IsSelected
     {
-        get => _isSelected;
-        set => Set(ref _isSelected, value);
+        get
+        {
+            return _isSelected;
+        }
+
+        set
+        {
+            Set(ref _isSelected, value);
+        }
     }
 }

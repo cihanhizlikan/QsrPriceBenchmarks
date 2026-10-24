@@ -11,11 +11,11 @@ public static class BrandPalette
 {
     private static readonly Dictionary<string, string> Hex = new(StringComparer.Ordinal)
     {
-        ["Arby's"]      = "#D91C22", // red
+        ["Arby's"] = "#D91C22", // red
         ["Burger King"] = "#FAB111", // amber/yellow
-        ["Popeyes"]     = "#FF7C00", // orange
-        ["Sbarro"]      = "#CA0D2A", // red
-        ["Subway"]      = "#005543", // dark green
+        ["Popeyes"] = "#FF7C00", // orange
+        ["Sbarro"] = "#CA0D2A", // red
+        ["Subway"] = "#005543", // dark green
         ["Usta Dönerci"] = "#D93832", // red
         ["Usta Pideci"] = "#E12325", // red
     };
@@ -24,9 +24,14 @@ public static class BrandPalette
     public const string FallbackHex = "#2F2F2F";
 
     /// <summary>Return the chain's brand hex, or <see cref="FallbackHex"/> if unknown.</summary>
-    public static string HexFor(string chainName) =>
-        Hex.TryGetValue(chainName, out string? hex) ? hex : FallbackHex;
+    public static string HexFor(string chainName)
+    {
+        return Hex.TryGetValue(chainName, out string? hex) ? hex : FallbackHex;
+    }
 
     /// <summary>True when the chain has an explicit brand colour (not the fallback).</summary>
-    public static bool HasBrand(string chainName) => Hex.ContainsKey(chainName);
+    public static bool HasBrand(string chainName)
+    {
+        return Hex.ContainsKey(chainName);
+    }
 }

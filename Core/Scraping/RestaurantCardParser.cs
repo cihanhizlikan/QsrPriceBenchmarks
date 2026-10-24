@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using AngleSharp.Dom;
 using QsrPriceBenchmarks.Core.Models;
@@ -13,10 +14,11 @@ namespace QsrPriceBenchmarks.Core.Scraping;
 /// </summary>
 public static class RestaurantCardParser
 {
+    [SuppressMessage("Maintainability", "CA1502", Justification = "Measured 26. Its card-shape fallbacks each encode a site quirk; decomposing is plan WP-M1.")]
     public static List<RestaurantCard> Parse(IDocument document, string baseUrl)
     {
-        List<RestaurantCard> results = new();
-        HashSet<string> seen = new();
+        List<RestaurantCard> results = [];
+        HashSet<string> seen = [];
 
         foreach (IElement a in document.QuerySelectorAll("a[href]"))
         {
@@ -91,7 +93,7 @@ public static class RestaurantCardParser
             //    li/article/div.restaurant wrapper.
             if (name is null)
             {
-                string aText = Clean(a.TextContent);
+                string? aText = Clean(a.TextContent);
                 if (!string.IsNullOrEmpty(aText))
                 {
                     IElement? container = a.Closest("li, article, div.restaurant") ?? a.ParentElement;
@@ -131,9 +133,11 @@ public static class RestaurantCardParser
         return results;
     }
 
-    private static bool ContainsIgnoreCase(string? haystack, string needle) =>
-        !string.IsNullOrEmpty(haystack) &&
+    private static bool ContainsIgnoreCase(string? haystack, string needle)
+    {
+        return !string.IsNullOrEmpty(haystack) &&
         haystack.Contains(needle, StringComparison.OrdinalIgnoreCase);
+    }
 
     private static string? Clean(string? text)
     {

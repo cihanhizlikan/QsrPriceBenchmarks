@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using Microsoft.Data.Sqlite;
 using QsrPriceBenchmarks.Core.Models;
 using QsrPriceBenchmarks.Core.Util;
@@ -24,13 +26,17 @@ public static class Repository
     /// the Step 1 crawl window). Centralised so the format can't drift between
     /// call sites — string comparisons on these values depend on a single format.
     /// </summary>
-    internal static string UtcStamp() => DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
+    internal static string UtcStamp()
+    {
+        return DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
+    }
 
     // ── Command plumbing ─────────────────────────────────────────────────────
     // Every ADO.NET call in this class runs through these helpers, so the
     // create-command / set-text / add-parameters boilerplate lives in exactly
     // one place. Null parameter values are stored as SQL NULL (DBNull).
 
+    [SuppressMessage("Security", "CA2100", Justification = "Every caller builds its SQL from constant fragments (the dynamic UPDATEs join constant SET clauses) and binds values as parameters.")]
     private static SqliteCommand Command(
         SqliteConnection conn, string sql, params (string Name, object? Value)[] parameters)
     {
@@ -90,9 +96,9 @@ public static class Repository
         object? existing = Scalar(conn, findSql, parameters);
         if (existing is not null)
         {
-            return Convert.ToInt64(existing);
+            return Convert.ToInt64(existing, CultureInfo.InvariantCulture);
         }
-        return Convert.ToInt64(Scalar(conn, insertSql, parameters));
+        return Convert.ToInt64(Scalar(conn, insertSql, parameters), CultureInfo.InvariantCulture);
     }
 
     // ── Lookups ──────────────────────────────────────────────────────────────
@@ -101,14 +107,14 @@ public static class Repository
     {
         object? result = Scalar(conn, "SELECT ID FROM QSR WHERE NAME = $name;", ("$name", name))
             ?? throw new InvalidOperationException($"QSR not found: {name}");
-        return Convert.ToInt64(result);
+        return Convert.ToInt64(result, CultureInfo.InvariantCulture);
     }
 
     public static long PlatformId(SqliteConnection conn, string name)
     {
         object? result = Scalar(conn, "SELECT ID FROM PLATFORMS WHERE NAME = $name;", ("$name", name))
             ?? throw new InvalidOperationException($"Platform not found: {name}");
-        return Convert.ToInt64(result);
+        return Convert.ToInt64(result, CultureInfo.InvariantCulture);
     }
 
     /// <summary>Active (not soft-deleted) scrape tabs for one chain/platform, in display order.</summary>
@@ -126,7 +132,7 @@ public static class Repository
     /// <summary>First column of every row, as strings — shared reader loop.</summary>
     private static List<string> ReadStrings(SqliteCommand cmd)
     {
-        List<string> result = new();
+        List<string> result = [];
         using SqliteDataReader reader = cmd.ExecuteReader();
         while (reader.Read())
         {
@@ -169,7 +175,7 @@ public static class Repository
         SqliteConnection conn, long qsrId, long platformId, IReadOnlyCollection<string> observedTabs)
     {
         HashSet<string> observed = new(observedTabs, StringComparer.Ordinal);
-        List<string> deactivated = new();
+        List<string> deactivated = [];
 
         using SqliteTransaction tx = conn.BeginTransaction();
         foreach (string tab in LoadScrapeTabsTx(conn, tx, qsrId, platformId))
@@ -250,7 +256,7 @@ public static class Repository
             ("$qsr", qsrId), ("$slug", slug));
         if (existing is not null)
         {
-            long existingId = Convert.ToInt64(existing);
+            long existingId = Convert.ToInt64(existing, CultureInfo.InvariantCulture);
             // Seen this crawl: refresh LAST_SEEN_AT and reactivate, so a slug
             // that had been marked closed in an earlier reconcile comes back
             // on the same row (continuous history, stable LOCATION_ID).
@@ -265,7 +271,7 @@ public static class Repository
             VALUES ($qsr, $district, $slug, 1, $now);
             SELECT last_insert_rowid();
             """,
-            ("$qsr", qsrId), ("$district", districtId), ("$slug", slug), ("$now", now)));
+            ("$qsr", qsrId), ("$district", districtId), ("$slug", slug), ("$now", now)), CultureInfo.InvariantCulture);
     }
 
     /// <summary>
@@ -313,7 +319,7 @@ public static class Repository
     public static void UpdateLocationDetails(
         SqliteConnection conn, string slug, string? rawName, string? rawAddress, long qsrId)
     {
-        string cleanName = TextNormalization.StripBoilerplate(rawName);
+        string? cleanName = TextNormalization.StripBoilerplate(rawName);
         string cleanAddress = rawAddress?.Trim() ?? "";
 
         if (!string.IsNullOrEmpty(cleanName) && cleanAddress.Length > 0)
@@ -346,7 +352,7 @@ public static class Repository
         // edit must NOT trigger a needless (and flaky) re-geocode.
         bool addressChanged = writeAddress && existingAddress != newAddress;
 
-        List<string> setClauses = new();
+        List<string> setClauses = [];
         if (writeName)
         {
             setClauses.Add("NAME = $name");
@@ -422,7 +428,7 @@ public static class Repository
             ("$qsr", qsrId), ("$plat", platformId), ("$slug", slug));
         if (existing is not null)
         {
-            return Convert.ToInt64(existing);
+            return Convert.ToInt64(existing, CultureInfo.InvariantCulture);
         }
 
         return Convert.ToInt64(Scalar(conn, """
@@ -431,7 +437,7 @@ public static class Repository
             SELECT last_insert_rowid();
             """,
             ("$qsr", qsrId), ("$plat", platformId), ("$slug", slug),
-            ("$name", TextNormalization.Title(name))));
+            ("$name", TextNormalization.Title(name))), CultureInfo.InvariantCulture);
     }
 
     /// <summary>Outcome of one sitemap census applied to PLATFORM_LOCATIONS.</summary>
@@ -453,13 +459,12 @@ public static class Repository
     public static PlatformCensusResult UpsertPlatformLocationsBulk(
         SqliteConnection conn, long qsrId, long platformId, IEnumerable<string> slugs)
     {
-        List<string> census = slugs
+        List<string> census = [.. slugs
             .Where(slug => !TextNormalization.IsTestSlug(slug))
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
+            .Distinct(StringComparer.Ordinal)];
         if (census.Count == 0)
         {
-            return new PlatformCensusResult(0, 0, new List<string>());
+            return new PlatformCensusResult(0, 0, []);
         }
 
         string stamp = UtcStamp();
@@ -516,7 +521,7 @@ public static class Repository
         }
 
         // Active rows the census no longer lists → soft delete.
-        List<string> delisted = new();
+        List<string> delisted = [];
         using SqliteCommand retire = Command(conn, tx, """
             UPDATE PLATFORM_LOCATIONS SET ACTIVE = 0
             WHERE QSR_ID = $qsr AND PLATFORM_ID = $plat AND SLUG = $slug;
@@ -547,8 +552,8 @@ public static class Repository
         string? name = null, string? address = null,
         double? lat = null, double? lon = null)
     {
-        List<string> setClauses = new();
-        List<(string Name, object? Value)> parameters = new();
+        List<string> setClauses = [];
+        List<(string Name, object? Value)> parameters = [];
 
         if (name is not null)
         {
@@ -593,7 +598,7 @@ public static class Repository
         parameters.Add(("$id", platformLocationId));
         NonQuery(conn,
             $"UPDATE PLATFORM_LOCATIONS SET {string.Join(", ", setClauses)} WHERE ID = $id;",
-            parameters.ToArray());
+            [.. parameters]);
     }
 
     public static void SetPlatformLocationMatch(SqliteConnection conn, long platformLocationId, long? locationId)
@@ -621,7 +626,7 @@ public static class Repository
             INSERT INTO SCRAPE_RUNS (QSR_ID, STARTED_AT) VALUES ($qsr, $started);
             SELECT last_insert_rowid();
             """,
-            ("$qsr", qsrId), ("$started", UtcStamp())));
+            ("$qsr", qsrId), ("$started", UtcStamp())), CultureInfo.InvariantCulture);
     }
 
     public static void FinishScrapeRun(SqliteConnection conn, long runId)
@@ -683,14 +688,14 @@ public static class Repository
             """,
             ("$qsr", qsrId));
 
-        List<UnscrapedLocationRow> result = new();
+        List<UnscrapedLocationRow> result = [];
         using SqliteDataReader reader = cmd.ExecuteReader();
         while (reader.Read())
         {
-            string  qsrName = reader.GetString(0);
-            string? name    = reader.IsDBNull(1) ? null : reader.GetString(1);
+            string qsrName = reader.GetString(0);
+            string? name = reader.IsDBNull(1) ? null : reader.GetString(1);
             string? address = reader.IsDBNull(2) ? null : reader.GetString(2);
-            string  slug    = reader.GetString(3);
+            string slug = reader.GetString(3);
 
             string chainSlug = slugByChain.GetValueOrDefault(qsrName, "");
             string url = string.IsNullOrEmpty(chainSlug)
@@ -721,7 +726,7 @@ public static class Repository
             """,
             ("$qsr", qsrId));
 
-        List<ProvinceDistrictCount> result = new();
+        List<ProvinceDistrictCount> result = [];
         using SqliteDataReader reader = cmd.ExecuteReader();
         while (reader.Read())
         {
@@ -743,7 +748,7 @@ public static class Repository
             ? "SELECT COUNT(*) FROM LOCATIONS WHERE QSR_ID = $qsr AND ACTIVE = 1;"
             : "SELECT COUNT(*) FROM LOCATIONS WHERE QSR_ID = $qsr;";
         object? scalar = Scalar(conn, sql, ("$qsr", qsrId));
-        return scalar is null ? 0 : Convert.ToInt32(scalar);
+        return scalar is null ? 0 : Convert.ToInt32(scalar, CultureInfo.InvariantCulture);
     }
 
     public static List<ScrapeRunRow> ListScrapeRuns(SqliteConnection conn)
@@ -751,7 +756,7 @@ public static class Repository
         using SqliteCommand cmd = Command(conn,
             "SELECT ID, QSR_ID, STARTED_AT, FINISHED_AT FROM SCRAPE_RUNS ORDER BY ID;");
 
-        List<ScrapeRunRow> result = new();
+        List<ScrapeRunRow> result = [];
         using SqliteDataReader reader = cmd.ExecuteReader();
         while (reader.Read())
         {
@@ -782,7 +787,7 @@ public static class Repository
         }
 
         int count = Convert.ToInt32(Scalar(conn,
-            "SELECT COUNT(*) FROM MENU_SNAPSHOTS WHERE SCRAPE_RUN_ID = $id;", ("$id", runId)));
+            "SELECT COUNT(*) FROM MENU_SNAPSHOTS WHERE SCRAPE_RUN_ID = $id;", ("$id", runId)), CultureInfo.InvariantCulture);
 
         return (true, qsrId, startedAt, count);
     }

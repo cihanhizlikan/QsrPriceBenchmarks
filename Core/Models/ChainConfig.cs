@@ -33,7 +33,13 @@ public sealed record ChainConfig(
     /// Centralises the "exactly one platform" assumption that both Step 2 and the
     /// UI rely on, so there's one place to revisit if a second platform is added.
     /// </summary>
-    public string PrimaryPlatform => PlatformSlugs.Keys.First();
+    public string PrimaryPlatform
+    {
+        get
+        {
+            return PlatformSlugs.Keys.First();
+        }
+    }
 }
 
 /// <summary>
@@ -44,9 +50,9 @@ public static class Chains
 {
     private const string TgSitemap = "https://www.tiklagelsin.com/sitemap/sitemap/restoranlar.xml";
 
-    public static readonly IReadOnlyList<ChainConfig> All = new List<ChainConfig>
-    {
-        new ChainConfig(
+    public static readonly IReadOnlyList<ChainConfig> All =
+    [
+        new(
             Name: "Burger King",
             BaseUrl: "https://www.burgerking.com.tr/restoranlar-subeler/",
             RootUrl: "https://www.burgerking.com.tr/restoranlar-subeler",
@@ -55,7 +61,7 @@ public static class Chains
             ContentSelector: "#restaurantsContent"
         ),
 
-        new ChainConfig(
+        new(
             Name: "Popeyes",
             BaseUrl: "https://www.popeyes.com.tr/subeler/",
             RootUrl: "https://www.popeyes.com.tr/subeler",
@@ -64,7 +70,7 @@ public static class Chains
             ContentSelector: null
         ),
 
-        new ChainConfig(
+        new(
             Name: "Usta Dönerci",
             BaseUrl: "https://www.ustadonerci.com/tr/restoranlar/",
             RootUrl: "https://www.ustadonerci.com/tr/restoranlar",
@@ -80,7 +86,7 @@ public static class Chains
         // it must be whatever tab the page renders first — usually
         // "Popüler Ürünler", but "Fırsat Kampanyaları" for Sbarro.
 
-        new ChainConfig(
+        new(
             Name: "Arby's",
             BaseUrl: "https://www.arbys.com.tr/restoranlar/",
             RootUrl: "https://www.arbys.com.tr/restoranlar",
@@ -89,7 +95,7 @@ public static class Chains
             ContentSelector: null
         ),
 
-        new ChainConfig(
+        new(
             Name: "Sbarro",
             BaseUrl: "https://www.sbarro.com.tr/restoranlar-subeler/",
             RootUrl: "https://www.sbarro.com.tr/restoranlar-subeler",
@@ -98,7 +104,7 @@ public static class Chains
             ContentSelector: null
         ),
 
-        new ChainConfig(
+        new(
             Name: "Usta Pideci",
             BaseUrl: "https://www.ustapideci.com.tr/subeler/",
             RootUrl: "https://www.ustapideci.com.tr/subeler",
@@ -107,7 +113,7 @@ public static class Chains
             ContentSelector: null
         ),
 
-        new ChainConfig(
+        new(
             Name: "Subway",
             BaseUrl: "https://www.subway.com.tr/restoranlar-subeler/",
             RootUrl: "https://www.subway.com.tr/restoranlar-subeler",
@@ -115,7 +121,7 @@ public static class Chains
             PlatformSlugs: new Dictionary<string, string> { ["Tıkla Gelsin"] = "subway" },
             ContentSelector: null
         ),
-    };
+    ];
 
     /// <summary>
     /// Resolve a chain by its TG platform slug (e.g. "burger-king", "usta-donerci").
@@ -128,6 +134,8 @@ public static class Chains
             c.PlatformSlugs.Values.Any(v => string.Equals(v, key, StringComparison.OrdinalIgnoreCase)));
     }
 
-    public static IReadOnlyList<string> AllPlatformSlugs() =>
-        All.SelectMany(c => c.PlatformSlugs.Values).ToList();
+    public static IReadOnlyList<string> AllPlatformSlugs()
+    {
+        return [.. All.SelectMany(c => c.PlatformSlugs.Values)];
+    }
 }

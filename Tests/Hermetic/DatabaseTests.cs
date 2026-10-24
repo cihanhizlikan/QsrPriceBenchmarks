@@ -12,12 +12,12 @@ public sealed class DatabaseTests
     [Fact(DisplayName = "Open creates schema, seeds every chain, and is idempotent")]
     public void Open_SeedsChains_Idempotently()
     {
-        var path = System.IO.Path.Combine(
+        string path = System.IO.Path.Combine(
             System.IO.Path.GetTempPath(), $"qsr_seed_{Guid.NewGuid():N}.sqlite");
         try
         {
             long firstCount;
-            using (var conn = Database.Open(path))
+            using (SqliteConnection conn = Database.Open(path))
             {
                 using SqliteCommand cmd = conn.CreateCommand();
                 cmd.CommandText = "SELECT COUNT(*) FROM QSR;";
@@ -26,7 +26,7 @@ public sealed class DatabaseTests
             }
 
             // Re-opening the same file must not duplicate seed rows.
-            using (var conn = Database.Open(path))
+            using (SqliteConnection conn = Database.Open(path))
             {
                 using SqliteCommand cmd = conn.CreateCommand();
                 cmd.CommandText = "SELECT COUNT(*) FROM QSR;";
@@ -40,7 +40,7 @@ public sealed class DatabaseTests
         finally
         {
             Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
-            try { if (File.Exists(path)) File.Delete(path); } catch { }
+            try { if (File.Exists(path)) { File.Delete(path); } } catch { }
         }
     }
 
@@ -50,7 +50,7 @@ public sealed class DatabaseTests
         using TempDb db = new();
         using SqliteCommand cmd = db.Conn.CreateCommand();
         cmd.CommandText = "PRAGMA table_info(QSR);";
-        List<string> columns = new();
+        List<string> columns = [];
         using SqliteDataReader reader = cmd.ExecuteReader();
         while (reader.Read())
         {
@@ -112,7 +112,7 @@ public sealed class DatabaseTests
 
                 // A cleanly completed run that saw every tab EXCEPT the
                 // discovered one is what removes it — as a soft delete.
-                List<string> observed = tabs.Where(t => t != "Ekonomikings").ToList();
+                List<string> observed = [.. tabs.Where(t => t != "Ekonomikings")];
                 List<string> deactivated =
                     Repository.ReconcileScrapeTabs(conn, qsrId, platformId, observed);
 

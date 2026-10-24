@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Data.Sqlite;
 using Microsoft.Playwright;
 using QsrPriceBenchmarks.Core.Db;
@@ -19,13 +20,11 @@ public static class GeocodeAndMatchStep
         if (rematch)
         {
             using SqliteCommand resetCmd = conn.CreateCommand();
-            resetCmd.CommandText = chainQsrId is not null
-                ? "UPDATE PLATFORM_LOCATIONS SET LOCATION_ID = NULL WHERE QSR_ID = $qsr;"
-                : "UPDATE PLATFORM_LOCATIONS SET LOCATION_ID = NULL;";
-            if (chainQsrId is not null)
-            {
-                resetCmd.Parameters.AddWithValue("$qsr", chainQsrId.Value);
-            }
+            // One constant statement, the same optional-filter shape as the
+            // queries below: a null $qsr resets every chain.
+            resetCmd.CommandText =
+                "UPDATE PLATFORM_LOCATIONS SET LOCATION_ID = NULL WHERE ($qsr IS NULL OR QSR_ID = $qsr);";
+            resetCmd.Parameters.AddWithValue("$qsr", (object?)chainQsrId ?? DBNull.Value);
             resetCmd.ExecuteNonQuery();
             progress?.Report("  ✓ LOCATION_ID reset — rematching from scratch");
         }
@@ -49,7 +48,7 @@ public static class GeocodeAndMatchStep
             // a single connection isn't safe for concurrent use, so results are
             // applied sequentially on this thread after each batch completes.
             const int MaxConcurrency = 4;
-            List<IPage> pages = new() { session.Page };
+            List<IPage> pages = [session.Page];
             for (int k = 1; k < MaxConcurrency; k++)
             {
                 pages.Add(await session.Context.NewPageAsync());
@@ -162,10 +161,10 @@ public static class GeocodeAndMatchStep
             List<(long Id, string Slug, string? Address, double? Latitude, double? Longitude)> locations =
                 LoadLocationsForMatching(conn, qsrId);
 
-            List<MatchCandidate> candidates = group.Select(p =>
-                new MatchCandidate(p.Id, p.Slug, p.Address, p.Latitude, p.Longitude)).ToList();
-            List<MatchCandidate> locCandidates = locations.Select(l =>
-                new MatchCandidate(l.Id, l.Slug, l.Address, l.Latitude, l.Longitude)).ToList();
+            List<MatchCandidate> candidates = [.. group.Select(p =>
+                new MatchCandidate(p.Id, p.Slug, p.Address, p.Latitude, p.Longitude))];
+            List<MatchCandidate> locCandidates = [.. locations.Select(l =>
+                new MatchCandidate(l.Id, l.Slug, l.Address, l.Latitude, l.Longitude))];
 
             List<MatchResult> results = Matcher.Match(
                 candidates, locCandidates, chainNames.GetValueOrDefault(qsrId));
@@ -213,7 +212,7 @@ public static class GeocodeAndMatchStep
             """;
         cmd.Parameters.AddWithValue("$qsr", (object?)chainQsrId ?? DBNull.Value);
 
-        List<(long, string, string?, string?, long)> result = new();
+        List<(long, string, string?, string?, long)> result = [];
         using SqliteDataReader reader = cmd.ExecuteReader();
         while (reader.Read())
         {
@@ -262,7 +261,7 @@ public static class GeocodeAndMatchStep
             """;
         cmd.Parameters.AddWithValue("$qsr", (object?)chainQsrId ?? DBNull.Value);
 
-        List<(long, string, string?, string)> result = new();
+        List<(long, string, string?, string)> result = [];
         using SqliteDataReader reader = cmd.ExecuteReader();
         while (reader.Read())
         {
@@ -282,7 +281,7 @@ public static class GeocodeAndMatchStep
             "SELECT COUNT(*) FROM PLATFORM_LOCATIONS " +
             "WHERE ACTIVE = 1 AND LOCATION_ID IS NULL AND ($qsr IS NULL OR QSR_ID = $qsr);";
         cmd.Parameters.AddWithValue("$qsr", (object?)chainQsrId ?? DBNull.Value);
-        return Convert.ToInt32(cmd.ExecuteScalar());
+        return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
     }
 
     private static List<(long Id, long QsrId, string Slug, string? Address, double? Latitude, double? Longitude)>
@@ -294,7 +293,7 @@ public static class GeocodeAndMatchStep
             "WHERE ACTIVE = 1 AND LOCATION_ID IS NULL AND ($qsr IS NULL OR QSR_ID = $qsr);";
         cmd.Parameters.AddWithValue("$qsr", (object?)chainQsrId ?? DBNull.Value);
 
-        List<(long, long, string, string?, double?, double?)> result = new();
+        List<(long, long, string, string?, double?, double?)> result = [];
         using SqliteDataReader reader = cmd.ExecuteReader();
         while (reader.Read())
         {
@@ -314,7 +313,7 @@ public static class GeocodeAndMatchStep
         cmd.CommandText = "SELECT ID, SLUG, ADDRESS, LATITUDE, LONGITUDE FROM LOCATIONS WHERE QSR_ID = $qsr;";
         cmd.Parameters.AddWithValue("$qsr", qsrId);
 
-        List<(long, string, string?, double?, double?)> result = new();
+        List<(long, string, string?, double?, double?)> result = [];
         using SqliteDataReader reader = cmd.ExecuteReader();
         while (reader.Read())
         {

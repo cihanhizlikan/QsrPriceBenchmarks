@@ -63,12 +63,12 @@ public sealed class ExportWithoutGeocodeTests
         using TempDb db = new();
         SeedUnmatched(db.Conn);
 
-        var outDir = System.IO.Path.Combine(
+        string outDir = System.IO.Path.Combine(
             System.IO.Path.GetTempPath(), $"qsr_xlsx_{Guid.NewGuid():N}");
         try
         {
             // Previously threw: "The data is NULL at ordinal 0".
-            var path = ExcelExporter.Export(Chain, db.Conn, outDir);
+            string path = ExcelExporter.Export(Chain, db.Conn, outDir);
             Assert.True(File.Exists(path));
 
             using XLWorkbook wb = new(path);
@@ -81,7 +81,7 @@ public sealed class ExportWithoutGeocodeTests
         }
         finally
         {
-            try { if (Directory.Exists(outDir)) Directory.Delete(outDir, recursive: true); } catch { }
+            try { if (Directory.Exists(outDir)) { Directory.Delete(outDir, recursive: true); } } catch { }
         }
     }
 }

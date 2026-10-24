@@ -1,3 +1,4 @@
+using System.Globalization;
 using ClosedXML.Excel;
 using Microsoft.Data.Sqlite;
 using QsrPriceBenchmarks.Core.Db;
@@ -8,7 +9,7 @@ namespace QsrPriceBenchmarks.Core.Export;
 
 /// <summary>
 /// Step 4: export V_MARKETING_REPORT rows for one chain to a styled Excel
-/// workbook. When <paramref name="sinceRunId"/> is given, only snapshots
+/// workbook. When a run id is given to <see cref="Export"/>, only snapshots
 /// from that scrape run onwards are included.
 /// </summary>
 public static class ExcelExporter
@@ -33,17 +34,17 @@ public static class ExcelExporter
     private const int ColumnFitSampleRows = 2_000;
 
     private static readonly string[] Headers =
-    {
+    [
         "Province", "District", "Location Name", "Location Address",
         "Platform Location Name", "Platform Location Address",
         "Platform URL", "Menu Item", "Price", "Previous Price", "Price Change",
         "Last Scrape Run", "Days Since Scrape",
-    };
+    ];
 
     private static readonly string[] UnscrapedHeaders =
-    {
+    [
         "Platform Location Name", "Address", "Tıkla Gelsin URL",
-    };
+    ];
 
     /// <summary>
     /// Strip characters that are invalid in the XLSX's underlying XML 1.0
@@ -64,7 +65,7 @@ public static class ExcelExporter
         bool needsFilter = false;
         foreach (char c in text)
         {
-            if ((c < 0x20 && c != '\t' && c != '\n' && c != '\r') || c == '\uFFFE' || c == '\uFFFF')
+            if (c is < (char)0x20 and not '\t' and not '\n' and not '\r' or '\uFFFE' or '\uFFFF')
             {
                 needsFilter = true;
                 break;
@@ -78,7 +79,7 @@ public static class ExcelExporter
         System.Text.StringBuilder sb = new(text.Length);
         foreach (char c in text)
         {
-            if ((c < 0x20 && c != '\t' && c != '\n' && c != '\r') || c == '\uFFFE' || c == '\uFFFF')
+            if (c is < (char)0x20 and not '\t' and not '\n' and not '\r' or '\uFFFE' or '\uFFFF')
             {
                 continue;
             }
@@ -138,7 +139,7 @@ public static class ExcelExporter
 
             sheet.Cell(rowIdx, 8).SetValue(Clean(row.MenuItem));
             sheet.Cell(rowIdx, 9).SetValue(row.Price);
-            sheet.Cell(rowIdx, 10).SetValue(row.PrevPrice?.ToString() ?? "");
+            sheet.Cell(rowIdx, 10).SetValue(row.PrevPrice?.ToString(CultureInfo.CurrentCulture) ?? "");
 
             IXLCell changeCell = sheet.Cell(rowIdx, 11);
             changeCell.SetValue(row.PriceChange);
@@ -242,8 +243,8 @@ public static class ExcelExporter
     private static string SanitiseSheetName(string name)
     {
         // Excel sheet names: max 31 chars, no \ / ? * [ ] :
-        char[] invalid = { '\\', '/', '?', '*', '[', ']', ':' };
-        string cleaned = new(name.Where(c => !invalid.Contains(c)).ToArray());
+        char[] invalid = ['\\', '/', '?', '*', '[', ']', ':'];
+        string cleaned = new([.. name.Where(c => !invalid.Contains(c))]);
         return cleaned.Length > 31 ? cleaned[..31] : cleaned;
     }
 
@@ -272,7 +273,7 @@ public static class ExcelExporter
             cmd.Parameters.AddWithValue("$since", sinceRunId.Value);
         }
 
-        List<ReportRow> result = new();
+        List<ReportRow> result = [];
         using SqliteDataReader reader = cmd.ExecuteReader();
         while (reader.Read())
         {

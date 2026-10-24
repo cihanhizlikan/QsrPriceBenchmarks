@@ -43,8 +43,8 @@ public static class UrlUtils
         int target = baseParts.Count + depthOffset;
         string baseDomain = baseUri.Host;
 
-        HashSet<string> seen = new();
-        List<string> results = new();
+        HashSet<string> seen = [];
+        List<string> results = [];
 
         foreach (IElement a in document.QuerySelectorAll("a[href]"))
         {
@@ -77,7 +77,9 @@ public static class UrlUtils
             // has a language prefix (e.g. "/tr/restoranlar").
             if (pathParts.Count < baseParts.Count ||
                 !pathParts.Take(baseParts.Count).SequenceEqual(baseParts, StringComparer.OrdinalIgnoreCase))
+            {
                 continue;
+            }
 
             if (pathParts.Count != target)
             {
@@ -98,11 +100,15 @@ public static class UrlUtils
     /// Split a URL path into non-empty segments, e.g. "/tr/restoranlar/" -&gt;
     /// ["tr", "restoranlar"].
     /// </summary>
-    public static List<string> SplitPath(string path) =>
-        path.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries).ToList();
+    public static List<string> SplitPath(string path)
+    {
+        return [.. path.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries)];
+    }
 
-    private static string NormaliseTrailingSlash(string url) =>
-        url.EndsWith('/') ? url : url + "/";
+    private static string NormaliseTrailingSlash(string url)
+    {
+        return url.EndsWith('/') ? url : url + "/";
+    }
 
     /// <summary>
     /// Extract (province, district, slug) from a restaurant URL relative to the
@@ -121,7 +127,7 @@ public static class UrlUtils
             throw new ArgumentException($"URL is not under the chain root: '{url}'");
         }
 
-        List<string> relative = urlParts.Skip(rootParts.Count).ToList();
+        List<string> relative = [.. urlParts.Skip(rootParts.Count)];
 
         return relative.Count switch
         {

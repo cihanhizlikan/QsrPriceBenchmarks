@@ -58,7 +58,7 @@ void PrintHelp() => Console.WriteLine("""
 
 // ── Parse ─────────────────────────────────────────────────────────────────────
 CliOptions opts;
-try                             { opts = CliParser.Parse(args); }
+try { opts = CliParser.Parse(args); }
 catch (CliArgumentException ex) { Console.Error.WriteLine($"error: {ex.Message}"); return 1; }
 
 if (opts.Help) { PrintBanner(); PrintHelp(); return 0; }
@@ -131,15 +131,15 @@ Console.WriteLine();
 
 PipelineOptions pipeOpts = new()
 {
-    Chain          = chain,
-    ForceCrawl     = opts.ForceCrawl,
-    Geocode        = opts.Geocode,
+    Chain = chain,
+    ForceCrawl = opts.ForceCrawl,
+    Geocode = opts.Geocode,
     GeocodeRematch = opts.GeocodeRematch,
-    Export         = opts.Export,
-    ExportSince    = opts.ExportSince,
+    Export = opts.Export,
+    ExportSince = opts.ExportSince,
     // Tabs intentionally left null: the CLI has no tab picker, so a full run
     // always scrapes every configured tab.
-    OutputDir      = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(opts.Db))!, "output"),
+    OutputDir = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(opts.Db))!, "output"),
 };
 
 // Close the maintenance connection — PipelineRunner opens its own.
@@ -196,7 +196,10 @@ sealed class ConsoleReporter
     public void Bar(StepProgress p)
     {
         // No sensible bar when there's no work, or when output is redirected to a file.
-        if (p.Total <= 0 || Console.IsOutputRedirected) return;
+        if (p.Total <= 0 || Console.IsOutputRedirected)
+        {
+            return;
+        }
 
         lock (_gate)
         {
@@ -220,5 +223,8 @@ sealed class ConsoleReporter
 /// <summary>Synchronous <see cref="IProgress{T}"/> — reports on the calling thread so console output stays ordered.</summary>
 sealed class SyncProgress<T>(Action<T> handler) : IProgress<T>
 {
-    public void Report(T value) => handler(value);
+    public void Report(T value)
+    {
+        handler(value);
+    }
 }

@@ -17,8 +17,15 @@ public static class LogTextBehavior
             "Line", typeof(string), typeof(LogTextBehavior),
             new PropertyMetadata(null, OnLineChanged));
 
-    public static void SetLine(DependencyObject d, string value) => d.SetValue(LineProperty, value);
-    public static string GetLine(DependencyObject d) => (string)d.GetValue(LineProperty);
+    public static void SetLine(DependencyObject d, string value)
+    {
+        d.SetValue(LineProperty, value);
+    }
+
+    public static string GetLine(DependencyObject d)
+    {
+        return (string)d.GetValue(LineProperty);
+    }
 
     private static void OnLineChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {

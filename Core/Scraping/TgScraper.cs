@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using AngleSharp.Dom;
 using Microsoft.Data.Sqlite;
 using Microsoft.Playwright;
@@ -27,6 +29,7 @@ public static class TgScraper
         int FirstTabCount = 0, int TabsAttempted = 0, int TabsWithItems = 0, string? Reason = null,
         List<string>? PageTabs = null);
 
+    [SuppressMessage("Maintainability", "CA1502", Justification = "Measured 37. Decomposing the scrape loop must keep its per-page catches and cancellation checks; plan WP-M1.")]
     public static async Task ScrapeAsync(
         ChainConfig chain, SqliteConnection conn,
         IProgress<string>? progress = null, CancellationToken ct = default,
@@ -59,7 +62,7 @@ public static class TgScraper
         {
             // Keep only the user-selected tabs, preserving the discovered order.
             HashSet<string> allowed = new(tabFilter, StringComparer.Ordinal);
-            tabs = tabs.Where(allowed.Contains).ToList();
+            tabs = [.. tabs.Where(allowed.Contains)];
         }
         if (tabs.Count > 0)
         {
@@ -209,7 +212,7 @@ public static class TgScraper
                 if (attempt >= MaxPageAttempts)
                 {
                     progress?.Report($"      ⚠ skipped after {MaxPageAttempts} attempts: {ex.Message}");
-                    return new TgPageData(null, null, new List<(string, decimal)>(),
+                    return new TgPageData(null, null, [],
                         Reason: $"failed after {MaxPageAttempts} attempts");
                 }
                 progress?.Report(
@@ -217,7 +220,7 @@ public static class TgScraper
                 await Task.Delay(2_000, ct);
             }
         }
-        return new TgPageData(null, null, new List<(string, decimal)>(), Reason: "unreachable");
+        return new TgPageData(null, null, [], Reason: "unreachable");
     }
 
     /// <summary>
@@ -229,8 +232,8 @@ public static class TgScraper
         IPage page, string platformSlug, string slug, List<string> tabs, CancellationToken ct = default)
     {
         string url = $"{TgBaseUrl}{platformSlug}/{slug}?gel-al";
-        List<(string, decimal)> results = new();
-        HashSet<string> seen = new();
+        List<(string, decimal)> results = [];
+        HashSet<string> seen = [];
 
         // Closing the page on cancellation makes any pending navigation/wait
         // throw at once, so Cancel takes effect mid-page rather than only at
@@ -281,7 +284,7 @@ public static class TgScraper
 
         // Inactive-restaurant / Next.js server-error detection: these pages
         // render only navigation/footer, with no product data at all.
-        if (firstPageHtml.Contains("E{\"digest\":"))
+        if (firstPageHtml.Contains("E{\"digest\":", StringComparison.Ordinal))
         {
             return new TgPageData(null, null, results, Reason: "inactive/closed page (digest marker)");
         }
@@ -324,9 +327,7 @@ public static class TgScraper
                 // JSON payload, not real DOM nodes. Section headings aren't
                 // rendered in the static HTML, so pass tabName=null and take
                 // every item found.
-                tabItems = NextJsTabParser.Parse(firstPageHtml, tabName: null)
-                    .Select(m => (m.Name, m.Price))
-                    .ToList();
+                tabItems = [.. NextJsTabParser.Parse(firstPageHtml, tabName: null).Select(m => (m.Name, m.Price))];
             }
             else
             {
@@ -396,7 +397,7 @@ public static class TgScraper
                 """);
             if (names is null)
             {
-                return new List<string>();
+                return [];
             }
             HashSet<string> seen = new(StringComparer.Ordinal);
             List<string> result = new(names.Length);
@@ -411,7 +412,7 @@ public static class TgScraper
         }
         catch
         {
-            return new List<string>();
+            return [];
         }
     }
 
@@ -435,8 +436,16 @@ public static class TgScraper
         DateTime deadline = DateTime.UtcNow + TimeSpan.FromMilliseconds(timeoutMs);
         while (DateTime.UtcNow < deadline)
         {
-            if (html.Contains("E{\"digest\":")) break;            // inactive page — nothing to await
-            if (NextJsTabParser.Parse(html, tabName: null).Count > 0) break;
+            if (html.Contains("E{\"digest\":", StringComparison.Ordinal))
+            {
+                break;            // inactive page — nothing to await
+            }
+
+            if (NextJsTabParser.Parse(html, tabName: null).Count > 0)
+            {
+                break;
+            }
+
             await page.WaitForTimeoutAsync(750);
             html = await page.ContentAsync();
         }
@@ -613,8 +622,11 @@ public static class TgScraper
         }
     }
 
-    private static string? Norm(string? s) =>
-        string.IsNullOrWhiteSpace(s) ? null : System.Net.WebUtility.HtmlDecode(s.Trim());
+    private static string? Norm(string? s)
+    {
+        return string.IsNullOrWhiteSpace(s) ? null : System.Net.WebUtility.HtmlDecode(s.Trim());
+    }
+
     private static async Task<bool> TryClickTabAsync(IPage page, string tabName)
     {
         try
@@ -651,14 +663,14 @@ public static class TgScraper
     {
         IDocument doc = await PageFetcher.ParseHtmlAsync(html, url);
         IElement? grid = doc.QuerySelectorAll("div.grid")
-            .FirstOrDefault(g => (g.ClassName ?? "").Contains("lg:grid-cols-2"));
+            .FirstOrDefault(g => (g.ClassName ?? "").Contains("lg:grid-cols-2", StringComparison.Ordinal));
         if (grid is null)
         {
-            return new List<(string, decimal)>();
+            return [];
         }
 
-        List<(string, decimal)> results = new();
-        HashSet<string> seen = new();
+        List<(string, decimal)> results = [];
+        HashSet<string> seen = [];
 
         foreach (IElement titleEl in grid.QuerySelectorAll("#restaurant-card-title"))
         {
@@ -670,7 +682,7 @@ public static class TgScraper
 
             IElement? card = titleEl.Closest("div.flex-col") ?? titleEl.ParentElement;
             IElement? priceEl = card?.QuerySelectorAll("span, div")
-                .FirstOrDefault(e => (e.ClassName ?? "").Contains("text-marker") || (e.ClassName ?? "").Contains("text-errorText"));
+                .FirstOrDefault(e => (e.ClassName ?? "").Contains("text-marker", StringComparison.Ordinal) || (e.ClassName ?? "").Contains("text-errorText", StringComparison.Ordinal));
             if (priceEl is null)
             {
                 continue;
@@ -720,7 +732,7 @@ public static class TgScraper
         }
 
         string prefix = $"https://www.tiklagelsin.com/restoran/{platformSlug}/";
-        List<string> slugs = new();
+        List<string> slugs = [];
         foreach (System.Text.RegularExpressions.Match m in
             System.Text.RegularExpressions.Regex.Matches(xml, $@"<loc>\s*{System.Text.RegularExpressions.Regex.Escape(prefix)}([^<?\s]+)"))
         {
@@ -752,7 +764,7 @@ public static class TgScraper
         cmd.CommandText = "SELECT COUNT(*) FROM PLATFORM_LOCATIONS WHERE QSR_ID = $qsr AND PLATFORM_ID = $plat AND ACTIVE = 1;";
         cmd.Parameters.AddWithValue("$qsr", qsrId);
         cmd.Parameters.AddWithValue("$plat", platformId);
-        return Convert.ToInt32(cmd.ExecuteScalar());
+        return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
     }
 
     /// <summary>
@@ -774,7 +786,7 @@ public static class TgScraper
         cmd.Parameters.AddWithValue("$plat", platformId);
         cmd.Parameters.AddWithValue("$run", runId);
 
-        List<(long, string)> result = new();
+        List<(long, string)> result = [];
         using SqliteDataReader reader = cmd.ExecuteReader();
         while (reader.Read())
         {
@@ -791,7 +803,7 @@ public static class TgScraper
         cmd.Parameters.AddWithValue("$qsr", qsrId);
         cmd.Parameters.AddWithValue("$plat", platformId);
 
-        List<(long, string)> result = new();
+        List<(long, string)> result = [];
         using SqliteDataReader reader = cmd.ExecuteReader();
         while (reader.Read())
         {

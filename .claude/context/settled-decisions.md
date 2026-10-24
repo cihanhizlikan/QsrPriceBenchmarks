@@ -25,3 +25,12 @@ writing anything to it; views are dropped and recreated on every open so view fi
 schema notes on `Database` record which unique keys look wrong and are not.
 **Re-opened by** the database becoming a cache that can be rebuilt from a re-scrape — it is not today, because a
 scrape run is a price observation at a moment in time.
+
+## Analyzers are opted in one rule at a time; AnalysisMode=All and CA2000 are declined (2026-10-24)
+
+**Decision.** `AnalysisMode` stays `Default` and the rules worth having are switched on individually in
+`.editorconfig`. **Measured**: `AnalysisMode=All` over Core, Cli and Ui gave 349 sites, led by CA2007 (107 —
+`ConfigureAwait(false)`, wrong for a WPF app whose continuations must return to the UI thread) and CA1062 (39 —
+null guards that nullable reference types already check). CA2000 is off because it cannot see ownership
+transfers (a browser context the session disposes), so it could not be held at zero.
+**Re-opened by** a defect one of the declined rules would have caught.

@@ -142,5 +142,7 @@ public static partial class Geocoder
     }
 
     public static async Task<GeoPoint?> GeocodeAsync(IPage page, string address)
-        => (await GeocodeDetailedAsync(page, address)).Point;
+    {
+        return (await GeocodeDetailedAsync(page, address)).Point;
+    }
 }
