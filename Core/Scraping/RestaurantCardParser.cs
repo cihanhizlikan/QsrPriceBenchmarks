@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using AngleSharp.Dom;
 using QsrPriceBenchmarks.Core.Models;
@@ -14,7 +13,6 @@ namespace QsrPriceBenchmarks.Core.Scraping;
 /// </summary>
 public static class RestaurantCardParser
 {
-    [SuppressMessage("Maintainability", "CA1502", Justification = "Measured 26. Its card-shape fallbacks each encode a site quirk; decomposing is plan WP-M1.")]
     public static List<RestaurantCard> Parse(IDocument document, string baseUrl)
     {
         List<RestaurantCard> results = [];
@@ -43,74 +41,19 @@ public static class RestaurantCardParser
                 continue;
             }
 
-            string? name = null;
-            string? address = null;
-
-            // ── Strategy 1: <a><h3>NAME</h3><p>ADDRESS</p></a> (Usta Dönerci style) ──
-            // The <a> itself is the card container; h3/p are direct children.
-            // Must be tried BEFORE Strategy 2 — Strategy 2's address-class
-            // regex would otherwise match the <a class="restaurant-address">
-            // element itself and return the whole card's concatenated text.
-            IElement? h3 = a.QuerySelector("h3");
-            IElement? pDirect = a.QuerySelector("p");
-            if (h3 is not null && pDirect is not null)
-            {
-                name = Clean(h3.TextContent);
-                // Pick the first <p> that actually looks like an address. Some
-                // chains (e.g. Usta Dönerci) put a numeric badge/count in an
-                // earlier <p>; selecting the first <p> blindly stored "1" as the
-                // address. Skip <p>s that aren't address-like; null if none are.
-                address = a.QuerySelectorAll("p")
-                    .Select(p => Clean(p.TextContent))
-                    .FirstOrDefault(TextNormalization.IsPlausibleAddress);
-            }
-
-            // ── Strategy 2: id="restaurantCardTitle"/"restaurantCardAddress" (BK style) ──
+            // The strategies run in order and the first one that yields a NAME
+            // wins, with its own address. When none does, the link is a bare
+            // navigation link (e.g. a district index link) and is recorded with
+            // name = null, so callers can tell "a link to sub-crawl" from "a
+            // restaurant".
+            (string? name, string? address) = HeadingCard(a);
             if (name is null)
             {
-                IElement? nameEl = a.QuerySelector("#restaurantCardTitle")
-                    ?? a.QuerySelectorAll("*").FirstOrDefault(e =>
-                        ContainsIgnoreCase(e.GetAttribute("id"), "title") ||
-                        ContainsIgnoreCase(e.GetAttribute("id"), "name") ||
-                        ContainsIgnoreCase(e.ClassName, "title") ||
-                        ContainsIgnoreCase(e.ClassName, "name"));
-                IElement? addrEl = a.QuerySelector("#restaurantCardAddress")
-                    ?? a.QuerySelectorAll("*").FirstOrDefault(e =>
-                        ContainsIgnoreCase(e.GetAttribute("id"), "address") ||
-                        ContainsIgnoreCase(e.GetAttribute("id"), "addr") ||
-                        ContainsIgnoreCase(e.ClassName, "address") ||
-                        ContainsIgnoreCase(e.ClassName, "addr"));
-                if (nameEl is not null)
-                {
-                    name = Clean(nameEl.TextContent);
-                    address = addrEl is not null ? Clean(addrEl.TextContent) : null;
-                }
+                (name, address) = IdOrClassCard(a);
             }
-
-            // ── Strategy 3: <a>NAME</a> + sibling <p>/<span> in enclosing
-            //    container (Popeyes style) — the <a> text IS the name, and
-            //    the address is a sibling element inside the nearest
-            //    li/article/div.restaurant wrapper.
             if (name is null)
             {
-                string? aText = Clean(a.TextContent);
-                if (!string.IsNullOrEmpty(aText))
-                {
-                    IElement? container = a.Closest("li, article, div.restaurant") ?? a.ParentElement;
-                    IElement? addrEl = container?.QuerySelectorAll("p, span")
-                        .FirstOrDefault(e => !string.Equals(Clean(e.TextContent), aText, StringComparison.Ordinal));
-                    name = aText;
-                    address = addrEl is not null ? Clean(addrEl.TextContent) : null;
-                }
-            }
-
-            // ── Strategy 4: leaf-text fallback — bare navigation link with no
-            //    structured name/address (e.g. a district index link).
-            //    Recorded with name = null so callers can distinguish "this is
-            //    a navigation link to sub-crawl" from "this is a restaurant".
-            if (name is null)
-            {
-                name = null; // explicit: a bare link is never treated as a named card.
+                (name, address) = ContainerCard(a);
             }
 
             // ── Final guard ──────────────────────────────────────────────────
@@ -131,6 +74,76 @@ public static class RestaurantCardParser
         }
 
         return results;
+    }
+
+    /// <summary>
+    /// Strategy 1: <c>&lt;a&gt;&lt;h3&gt;NAME&lt;/h3&gt;&lt;p&gt;ADDRESS&lt;/p&gt;&lt;/a&gt;</c>
+    /// (Usta Dönerci style) — the &lt;a&gt; itself is the card container. Must be
+    /// tried BEFORE <see cref="IdOrClassCard"/>, whose address-class match would
+    /// otherwise hit the &lt;a class="restaurant-address"&gt; itself and return the
+    /// whole card's concatenated text.
+    /// </summary>
+    private static (string? Name, string? Address) HeadingCard(IElement a)
+    {
+        IElement? h3 = a.QuerySelector("h3");
+        if (h3 is null || a.QuerySelector("p") is null)
+        {
+            return (null, null);
+        }
+
+        // The first <p> that actually looks like an address. Some chains (e.g.
+        // Usta Dönerci) put a numeric badge/count in an earlier <p>; taking the
+        // first <p> blindly stored "1" as the address. Null if none are address-like.
+        string? address = a.QuerySelectorAll("p")
+            .Select(p => Clean(p.TextContent))
+            .FirstOrDefault(TextNormalization.IsPlausibleAddress);
+        return (Clean(h3.TextContent), address);
+    }
+
+    /// <summary>
+    /// Strategy 2: <c>id="restaurantCardTitle"</c> / <c>"restaurantCardAddress"</c>
+    /// (BK style), or any descendant whose id or class says title/name and
+    /// address/addr.
+    /// </summary>
+    private static (string? Name, string? Address) IdOrClassCard(IElement a)
+    {
+        IElement? nameEl = a.QuerySelector("#restaurantCardTitle")
+            ?? a.QuerySelectorAll("*").FirstOrDefault(e =>
+                ContainsIgnoreCase(e.GetAttribute("id"), "title") ||
+                ContainsIgnoreCase(e.GetAttribute("id"), "name") ||
+                ContainsIgnoreCase(e.ClassName, "title") ||
+                ContainsIgnoreCase(e.ClassName, "name"));
+        if (nameEl is null)
+        {
+            return (null, null);
+        }
+
+        IElement? addrEl = a.QuerySelector("#restaurantCardAddress")
+            ?? a.QuerySelectorAll("*").FirstOrDefault(e =>
+                ContainsIgnoreCase(e.GetAttribute("id"), "address") ||
+                ContainsIgnoreCase(e.GetAttribute("id"), "addr") ||
+                ContainsIgnoreCase(e.ClassName, "address") ||
+                ContainsIgnoreCase(e.ClassName, "addr"));
+        return (Clean(nameEl.TextContent), addrEl is not null ? Clean(addrEl.TextContent) : null);
+    }
+
+    /// <summary>
+    /// Strategy 3: <c>&lt;a&gt;NAME&lt;/a&gt;</c> + a sibling &lt;p&gt;/&lt;span&gt; in the
+    /// enclosing container (Popeyes style) — the &lt;a&gt; text IS the name, and the
+    /// address is a sibling inside the nearest li/article/div.restaurant wrapper.
+    /// </summary>
+    private static (string? Name, string? Address) ContainerCard(IElement a)
+    {
+        string? aText = Clean(a.TextContent);
+        if (string.IsNullOrEmpty(aText))
+        {
+            return (null, null);
+        }
+
+        IElement? container = a.Closest("li, article, div.restaurant") ?? a.ParentElement;
+        IElement? addrEl = container?.QuerySelectorAll("p, span")
+            .FirstOrDefault(e => !string.Equals(Clean(e.TextContent), aText, StringComparison.Ordinal));
+        return (aText, addrEl is not null ? Clean(addrEl.TextContent) : null);
     }
 
     private static bool ContainsIgnoreCase(string? haystack, string needle)

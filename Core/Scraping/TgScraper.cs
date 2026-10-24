@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using AngleSharp.Dom;
 using Microsoft.Data.Sqlite;
@@ -29,7 +28,6 @@ public static class TgScraper
         int FirstTabCount = 0, int TabsAttempted = 0, int TabsWithItems = 0, string? Reason = null,
         List<string>? PageTabs = null);
 
-    [SuppressMessage("Maintainability", "CA1502", Justification = "Measured 37. Decomposing the scrape loop must keep its per-page catches and cancellation checks; plan WP-M1.")]
     public static async Task ScrapeAsync(
         ChainConfig chain, SqliteConnection conn,
         IProgress<string>? progress = null, CancellationToken ct = default,
@@ -43,31 +41,8 @@ public static class TgScraper
 
         await HarvestSitemapSlugsAsync(chain, conn, qsrId, platformId, platformSlug, progress);
 
-        // knownTabs = every tab currently selectable (the full ACTIVE set, before
-        // the user's filter): the reference set for discovering NEW tabs on pages.
-        List<string> activeTabs = Repository.LoadScrapeTabs(conn, qsrId, platformId);
-        HashSet<string> knownTabs = new(activeTabs, StringComparer.Ordinal);
-        List<string> tabs = activeTabs;
-        if (tabs.Count == 0)
-        {
-            // No tabs known yet (fresh database — tabs are never hardcoded, only
-            // discovered). This pass becomes a DISCOVERY run: every page is still
-            // visited and its restaurant name/address persisted, and the tab bar
-            // of each page feeds the discovery below — so the tab list is fully
-            // populated for the next run — but no menu items can be collected yet.
-            progress?.Report("  ⓘ No tabs known for this chain yet — this run will discover them");
-            progress?.Report("    (menu items will be collected from the NEXT run on)");
-        }
-        if (tabFilter is not null)
-        {
-            // Keep only the user-selected tabs, preserving the discovered order.
-            HashSet<string> allowed = new(tabFilter, StringComparer.Ordinal);
-            tabs = [.. tabs.Where(allowed.Contains)];
-        }
-        if (tabs.Count > 0)
-        {
-            progress?.Report($"  Tabs: {string.Join(", ", tabs)}");
-        }
+        (List<string> tabs, HashSet<string> knownTabs) =
+            ResolveTabs(conn, qsrId, platformId, tabFilter, progress);
 
         // Union of tab names actually seen on pages during this run — feeds the
         // end-of-run soft-delete reconciliation of SCRAPE_TABS.
@@ -98,65 +73,15 @@ public static class TgScraper
                 TgPageData pageData = await ScrapeOnePageWithRetryAsync(
                     page, platformSlug, slug, tabs, progress, ct);
 
-                if (pageData.Reason is not null
-                    && (pageData.Reason.StartsWith("failed after", StringComparison.Ordinal)
-                        || pageData.Reason.StartsWith("navigation timed out", StringComparison.Ordinal)))
+                if (IsTechnicalFailure(pageData))
                 {
                     // A page we couldn't read might have shown a tab nobody else
                     // has — one such gap forbids the soft-delete reconciliation.
                     anyPageTechnicallyFailed = true;
                 }
 
-                if (pageData.PageTabs is not null)
-                {
-                    foreach (string pageTab in pageData.PageTabs)
-                    {
-                        observedTabs.Add(pageTab);
-                        if (knownTabs.Add(pageTab))
-                        {
-                            // New (or previously soft-deleted) tab spotted live on
-                            // the platform: record it as selectable from the NEXT
-                            // run on — the tab list of the run in progress is fixed.
-                            Repository.UpsertDiscoveredScrapeTab(conn, qsrId, platformId, pageTab);
-                            progress?.Report(
-                                $"      🆕 New tab \"{pageTab}\" discovered — selectable from the next run");
-                        }
-                    }
-                }
-
-                // Persist the restaurant's own NAME/ADDRESS (needed for Step 3
-                // geocoding and matching), then its menu-item price snapshots.
-                if (pageData.Name is not null || pageData.Address is not null)
-                {
-                    Repository.UpdatePlatformLocation(conn, plId,
-                        name: pageData.Name, address: pageData.Address);
-                }
-
-                IReadOnlyList<(string Name, decimal Price)> items = pageData.Items;
-                if (items.Count == 0)
-                {
-                    string why = pageData.Reason ?? "active page, but SSR + DOM tabs both parsed nothing";
-                    progress?.Report($"      No menu items — {why}");
-                }
-                else
-                {
-                    foreach ((string name, decimal price) in items)
-                    {
-                        long menuItemId = Repository.GetOrCreateMenuItem(conn, qsrId, name);
-                        Repository.InsertSnapshot(conn, runId, plId, menuItemId, price);
-                    }
-                }
-
-                if (pageData.Reason is null)
-                {
-                    progress?.Report(
-                        $"      → {items.Count} item(s)  [first tab {pageData.FirstTabCount}, " +
-                        $"other tabs {pageData.TabsWithItems}/{pageData.TabsAttempted} produced items]");
-                }
-                else
-                {
-                    progress?.Report($"      → {items.Count} menu item(s)");
-                }
+                RecordDiscoveredTabs(conn, qsrId, platformId, pageData, knownTabs, observedTabs, progress);
+                RecordPage(conn, qsrId, runId, plId, pageData, progress);
             }
 
             // Soft-delete reconciliation — only when this run is trustworthy as a
@@ -182,6 +107,118 @@ public static class TgScraper
             // never left stuck in the "running" (no FINISHED_AT) state.
             Repository.FinishScrapeRun(conn, runId);
             progress?.Report($"  ✓ Run {runId} finished.");
+        }
+    }
+
+    /// <summary>
+    /// The tabs this run scrapes (the ACTIVE set, narrowed to the user's filter,
+    /// in discovered order) and the known-tab set new tabs are discovered
+    /// against — every tab currently selectable, BEFORE the filter.
+    /// </summary>
+    private static (List<string> Tabs, HashSet<string> KnownTabs) ResolveTabs(
+        SqliteConnection conn, long qsrId, long platformId,
+        IReadOnlyCollection<string>? tabFilter, IProgress<string>? progress)
+    {
+        List<string> activeTabs = Repository.LoadScrapeTabs(conn, qsrId, platformId);
+        HashSet<string> knownTabs = new(activeTabs, StringComparer.Ordinal);
+        List<string> tabs = activeTabs;
+        if (tabs.Count == 0)
+        {
+            // No tabs known yet (fresh database — tabs are never hardcoded, only
+            // discovered). This pass becomes a DISCOVERY run: every page is still
+            // visited and its restaurant name/address persisted, and the tab bar
+            // of each page feeds the discovery — so the tab list is fully
+            // populated for the next run — but no menu items can be collected yet.
+            progress?.Report("  ⓘ No tabs known for this chain yet — this run will discover them");
+            progress?.Report("    (menu items will be collected from the NEXT run on)");
+        }
+        if (tabFilter is not null)
+        {
+            // Keep only the user-selected tabs, preserving the discovered order.
+            HashSet<string> allowed = new(tabFilter, StringComparer.Ordinal);
+            tabs = [.. tabs.Where(allowed.Contains)];
+        }
+        if (tabs.Count > 0)
+        {
+            progress?.Report($"  Tabs: {string.Join(", ", tabs)}");
+        }
+        return (tabs, knownTabs);
+    }
+
+    /// <summary>True when the page could not be read at all, as opposed to being read and empty.</summary>
+    private static bool IsTechnicalFailure(TgPageData pageData)
+    {
+        return pageData.Reason is not null
+            && (pageData.Reason.StartsWith("failed after", StringComparison.Ordinal)
+                || pageData.Reason.StartsWith("navigation timed out", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Adds the page's tab bar to <paramref name="observedTabs"/>, and records any
+    /// tab not in <paramref name="knownTabs"/> as selectable from the NEXT run.
+    /// </summary>
+    private static void RecordDiscoveredTabs(
+        SqliteConnection conn, long qsrId, long platformId, TgPageData pageData,
+        HashSet<string> knownTabs, HashSet<string> observedTabs, IProgress<string>? progress)
+    {
+        if (pageData.PageTabs is null)
+        {
+            return;
+        }
+        foreach (string pageTab in pageData.PageTabs)
+        {
+            observedTabs.Add(pageTab);
+            if (knownTabs.Add(pageTab))
+            {
+                // New (or previously soft-deleted) tab spotted live on the
+                // platform: selectable from the NEXT run on — the tab list of the
+                // run in progress is fixed.
+                Repository.UpsertDiscoveredScrapeTab(conn, qsrId, platformId, pageTab);
+                progress?.Report(
+                    $"      🆕 New tab \"{pageTab}\" discovered — selectable from the next run");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Persists one page: the restaurant's own NAME/ADDRESS (needed for Step 3
+    /// geocoding and matching), then its menu-item price snapshots, and reports
+    /// what was stored.
+    /// </summary>
+    private static void RecordPage(
+        SqliteConnection conn, long qsrId, long runId, long plId, TgPageData pageData,
+        IProgress<string>? progress)
+    {
+        if (pageData.Name is not null || pageData.Address is not null)
+        {
+            Repository.UpdatePlatformLocation(conn, plId,
+                name: pageData.Name, address: pageData.Address);
+        }
+
+        IReadOnlyList<(string Name, decimal Price)> items = pageData.Items;
+        if (items.Count == 0)
+        {
+            string why = pageData.Reason ?? "active page, but SSR + DOM tabs both parsed nothing";
+            progress?.Report($"      No menu items — {why}");
+        }
+        else
+        {
+            foreach ((string name, decimal price) in items)
+            {
+                long menuItemId = Repository.GetOrCreateMenuItem(conn, qsrId, name);
+                Repository.InsertSnapshot(conn, runId, plId, menuItemId, price);
+            }
+        }
+
+        if (pageData.Reason is null)
+        {
+            progress?.Report(
+                $"      → {items.Count} item(s)  [first tab {pageData.FirstTabCount}, " +
+                $"other tabs {pageData.TabsWithItems}/{pageData.TabsAttempted} produced items]");
+        }
+        else
+        {
+            progress?.Report($"      → {items.Count} menu item(s)");
         }
     }
 

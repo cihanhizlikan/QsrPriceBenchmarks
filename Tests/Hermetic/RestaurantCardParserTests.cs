@@ -73,4 +73,33 @@ public sealed class RestaurantCardParserTests
         Assert.Equal("Arnavutköy Şubesi", card.Name);
         Assert.Equal("Eski Edirne Asfaltı No: 1211/A", card.Address);
     }
+
+    [Fact(DisplayName = "A title/address-id card (Burger King style) takes name and address from those elements")]
+    public async Task IdCard_NameAndAddressFromTheirElements()
+    {
+        RestaurantCard card = (await ParseAsync("""
+            <a href="/restoranlar/istanbul/besiktas">
+              <div id="restaurantCardTitle">Beşiktaş</div>
+              <div id="restaurantCardAddress">Barbaros Bulvarı No: 3</div>
+            </a>
+            """)).Single();
+
+        // Not the link's whole concatenated text, which a later strategy would take.
+        Assert.Equal("Beşiktaş", card.Name);
+        Assert.Equal("Barbaros Bulvarı No: 3", card.Address);
+    }
+
+    [Fact(DisplayName = "A bare link in a container (Popeyes style) takes its address from a sibling")]
+    public async Task ContainerCard_AddressFromSibling()
+    {
+        RestaurantCard card = (await ParseAsync("""
+            <ul><li>
+              <a href="/restoranlar/istanbul/kadikoy">Kadıköy</a>
+              <span>Caferağa Mahallesi No: 5</span>
+            </li></ul>
+            """)).Single();
+
+        Assert.Equal("Kadıköy", card.Name);
+        Assert.Equal("Caferağa Mahallesi No: 5", card.Address);
+    }
 }
