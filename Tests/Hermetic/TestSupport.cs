@@ -1,6 +1,8 @@
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using Microsoft.Data.Sqlite;
 using QsrPriceBenchmarks.Core.Db;
+using QsrPriceBenchmarks.Core.Util;
 using SQLitePCL;
 
 namespace QsrPriceBenchmarks.IntegrationTests.Hermetic;
@@ -62,5 +64,35 @@ internal sealed class TempDb : IDisposable
             }
         }
         catch { /* best-effort cleanup */ }
+    }
+}
+
+/// <summary>
+/// Seeding helpers for tests that need a row the production code only ever
+/// writes in bulk. <see cref="InsertPlatformLocation"/> lived in
+/// <c>Repository</c> as <c>UpsertPlatformLocation</c> with no production
+/// caller; it moved here (plan WP-D2) so the repository holds only what the
+/// app uses.
+/// </summary>
+internal static class TestData
+{
+    /// <summary>
+    /// Inserts one active PLATFORM_LOCATIONS row and returns its ID. The name
+    /// is title-cased the way the production census writes names.
+    /// </summary>
+    public static long InsertPlatformLocation(
+        SqliteConnection conn, long qsrId, long platformId, string slug, string? name = null)
+    {
+        using SqliteCommand cmd = conn.CreateCommand();
+        cmd.CommandText = """
+            INSERT INTO PLATFORM_LOCATIONS (QSR_ID, PLATFORM_ID, SLUG, NAME)
+            VALUES ($qsr, $plat, $slug, $name);
+            SELECT last_insert_rowid();
+            """;
+        cmd.Parameters.AddWithValue("$qsr", qsrId);
+        cmd.Parameters.AddWithValue("$plat", platformId);
+        cmd.Parameters.AddWithValue("$slug", slug);
+        cmd.Parameters.AddWithValue("$name", (object?)TextNormalization.Title(name) ?? DBNull.Value);
+        return Convert.ToInt64(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
     }
 }

@@ -28,11 +28,15 @@ internal static class TestHelpers
         "https://www.tiklagelsin.com/sitemap/sitemap/restoranlar.xml";
 
     private static string? _cachedSitemapXml;
+    // Why the one fetch failed, kept so 28 cases fail fast on the same reason
+    // instead of each waiting out the 45 s timeout again.
+    private static string? _sitemapFailure;
     private static readonly SemaphoreSlim _lock = new(1, 1);
 
     /// <summary>
     /// Returns the first TG restaurant slug for <paramref name="platformSlug"/>
-    /// or null when the chain has no TG listings yet.
+    /// or null when the chain has no TG listings yet. Throws when the sitemap
+    /// itself could not be fetched — see <see cref="GetSitemapAsync"/>.
     /// </summary>
     public static Task<string?> GetFirstSlugFromSitemapAsync(string platformSlug) =>
         GetNthSlugFromSitemapAsync(platformSlug, 1);
@@ -46,11 +50,6 @@ internal static class TestHelpers
     public static async Task<string?> GetNthSlugFromSitemapAsync(string platformSlug, int n)
     {
         string sitemap = await GetSitemapAsync();
-        if (string.IsNullOrWhiteSpace(sitemap))
-        {
-            return null;
-        }
-
         string prefix = $"https://www.tiklagelsin.com/restoran/{platformSlug}/";
         MatchCollection matches = Regex.Matches(sitemap,
             $@"<loc>\s*{Regex.Escape(prefix)}([^/\s<]+)",
@@ -58,22 +57,49 @@ internal static class TestHelpers
         return matches.Count >= n ? matches[n - 1].Groups[1].Value.TrimEnd('/') : null;
     }
 
-    /// <summary>Loads (and caches) the TG sitemap XML once for the whole run.</summary>
+    /// <summary>
+    /// Loads (and caches) the TG sitemap XML once for the whole run. A failed
+    /// fetch — an HTTP error status, an empty body (how TG answers a client it
+    /// blocks), a network error or the timeout — THROWS, every time it is asked
+    /// for: an absent sitemap would otherwise read exactly like "this chain is
+    /// not on TG", and every TG test would pass having asserted nothing.
+    /// </summary>
     private static async Task<string> GetSitemapAsync()
     {
         await _lock.WaitAsync();
         try
         {
-            if (_cachedSitemapXml is null)
+            if (_cachedSitemapXml is null && _sitemapFailure is null)
             {
                 try
                 {
-                    _cachedSitemapXml = await Http.GetStringAsync(TgSitemapUrl);
+                    using HttpResponseMessage response = await Http.GetAsync(TgSitemapUrl);
+                    string body = await response.Content.ReadAsStringAsync();
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        _sitemapFailure = $"HTTP {(int)response.StatusCode} {response.StatusCode}";
+                    }
+                    else if (string.IsNullOrWhiteSpace(body))
+                    {
+                        _sitemapFailure = $"HTTP {(int)response.StatusCode} with an empty body";
+                    }
+                    else
+                    {
+                        _cachedSitemapXml = body;
+                    }
                 }
-                catch
+                catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
                 {
-                    _cachedSitemapXml = ""; // each caller handles a missing sitemap gracefully
+                    _sitemapFailure = $"{ex.GetType().Name}: {ex.Message}";
                 }
+            }
+
+            if (_cachedSitemapXml is null)
+            {
+                throw new InvalidOperationException(
+                    $"The Tıkla Gelsin sitemap could not be fetched ({_sitemapFailure}) from {TgSitemapUrl}. " +
+                    "This is the site or the network, not the scraper — but without the sitemap a chain " +
+                    "that is not on TG cannot be told apart from TG being unreachable, so the test fails.");
             }
             return _cachedSitemapXml;
         }
