@@ -706,9 +706,12 @@ public sealed class MainViewModel : ViewModelBase
                     {
                         qsrId = Repository.QsrId(conn, chainName);
                     }
-                    catch
+                    catch (InvalidOperationException)
                     {
-                        qsrId = -1; // chain not seeded yet (no Step 1 data)
+                        // Repository.QsrId's "QSR not found": the chain is not seeded
+                        // yet (no Step 1 data). Any other failure is a real read error
+                        // and reaches the catch below, which logs it.
+                        qsrId = -1;
                     }
 
                     if (qsrId > 0)
@@ -756,7 +759,7 @@ public sealed class MainViewModel : ViewModelBase
                 byProvince.TryGetValue(TurkeyMap.Normalize(name), out (int Total, List<string> Districts) agg);
                 cells.Add(new MapCellViewModel
                 {
-                    ProvinceName = name, // the map's proper Turkish district name
+                    ProvinceName = name, // the map's proper Turkish province name
                     Shape = shape,
                     DotLeft = cx - MapCellViewModel.DotBox / 2,
                     DotTop = cy - MapCellViewModel.DotBox / 2,
@@ -1004,7 +1007,14 @@ public sealed class MainViewModel : ViewModelBase
                 }
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            // Best effort — a chain without its logo still shows its initials —
+            // but never silent: an empty catch here once hid every logo after the
+            // first one.
+            Application.Current.Dispatcher.Invoke(() =>
+                LogLines.Add($"  ⚠ Chain logos could not be read from '{DbPath}': {ex.Message}"));
+        }
     });
     }
 
