@@ -196,7 +196,10 @@ sealed class ConsoleReporter
     public void Bar(StepProgress p)
     {
         // No sensible bar when there's no work, or when output is redirected to a file.
-        if (p.Total <= 0 || Console.IsOutputRedirected) return;
+        if (p.Total <= 0 || Console.IsOutputRedirected)
+        {
+            return;
+        }
 
         lock (_gate)
         {
@@ -220,5 +223,8 @@ sealed class ConsoleReporter
 /// <summary>Synchronous <see cref="IProgress{T}"/> — reports on the calling thread so console output stays ordered.</summary>
 sealed class SyncProgress<T>(Action<T> handler) : IProgress<T>
 {
-    public void Report(T value) => handler(value);
+    public void Report(T value)
+    {
+        handler(value);
+    }
 }

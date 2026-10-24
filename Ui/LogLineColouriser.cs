@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Windows.Documents;
 using System.Windows.Media;
@@ -55,26 +54,28 @@ public static class LogLineColouriser
         // Whole-line categories first (match Python precedence).
         if (stripped.Length > 0 &&
             (stripped[0] is '\u2500' or '\u2550' or '\u2501' || ReSeparator.IsMatch(stripped)))
-            return new[] { new Run(LogMarkup.Strip(msg)) { Foreground = DimCyan } };
+        {
+            return [new Run(LogMarkup.Strip(msg)) { Foreground = DimCyan }];
+        }
 
         if (stripped.StartsWith('✗'))
         {
-            return new[] { new Run(LogMarkup.Strip(msg)) { Foreground = Purple } };
+            return [new Run(LogMarkup.Strip(msg)) { Foreground = Purple }];
         }
 
         if (stripped.StartsWith('⚠') || stripped.StartsWith('\u2139'))
         {
-            return new[] { new Run(LogMarkup.Strip(msg)) { Foreground = DimCyan } };
+            return [new Run(LogMarkup.Strip(msg)) { Foreground = DimCyan }];
         }
 
         // Widget pass: [Step N] and [n/m] both render as dark-bg widgets with
         // light-cyan numbers and white brackets/slash. Find every widget match
         // in order, colour the gaps between them as normal segments.
-        List<Run> runs = new();
+        List<Run> runs = [];
         int cursor = 0;
 
         // Collect all widget matches (step tags + ratios), ordered by position.
-        List<(int Start, int Len, Run[] Parts)> widgets = new();
+        List<(int Start, int Len, Run[] Parts)> widgets = [];
         foreach (Match m in ReStepTag.Matches(msg))
         {
             widgets.Add((m.Index, m.Length, StepRuns(m.Groups[1].Value)));
@@ -107,29 +108,38 @@ public static class LogLineColouriser
     }
 
     /// <summary>Runs for a [Step N] widget: white brackets, light-cyan number, dark bg.</summary>
-    private static Run[] StepRuns(string num) => new[]
+    private static Run[] StepRuns(string num)
     {
+        return
+    [
         new Run("[Step ") { Foreground = White,     Background = StepBg },
         new Run(num)      { Foreground = LightCyan, Background = StepBg },
         new Run("]")      { Foreground = White,     Background = StepBg },
-    };
+    ];
+    }
 
     /// <summary>Runs for a [n/m] ratio widget: white brackets/slash, light-cyan numbers, dark bg.</summary>
-    private static Run[] RatioRuns(string cur, string tot) => new[]
+    private static Run[] RatioRuns(string cur, string tot)
     {
+        return
+    [
         new Run("[")  { Foreground = White,     Background = StepBg },
         new Run(cur)  { Foreground = LightCyan, Background = StepBg },
         new Run("/")  { Foreground = White,     Background = StepBg },
         new Run(tot)  { Foreground = LightCyan, Background = StepBg },
         new Run("]")  { Foreground = White,     Background = StepBg },
-    };
+    ];
+    }
 
     private static IEnumerable<Run> ColourSegment(string seg)
     {
-        if (string.IsNullOrEmpty(seg)) yield break;
+        if (string.IsNullOrEmpty(seg))
+        {
+            yield break;
+        }
 
         // Protected spans: marked values (dim cyan), SKIP/FORCE (dark bg), URLs (dim cyan).
-        List<(int Start, int End, Run Run)> spans = new();
+        List<(int Start, int End, Run Run)> spans = [];
         foreach (Match m in ReValue.Matches(seg))
         {
             spans.Add((m.Index, m.Index + m.Length,
@@ -148,7 +158,7 @@ public static class LogLineColouriser
         spans.Sort((a, b) => a.Start.CompareTo(b.Start));
 
         // Remove overlaps (first-wins, matches Python).
-        List<(int Start, int End, Run Run)> clean = new();
+        List<(int Start, int End, Run Run)> clean = [];
         int end = 0;
         foreach ((int Start, int End, Run Run) s in spans)
         {
@@ -179,7 +189,11 @@ public static class LogLineColouriser
 
     private static IEnumerable<Run> ColourText(string t)
     {
-        if (string.IsNullOrEmpty(t)) yield break;
+        if (string.IsNullOrEmpty(t))
+        {
+            yield break;
+        }
+
         int last = 0;
         foreach (Match m in ReSymbolsNum.Matches(t))
         {

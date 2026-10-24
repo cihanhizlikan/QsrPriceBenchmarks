@@ -1,7 +1,7 @@
+using AngleSharp.Dom;
 using Microsoft.Playwright;
 using QsrPriceBenchmarks.Core.Models;
 using QsrPriceBenchmarks.Core.Scraping;
-using QsrPriceBenchmarks.Core.Util;
 using QsrPriceBenchmarks.IntegrationTests.Fixtures;
 using Xunit;
 
@@ -35,11 +35,11 @@ public sealed class ChainWebsiteTests(PlaywrightFixture pw)
         ChainConfig chain = TestHelpers.RequireChain(platformSlug);
         Assert.NotNull(chain.RootUrl);
 
-        var (ctx, page) = await pw.NewPageAsync();
-        await using var _ = ctx;
+        (IBrowserContext ctx, IPage page) = await pw.NewPageAsync();
+        await using IBrowserContext _ = ctx;
 
-        var html = await FetchWithScrollAsync(page, chain.RootUrl!, chain.ContentSelector);
-        var doc = await PageFetcher.ParseHtmlAsync(html, chain.RootUrl!);
+        string html = await FetchWithScrollAsync(page, chain.RootUrl!, chain.ContentSelector);
+        IDocument doc = await PageFetcher.ParseHtmlAsync(html, chain.RootUrl!);
         List<string> provinceLinks = UrlUtils.ParseDepthLinks(doc, chain.RootUrl!, depthOffset: 1);
 
         Assert.True(provinceLinks.Count > 0,
@@ -61,12 +61,12 @@ public sealed class ChainWebsiteTests(PlaywrightFixture pw)
         ChainConfig chain = TestHelpers.RequireChain(platformSlug);
         Assert.NotNull(chain.RootUrl);
 
-        var (ctx, page) = await pw.NewPageAsync();
-        await using var _ = ctx;
+        (IBrowserContext ctx, IPage page) = await pw.NewPageAsync();
+        await using IBrowserContext _ = ctx;
 
         // ── Root → first province link ────────────────────────────────────────────
-        var rootHtml = await FetchWithScrollAsync(page, chain.RootUrl!, chain.ContentSelector);
-        var rootDoc = await PageFetcher.ParseHtmlAsync(rootHtml, chain.RootUrl!);
+        string rootHtml = await FetchWithScrollAsync(page, chain.RootUrl!, chain.ContentSelector);
+        IDocument rootDoc = await PageFetcher.ParseHtmlAsync(rootHtml, chain.RootUrl!);
         List<string> provinceLinks = UrlUtils.ParseDepthLinks(rootDoc, chain.RootUrl!, depthOffset: 1);
 
         Assert.True(provinceLinks.Count > 0,
@@ -76,7 +76,7 @@ public sealed class ChainWebsiteTests(PlaywrightFixture pw)
         //    Chain sites vary: some list restaurants directly at depth 1,
         //    others go root→province→district→restaurant (depth 3 after root).
         //    We try up to 3 hops before giving up.
-        var namedCard = await FindFirstNamedCardAsync(page, chain.RootUrl!, provinceLinks[0], maxDepth: 3);
+        RestaurantCard? namedCard = await FindFirstNamedCardAsync(page, chain.RootUrl!, provinceLinks[0], maxDepth: 3);
 
         Assert.True(namedCard is not null,
             $"[{chain.Name}] No restaurant card with a non-null Name found " +
@@ -141,13 +141,13 @@ public sealed class ChainWebsiteTests(PlaywrightFixture pw)
     private async Task<Core.Models.RestaurantCard?> FindFirstNamedCardAsync(
         IPage page, string rootUrl, string startUrl, int maxDepth)
     {
-        Queue<(string Url, int Depth)> queue = new();
+        Queue<(string Url, int Depth)> queue = [];
         queue.Enqueue((startUrl, 1));
-        HashSet<string> visited = new() { startUrl };
+        HashSet<string> visited = [startUrl];
 
         while (queue.Count > 0)
         {
-            var (url, depth) = queue.Dequeue();
+            (string url, int depth) = queue.Dequeue();
 
             string html;
             try
@@ -159,12 +159,12 @@ public sealed class ChainWebsiteTests(PlaywrightFixture pw)
                 continue;
             }
 
-            var doc = await PageFetcher.ParseHtmlAsync(html, url);
+            IDocument doc = await PageFetcher.ParseHtmlAsync(html, url);
             List<RestaurantCard> cards = RestaurantCardParser.Parse(doc, url);
 
             // A "real" restaurant card has a name AND sits at URL depth > root.
             List<string> rootParts = UrlUtils.SplitPath(new Uri(rootUrl).AbsolutePath);
-            var named = cards.FirstOrDefault(c =>
+            RestaurantCard? named = cards.FirstOrDefault(c =>
                 c.Name is not null &&
                 UrlUtils.SplitPath(new Uri(c.Url).AbsolutePath).Count > rootParts.Count + 1);
 
@@ -177,7 +177,7 @@ public sealed class ChainWebsiteTests(PlaywrightFixture pw)
             if (depth < maxDepth)
             {
                 List<string> subLinks = UrlUtils.ParseDepthLinks(doc, url, depthOffset: 1);
-                foreach (var sub in subLinks.Take(3)) // limit breadth for test speed
+                foreach (string? sub in subLinks.Take(3)) // limit breadth for test speed
                 {
                     if (visited.Add(sub))
                     {

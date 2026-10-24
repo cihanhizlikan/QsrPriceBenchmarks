@@ -30,17 +30,41 @@ public static class ConsoleColouriser
     public static bool Enabled { get; set; } = true;
 
     // ── Low-level wrappers ─────────────────────────────────────────────────────
-    private static string Wrap(string code, string text) =>
-        Enabled ? $"{Esc}[{code}m{text}{Reset}" : text;
+    private static string Wrap(string code, string text)
+    {
+        return Enabled ? $"{Esc}[{code}m{text}{Reset}" : text;
+    }
 
-    public static string LightCyan(string t) => Wrap(Lc, t);
-    public static string DimCyan(string t) => Wrap(DimLc, t);
-    public static string White(string t) => Wrap(W, t);
-    public static string Purple(string t) => Wrap(Pur, t);
-    public static string Bold(string t) => Wrap("1", t);
+    public static string LightCyan(string t)
+    {
+        return Wrap(Lc, t);
+    }
+
+    public static string DimCyan(string t)
+    {
+        return Wrap(DimLc, t);
+    }
+
+    public static string White(string t)
+    {
+        return Wrap(W, t);
+    }
+
+    public static string Purple(string t)
+    {
+        return Wrap(Pur, t);
+    }
+
+    public static string Bold(string t)
+    {
+        return Wrap("1", t);
+    }
 
     /// <summary>Dark-gray bg, white text — for SKIP/FORCE labels.</summary>
-    private static string DGrayBg(string t) => Wrap($"{Bg};{W}", t);
+    private static string DGrayBg(string t)
+    {
+        return Wrap($"{Bg};{W}", t);
+    }
 
     // ── Pre-compiled regexes (mirror Python's _RE_* constants) ────────────────
     private static readonly Regex ReSkipForce = new(@"\b(SKIP|FORCE)\b", RegexOptions.Compiled);
@@ -55,7 +79,11 @@ public static class ConsoleColouriser
     // ── [n/m] ratio widget: numbers light cyan, brackets+slash white, dark bg ─
     private static string Ratio(string cur, string tot)
     {
-        if (!Enabled) return $"[{cur}/{tot}]";
+        if (!Enabled)
+        {
+            return $"[{cur}/{tot}]";
+        }
+
         string inner = $"{Esc}[{W}m[{Esc}[{Lc}m{cur}{Esc}[{W}m/{Esc}[{Lc}m{tot}{Esc}[{W}m]";
         return $"{Esc}[{Bg}m{inner}{Reset}";
     }
@@ -63,7 +91,11 @@ public static class ConsoleColouriser
     // ── [Step N] widget: 'Step ' white, number light cyan, dark-gray bg ───────
     private static string Step(string tag)
     {
-        if (!Enabled) return $"[{tag}]";
+        if (!Enabled)
+        {
+            return $"[{tag}]";
+        }
+
         Match m = ReTagSuffix.Match(tag);
         string inner = m.Success
             ? $"{Esc}[{W}m[{m.Groups[1].Value}{Esc}[{Lc}m{m.Groups[2].Value}{Esc}[{W}m]"
@@ -74,11 +106,14 @@ public static class ConsoleColouriser
     // ── Colour a plain (escape-free) text segment ─────────────────────────────
     private static string ColourSegment(string seg)
     {
-        if (string.IsNullOrEmpty(seg)) return seg;
+        if (string.IsNullOrEmpty(seg))
+        {
+            return seg;
+        }
 
         // Protected spans in document order, overlaps removed
         // (marked values + URL + SKIP/FORCE).
-        List<(int Start, int End, string Coloured)> spans = new();
+        List<(int Start, int End, string Coloured)> spans = [];
         foreach (Match m in ReValue.Matches(seg))
         {
             spans.Add((m.Index, m.Index + m.Length, DimCyan(m.Groups[1].Value)));
@@ -93,7 +128,7 @@ public static class ConsoleColouriser
         }
         spans.Sort((a, b) => a.Start.CompareTo(b.Start));
 
-        List<(int Start, int End, string Coloured)> clean = new();
+        List<(int Start, int End, string Coloured)> clean = [];
         int end = 0;
         foreach ((int s, int e, string col) in spans)
         {
@@ -104,27 +139,47 @@ public static class ConsoleColouriser
         int pos = 0;
         foreach ((int s, int e, string col) in clean)
         {
-            if (s > pos) sb.Append(ColourText(seg[pos..s]));
+            if (s > pos)
+            {
+                sb.Append(ColourText(seg[pos..s]));
+            }
+
             sb.Append(col);
             pos = e;
         }
-        if (pos < seg.Length) sb.Append(ColourText(seg[pos..]));
+        if (pos < seg.Length)
+        {
+            sb.Append(ColourText(seg[pos..]));
+        }
+
         return sb.ToString();
     }
 
     // ── Colour numbers/symbols light cyan, everything else white ──────────────
     private static string ColourText(string t)
     {
-        if (string.IsNullOrEmpty(t)) return t;
+        if (string.IsNullOrEmpty(t))
+        {
+            return t;
+        }
+
         StringBuilder sb = new();
         int last = 0;
         foreach (Match m in ReSymbolsNum.Matches(t))
         {
-            if (m.Index > last) sb.Append(White(t[last..m.Index]));
+            if (m.Index > last)
+            {
+                sb.Append(White(t[last..m.Index]));
+            }
+
             sb.Append(LightCyan(m.Value));
             last = m.Index + m.Length;
         }
-        if (last < t.Length) sb.Append(White(t[last..]));
+        if (last < t.Length)
+        {
+            sb.Append(White(t[last..]));
+        }
+
         return sb.ToString();
     }
 
@@ -134,23 +189,37 @@ public static class ConsoleColouriser
     /// </summary>
     public static string Colourise(string msg)
     {
-        if (!Enabled) return LogMarkup.Strip(msg);
+        if (!Enabled)
+        {
+            return LogMarkup.Strip(msg);
+        }
 
         string stripped = msg.TrimStart();
 
         // Already coloured (pre-built widget) — pass through.
-        if (msg.Contains(Esc)) return msg;
+        if (msg.Contains(Esc, StringComparison.Ordinal))
+        {
+            return msg;
+        }
 
         // Separator lines (box-drawing or --- / ===) → dim cyan.
         if (stripped.Length > 0 &&
             (stripped[0] is '\u2500' or '\u2550' or '\u2501' || ReSeparator.IsMatch(stripped)))
+        {
             return DimCyan(LogMarkup.Strip(msg));
+        }
 
         // Error lines → purple.
-        if (stripped.StartsWith('✗')) return Purple(LogMarkup.Strip(msg));
+        if (stripped.StartsWith('✗'))
+        {
+            return Purple(LogMarkup.Strip(msg));
+        }
 
         // Info / warning lines → dim cyan.
-        if (stripped.StartsWith('⚠') || stripped.StartsWith('\u2139')) return DimCyan(LogMarkup.Strip(msg));
+        if (stripped.StartsWith('⚠') || stripped.StartsWith('\u2139'))
+        {
+            return DimCyan(LogMarkup.Strip(msg));
+        }
 
         // [Step N] → dark-gray bg widget, then colour the remaining segments.
         msg = ReStepTag.Replace(msg, m => Step($"Step {m.Groups[1].Value}"));
@@ -158,12 +227,12 @@ public static class ConsoleColouriser
         // [n/m] ratio → dark-gray bg widget (matches Python _ratio()).
         msg = ReRatio.Replace(msg, m => Ratio(m.Groups[1].Value, m.Groups[2].Value));
 
-        if (msg.Contains(Esc))
+        if (msg.Contains(Esc, StringComparison.Ordinal))
         {
             // Split on reset, colour only the escape-free parts.
             string[] parts = msg.Split(Reset);
             return string.Join(Reset,
-                parts.Select(p => p.Contains(Esc) ? p : ColourSegment(p)));
+                parts.Select(p => p.Contains(Esc, StringComparison.Ordinal) ? p : ColourSegment(p)));
         }
 
         return ColourSegment(msg);
@@ -173,14 +242,14 @@ public static class ConsoleColouriser
     public static IReadOnlyList<string> BannerLines()
     {
         string[] art =
-        {
+        [
             "   ██████  ███████ ██████  ",
             "   ██  ██ ██      ██   ██ ",
             "   ██  ██ ███████ ██████  ",
             "   ██  ██      ██ ██   ██ ",
             "   ██████  ███████ ██   ██ ",
-        };
-        List<string> lines = new();
+        ];
+        List<string> lines = [];
         for (int i = 0; i < art.Length; i++)
         {
             lines.Add(Bold(i % 2 == 0 ? LightCyan(art[i]) : DimCyan(art[i])));
@@ -188,7 +257,18 @@ public static class ConsoleColouriser
         return lines;
     }
 
-    public static string BannerTitle() => Bold(LightCyan("  QSR Price Benchmarks"));
-    public static string Separator(int n) => DimCyan("  " + new string('─', n));
-    public static string DbLine(string path) => DimCyan($"  DB: {path}");
+    public static string BannerTitle()
+    {
+        return Bold(LightCyan("  QSR Price Benchmarks"));
+    }
+
+    public static string Separator(int n)
+    {
+        return DimCyan("  " + new string('─', n));
+    }
+
+    public static string DbLine(string path)
+    {
+        return DimCyan($"  DB: {path}");
+    }
 }

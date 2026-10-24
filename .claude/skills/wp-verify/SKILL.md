@@ -36,10 +36,10 @@ grep -oE '[A-Za-z0-9_]+\.cs\([0-9]+,[0-9]+\): warning [A-Za-z]+[0-9]+' /tmp/qsr-
 ```
 
 **Never `cut` a warning line before deduplicating it** — two codes can sit at one site, and cutting collapses
-them into a drop that did not happen. **Read the baseline from `master`, not from this file**: build `master`
-the same way if the number matters. As of 2026-10-24 it was 4 sites (`CS8600` ×3 in `Repository.cs` and
-`RestaurantCardParser.cs`, `xUnit2031` in `MatcherTests.cs`); a sweep may have moved it since, and the commit that
-did says so. Any site that is not on `master` is this package's to explain.
+them into a drop that did not happen. **The baseline is ZERO sites** (WP-S4): every rule `.editorconfig` turns
+on was fixed or suppressed at its site with a reason when it landed. Zero is checkable — **any warning at all is
+this package's to explain**, and the repair is the code or a site-level `SuppressMessage` with a justification,
+never a raised baseline.
 
 ## 4. Formatter, into a file that you then READ
 
@@ -48,9 +48,10 @@ dotnet format --verify-no-changes --exclude Installer > /tmp/qsr-format.txt 2>&1
 grep -cE 'WHITESPACE|ENDOFLINE|IDE[0-9]+|CS[0-9]+' /tmp/qsr-format.txt
 ```
 
-**Never `dotnet format … | tail -3; echo $?`** — that reports `tail`'s exit code. With no `.editorconfig`,
-`dotnet format` applies its defaults; compare against `master` rather than against zero, and a non-zero exit is a
-reason to read the file, not a failure by itself.
+**Never `dotnet format … | tail -3; echo $?`** — that reports `tail`'s exit code. **The baseline is exit 0 and
+a count of 0** (WP-S3): alignment whitespace was formatted away when `.editorconfig` landed, so a non-zero result
+is this package's slip. Run `dotnet format whitespace --exclude Installer` (and `style` for IDE fixes) to repair
+it rather than hand-editing.
 
 ## 5. Line endings, if anything was edited with `sed`
 

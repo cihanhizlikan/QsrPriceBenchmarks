@@ -16,7 +16,7 @@ public sealed class ConsoleColouriserTests
         ConsoleColouriser.Enabled = true;
 
         string line = $"  [1/79] Province: {LogMarkup.Value("arnavutkoy")}";
-        var outp = ConsoleColouriser.Colourise(line);
+        string outp = ConsoleColouriser.Colourise(line);
 
         Assert.Contains($"{DimCyanOpen}arnavutkoy{Reset}", outp);
         // The raw markers must never reach the terminal.
@@ -29,7 +29,7 @@ public sealed class ConsoleColouriserTests
     {
         ConsoleColouriser.Enabled = true;
 
-        var outp = ConsoleColouriser.Colourise($"    ↳ {LogMarkup.Value("kadikoy")}");
+        string outp = ConsoleColouriser.Colourise($"    ↳ {LogMarkup.Value("kadikoy")}");
 
         Assert.Contains($"{DimCyanOpen}kadikoy{Reset}", outp);
         Assert.Contains("\u001b[96m↳", outp); // arrow stays light cyan
@@ -41,7 +41,7 @@ public sealed class ConsoleColouriserTests
         try
         {
             ConsoleColouriser.Enabled = false;
-            var outp = ConsoleColouriser.Colourise($"Province: {LogMarkup.Value("izmir")}");
+            string outp = ConsoleColouriser.Colourise($"Province: {LogMarkup.Value("izmir")}");
 
             Assert.Equal("Province: izmir", outp);
         }

@@ -4,10 +4,12 @@ paths: ["**/*.cs"]
 
 # C# Aesthetics (MANDATORY — apply to every edit)
 
-Adopted from Yalbuz on 2026-10-24. **Nothing below is build-enforced in this repository yet** — there is no
-`.editorconfig`, so every rule is reviewer-carried until the plan's enforcement package lands. **Bring existing
-code into compliance when you touch it**, and only the code you touch: a drive-by restyle of a whole file buries
-the change it rides with.
+Adopted from Yalbuz on 2026-10-24. **Rules 1, 2, 5, 7, 8, 10, 11 and 13 are build-enforced** by `.editorconfig`
+(`EnforceCodeStyleInBuild` is on; rule 13 through Roslynator's `RCS1211`), and the solution builds at **zero
+warnings**, so any warning is new and the change that raised it owns it. **Rules 3, 4, 6, 9 and 12 are
+reviewer-carried**: no analyzer prefers `as` to a cast, exception filters to catch-and-retest, or an honest name to
+a vague one, and nothing checks for a trailing blank line or a top-level-statements `Program`. A site that cannot
+comply is suppressed AT the site with `[SuppressMessage(..., Justification = "...")]`, never in a global file.
 
 1. **Never use `var`.** Explicit types, preferring target-typed `new()`: `StringBuilder builder = new();`
 2. **Always use curly brackets** for all control flow, even single-line blocks.

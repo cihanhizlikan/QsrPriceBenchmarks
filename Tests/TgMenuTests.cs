@@ -52,18 +52,24 @@ public sealed class TgMenuTests(PlaywrightFixture pw)
     /// </summary>
     private static async Task<ChainData?> FetchChainDataAsync(PlaywrightFixture pw, string platformSlug)
     {
-        var first = await TestHelpers.GetFirstSlugFromSitemapAsync(platformSlug);
-        if (first is null) return null; // chain not in TG sitemap
+        string? first = await TestHelpers.GetFirstSlugFromSitemapAsync(platformSlug);
+        if (first is null)
+        {
+            return null; // chain not in TG sitemap
+        }
 
-        var (ctx, page) = await pw.NewPageAsync();
-        await using var _ = ctx;
+        (IBrowserContext ctx, IPage page) = await pw.NewPageAsync();
+        await using IBrowserContext _ = ctx;
 
         for (int attempt = 1; attempt <= 4; attempt++)
         {
-            var slug = attempt == 1
+            string? slug = attempt == 1
                 ? first
                 : await TestHelpers.GetNthSlugFromSitemapAsync(platformSlug, attempt);
-            if (slug is null) break;
+            if (slug is null)
+            {
+                break;
+            }
 
             try
             {
@@ -75,17 +81,23 @@ public sealed class TgMenuTests(PlaywrightFixture pw)
 
             await PageFetcher.DismissCookieBannerAsync(page);
 
-            var html = await TgScraper.WaitForMenuPayloadAsync(page);
-            if (html.Contains("E{\"digest\":")) continue;   // inactive — try next slug
+            string html = await TgScraper.WaitForMenuPayloadAsync(page);
+            if (html.Contains("E{\"digest\":"))
+            {
+                continue;   // inactive — try next slug
+            }
 
             List<MenuItem> items = NextJsTabParser.Parse(html, tabName: null);
-            if (items.Count == 0) continue;                    // empty restaurant — try next slug
+            if (items.Count == 0)
+            {
+                continue;                    // empty restaurant — try next slug
+            }
 
-            var (name, address) = await TgScraper.ScrapeRestaurantInfoAsync(page);
+            (string? name, string? address) = await TgScraper.ScrapeRestaurantInfoAsync(page);
             return new ChainData(items, name, address);
         }
 
-        return new ChainData(new List<Core.Models.MenuItem>(), null, null); // none active in sample
+        return new ChainData([], null, null); // none active in sample
     }
 
     // ── Menu items present ───────────────────────────────────────────────────
@@ -94,7 +106,7 @@ public sealed class TgMenuTests(PlaywrightFixture pw)
     [MemberData(nameof(AllSlugs))]
     public async Task TgPage_FirstSitemapSlug_ReturnsMenuItems(string platformSlug)
     {
-        var data = await GetChainDataAsync(platformSlug);
+        ChainData? data = await GetChainDataAsync(platformSlug);
         if (data is null || data.Items.Count == 0)
         {
             return; // chain has no active menu on TG right now — informational skip
@@ -120,11 +132,14 @@ public sealed class TgMenuTests(PlaywrightFixture pw)
     [MemberData(nameof(AllSlugs))]
     public async Task TgPage_Items_HaveReasonablePrices(string platformSlug)
     {
-        var data = await GetChainDataAsync(platformSlug);
-        if (data is null || data.Items.Count == 0) return;
+        ChainData? data = await GetChainDataAsync(platformSlug);
+        if (data is null || data.Items.Count == 0)
+        {
+            return;
+        }
 
         Assert.All(data.Items, item =>
-            Assert.True(item.Price > 0m && item.Price < 100_000m,
+            Assert.True(item.Price is > 0m and < 100_000m,
                 $"[{platformSlug}] '{item.Name}' price {item.Price} TL is outside " +
                 $"expected range. Check PriceParsing for a Turkish locale regression."));
     }
@@ -135,11 +150,14 @@ public sealed class TgMenuTests(PlaywrightFixture pw)
     [MemberData(nameof(AllSlugs))]
     public async Task TgPage_Items_HaveUniqueNames(string platformSlug)
     {
-        var data = await GetChainDataAsync(platformSlug);
-        if (data is null || data.Items.Count == 0) return;
+        ChainData? data = await GetChainDataAsync(platformSlug);
+        if (data is null || data.Items.Count == 0)
+        {
+            return;
+        }
 
-        var names = data.Items.Select(i => i.Name).ToList();
-        var distinct = names.Distinct().ToList();
+        List<string> names = [.. data.Items.Select(i => i.Name)];
+        List<string> distinct = [.. names.Distinct()];
 
         Assert.True(distinct.Count == names.Count,
             $"[{platformSlug}] Duplicate menu item names found: " +
@@ -155,7 +173,7 @@ public sealed class TgMenuTests(PlaywrightFixture pw)
     [MemberData(nameof(AllSlugs))]
     public async Task TgPage_HasRestaurantNameAndAddress(string platformSlug)
     {
-        var data = await GetChainDataAsync(platformSlug);
+        ChainData? data = await GetChainDataAsync(platformSlug);
         if (data is null || data.Items.Count == 0)
         {
             return; // no active restaurant to read name/address from — skip

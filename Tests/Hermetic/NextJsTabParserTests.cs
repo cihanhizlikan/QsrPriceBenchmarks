@@ -27,7 +27,7 @@ public sealed class NextJsTabParserTests
     /// </summary>
     private static string BuildHtml(string innerJson)
     {
-        var escaped = JsonSerializer.Serialize(innerJson); // includes the surrounding quotes
+        string escaped = JsonSerializer.Serialize(innerJson); // includes the surrounding quotes
         return $"<!doctype html><html><body><script>self.__next_f.push([1, {escaped}])</script></body></html>";
     }
 
@@ -46,7 +46,7 @@ public sealed class NextJsTabParserTests
     [Fact(DisplayName = "tabName filter keeps only items under a matching section heading")]
     public void Parse_FiltersByTabName()
     {
-        var html = BuildHtml(InnerJson);
+        string html = BuildHtml(InnerJson);
 
         Assert.Equal(2, NextJsTabParser.Parse(html, tabName: "Popüler Ürünler").Count);
         Assert.Empty(NextJsTabParser.Parse(html, tabName: "Kampanyalar"));

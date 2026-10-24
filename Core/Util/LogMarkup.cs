@@ -19,11 +19,16 @@ public static class LogMarkup
     public const char ValueEnd = '\uE001';
 
     /// <summary>Mark <paramref name="text"/> as a scraped value (rendered dim cyan).</summary>
-    public static string Value(string text) => $"{ValueStart}{text}{ValueEnd}";
+    public static string Value(string text)
+    {
+        return $"{ValueStart}{text}{ValueEnd}";
+    }
 
     /// <summary>Remove any value markers from <paramref name="s"/> (used when colour is off).</summary>
-    public static string Strip(string s) =>
-        s.IndexOf(ValueStart) < 0 && s.IndexOf(ValueEnd) < 0
+    public static string Strip(string s)
+    {
+        return s.IndexOf(ValueStart, StringComparison.Ordinal) < 0 && s.IndexOf(ValueEnd, StringComparison.Ordinal) < 0
             ? s
-            : s.Replace(ValueStart.ToString(), "").Replace(ValueEnd.ToString(), "");
+            : s.Replace(ValueStart.ToString(), "", StringComparison.Ordinal).Replace(ValueEnd.ToString(), "", StringComparison.Ordinal);
+    }
 }

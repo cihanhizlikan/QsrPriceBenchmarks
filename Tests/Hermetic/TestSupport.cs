@@ -54,7 +54,13 @@ internal sealed class TempDb : IDisposable
     {
         Conn.Dispose();
         SqliteConnection.ClearAllPools();
-        try { if (File.Exists(Path)) File.Delete(Path); }
+        try
+        {
+            if (File.Exists(Path))
+            {
+                File.Delete(Path);
+            }
+        }
         catch { /* best-effort cleanup */ }
     }
 }

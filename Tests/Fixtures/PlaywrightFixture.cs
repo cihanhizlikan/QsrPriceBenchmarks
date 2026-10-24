@@ -27,7 +27,7 @@ public sealed class PlaywrightFixture : IAsyncLifetime
         // Idempotent: a fast no-op once the correct browser build is cached,
         // and the one-time download (~150 MB) after a Playwright version bump.
         // Without this, a stale/missing browser fails the whole collection.
-        var exitCode = Microsoft.Playwright.Program.Main(new[] { "install", "chromium" });
+        int exitCode = Microsoft.Playwright.Program.Main(["install", "chromium"]);
         if (exitCode != 0)
         {
             throw new InvalidOperationException(
@@ -45,7 +45,11 @@ public sealed class PlaywrightFixture : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        if (Browser is not null) await Browser.CloseAsync();
+        if (Browser is not null)
+        {
+            await Browser.CloseAsync();
+        }
+
         _playwright?.Dispose();
     }
 
@@ -55,14 +59,14 @@ public sealed class PlaywrightFixture : IAsyncLifetime
     /// </summary>
     public async Task<(IBrowserContext Context, IPage Page)> NewPageAsync()
     {
-        var ctx = await Browser!.NewContextAsync(new BrowserNewContextOptions
+        IBrowserContext ctx = await Browser!.NewContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1280, Height = 900 },
             UserAgent = BrowserSession.DefaultUserAgent,
             Locale = "tr-TR",
             IgnoreHTTPSErrors = true,
         });
-        var page = await ctx.NewPageAsync();
+        IPage page = await ctx.NewPageAsync();
         return (ctx, page);
     }
 }

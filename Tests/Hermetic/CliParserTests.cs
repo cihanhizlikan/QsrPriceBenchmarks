@@ -9,7 +9,7 @@ public sealed class CliParserTests
     [Fact(DisplayName = "Valid: --chain sets the chain slug")]
     public void Valid_Chain()
     {
-        var o = CliParser.Parse(new[] { "--chain", "burger-king" });
+        CliOptions o = CliParser.Parse(["--chain", "burger-king"]);
         Assert.Equal("burger-king", o.Chain);
         Assert.False(o.IsSelective);
         Assert.False(o.IsMaintenance);
@@ -18,7 +18,7 @@ public sealed class CliParserTests
     [Fact(DisplayName = "Selective flags + db path parse together")]
     public void Valid_SelectiveWithDb()
     {
-        var o = CliParser.Parse(new[] { "--chain", "popeyes", "--db", "x.sqlite", "--geocode", "--export-since", "7" });
+        CliOptions o = CliParser.Parse(["--chain", "popeyes", "--db", "x.sqlite", "--geocode", "--export-since", "7"]);
         Assert.Equal("x.sqlite", o.Db);
         Assert.True(o.Geocode);
         Assert.Equal(7, o.ExportSince);
@@ -27,46 +27,46 @@ public sealed class CliParserTests
 
     [Fact(DisplayName = "--help short-circuits without requiring --chain")]
     public void Help_NoChainRequired() =>
-        Assert.True(CliParser.Parse(new[] { "--help" }).Help);
+        Assert.True(CliParser.Parse(["--help"]).Help);
 
     [Fact(DisplayName = "Maintenance commands don't require --chain")]
     public void Maintenance_NoChainRequired() =>
-        Assert.True(CliParser.Parse(new[] { "--list-scrape-runs" }).ListScrapeRuns);
+        Assert.True(CliParser.Parse(["--list-scrape-runs"]).ListScrapeRuns);
 
     [Fact(DisplayName = "Missing --chain (non-maintenance) throws")]
     public void MissingChain_Throws() =>
-        Assert.Throws<CliArgumentException>(() => CliParser.Parse(Array.Empty<string>()));
+        Assert.Throws<CliArgumentException>(() => CliParser.Parse([]));
 
     [Fact(DisplayName = "--geocode and --geocode-rematch are mutually exclusive")]
     public void GeocodeFlags_MutuallyExclusive() =>
         Assert.Throws<CliArgumentException>(() =>
-            CliParser.Parse(new[] { "--chain", "x", "--geocode", "--geocode-rematch" }));
+            CliParser.Parse(["--chain", "x", "--geocode", "--geocode-rematch"]));
 
     [Fact(DisplayName = "--export and --export-since are mutually exclusive")]
     public void ExportFlags_MutuallyExclusive() =>
         Assert.Throws<CliArgumentException>(() =>
-            CliParser.Parse(new[] { "--chain", "x", "--export", "--export-since", "3" }));
+            CliParser.Parse(["--chain", "x", "--export", "--export-since", "3"]));
 
     [Fact(DisplayName = "Two maintenance commands are refused, not one silently dropped")]
     public void MaintenanceCommands_MutuallyExclusive() =>
         Assert.Throws<CliArgumentException>(() =>
-            CliParser.Parse(new[] { "--delete-scrape-run", "3", "--delete-scrape-runs-before-id", "10" }));
+            CliParser.Parse(["--delete-scrape-run", "3", "--delete-scrape-runs-before-id", "10"]));
 
     [Fact(DisplayName = "A maintenance command is refused alongside a pipeline step")]
     public void Maintenance_WithPipelineStep_Throws() =>
         Assert.Throws<CliArgumentException>(() =>
-            CliParser.Parse(new[] { "--chain", "x", "--list-scrape-runs", "--export" }));
+            CliParser.Parse(["--chain", "x", "--list-scrape-runs", "--export"]));
 
     [Fact(DisplayName = "A flag expecting a value throws when it's missing")]
     public void MissingValue_Throws() =>
-        Assert.Throws<CliArgumentException>(() => CliParser.Parse(new[] { "--db" }));
+        Assert.Throws<CliArgumentException>(() => CliParser.Parse(["--db"]));
 
     [Fact(DisplayName = "A flag expecting an integer rejects non-numeric input")]
     public void NonInteger_Throws() =>
         Assert.Throws<CliArgumentException>(() =>
-            CliParser.Parse(new[] { "--chain", "x", "--export-since", "abc" }));
+            CliParser.Parse(["--chain", "x", "--export-since", "abc"]));
 
     [Fact(DisplayName = "Unknown argument throws")]
     public void Unknown_Throws() =>
-        Assert.Throws<CliArgumentException>(() => CliParser.Parse(new[] { "--bogus" }));
+        Assert.Throws<CliArgumentException>(() => CliParser.Parse(["--bogus"]));
 }

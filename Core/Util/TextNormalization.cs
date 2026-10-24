@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace QsrPriceBenchmarks.Core.Util;
@@ -64,7 +63,7 @@ public static partial class TextNormalization
         string t = raw;
 
         // Cut off anything from "Telefon" / "Tel:" / "Çalışma Saatleri" onward.
-        string[] cutMarkers = { "Telefon", "Tel:", "Çalışma Saatleri", "Harita", "Yol Tarifi" };
+        string[] cutMarkers = ["Telefon", "Tel:", "Çalışma Saatleri", "Harita", "Yol Tarifi"];
         foreach (string marker in cutMarkers)
         {
             int idx = t.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
@@ -78,7 +77,7 @@ public static partial class TextNormalization
     }
 
     /// <summary>
-    /// True when <paramref name="text"/> looks like a marketing slogan rather
+    /// True when <paramref name="address"/> looks like a marketing slogan rather
     /// than a real street address: no digits at all, and ends with "!".
     /// Real Turkish addresses always carry a building/floor/street number
     /// (e.g. "No: 106", "Kat 1"); slogans like
@@ -102,8 +101,10 @@ public static partial class TextNormalization
     /// the minimal signal that distinguishes a real street address from a
     /// navigation label / slogan / district name with no numeric component.
     /// </summary>
-    public static bool IsRealAddress(string? address) =>
-        !string.IsNullOrWhiteSpace(address) && address.Any(char.IsDigit);
+    public static bool IsRealAddress(string? address)
+    {
+        return !string.IsNullOrWhiteSpace(address) && address.Any(char.IsDigit);
+    }
 
     /// <summary>
     /// Strip a trailing address suffix from a combined "name + address"
@@ -132,8 +133,10 @@ public static partial class TextNormalization
     }
 
     /// <summary>True when <paramref name="slug"/> contains "test" (case-insensitive).</summary>
-    public static bool IsTestSlug(string slug) =>
-        slug.Contains("test", StringComparison.OrdinalIgnoreCase);
+    public static bool IsTestSlug(string slug)
+    {
+        return slug.Contains("test", StringComparison.OrdinalIgnoreCase);
+    }
 
     /// <summary>
     /// True when <paramref name="text"/> is a plausible restaurant NAME: at
@@ -142,7 +145,10 @@ public static partial class TextNormalization
     /// (a lone "+", "-", or a bare number like "3"), which must never be stored
     /// as a name.
     /// </summary>
-    public static bool IsPlausibleName(string? text) => HasLetterAndMinLength(text, 2);
+    public static bool IsPlausibleName(string? text)
+    {
+        return HasLetterAndMinLength(text, 2);
+    }
 
     /// <summary>
     /// True when <paramref name="address"/> is a plausible street ADDRESS: at
@@ -150,7 +156,10 @@ public static partial class TextNormalization
     /// badges/counts (e.g. "1", "6") that sit next to the real address in some
     /// chains' card markup and were otherwise being stored as the address.
     /// </summary>
-    public static bool IsPlausibleAddress(string? address) => HasLetterAndMinLength(address, 2);
+    public static bool IsPlausibleAddress(string? address)
+    {
+        return HasLetterAndMinLength(address, 2);
+    }
 
     private static bool HasLetterAndMinLength(string? s, int min)
     {

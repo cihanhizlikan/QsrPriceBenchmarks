@@ -84,13 +84,13 @@ public static class Matcher
             c => c.Id, c => SignalTokens(c, brandTokens));
         Dictionary<long, HashSet<string>> locTokens = locations.ToDictionary(
             c => c.Id, c => SignalTokens(c, brandTokens));
-        Dictionary<string, double> idf = BuildIdf(plTokens.Values.Concat(locTokens.Values).ToList());
+        Dictionary<string, double> idf = BuildIdf([.. plTokens.Values, .. locTokens.Values]);
 
         // Geo lock-in pre-pass: platform locations whose nearest candidate is
         // unambiguously THE one by geography alone.
         Dictionary<long, long> lockedIn = FindGeoLockIns(platformLocations, locations);
 
-        List<(long PlId, long LocId, double Score)> allPairs = new();
+        List<(long PlId, long LocId, double Score)> allPairs = [];
         foreach (MatchCandidate pl in platformLocations)
         {
             foreach (MatchCandidate loc in locations)
@@ -112,7 +112,7 @@ public static class Matcher
             .GroupBy(p => p.PlId)
             .ToDictionary(g => g.Key, g => g.OrderByDescending(p => p.Score).ToList());
 
-        HashSet<long> ambiguousPls = new();
+        HashSet<long> ambiguousPls = [];
         foreach ((long plId, List<(long PlId, long LocId, double Score)> ranked) in byPl)
         {
             if (ranked.Count >= 2 && ranked[0].Score - ranked[1].Score < AmbiguityGap
@@ -124,9 +124,9 @@ public static class Matcher
 
         // Greedy one-to-one assignment over pairs meeting the threshold,
         // highest score first, skipping either side once claimed.
-        HashSet<long> usedPl = new();
-        HashSet<long> usedLoc = new();
-        Dictionary<long, MatchResult> results = new();
+        HashSet<long> usedPl = [];
+        HashSet<long> usedLoc = [];
+        Dictionary<long, MatchResult> results = [];
 
         foreach ((long PlId, long LocId, double Score) pair in allPairs
                      .Where(p => p.Score >= AcceptThreshold)
@@ -154,7 +154,7 @@ public static class Matcher
             }
         }
 
-        return results.Values.ToList();
+        return [.. results.Values];
     }
 
     private static double ScorePair(
@@ -194,10 +194,8 @@ public static class Matcher
         IReadOnlyList<MatchCandidate> platformLocations,
         IReadOnlyList<MatchCandidate> locations)
     {
-        Dictionary<long, long> locked = new();
-        List<MatchCandidate> geoLocs = locations
-            .Where(l => l.Latitude is not null && l.Longitude is not null)
-            .ToList();
+        Dictionary<long, long> locked = [];
+        List<MatchCandidate> geoLocs = [.. locations.Where(l => l.Latitude is not null && l.Longitude is not null)];
         if (geoLocs.Count == 0)
         {
             return locked;
@@ -251,7 +249,10 @@ public static class Matcher
         return earthRadiusM * c;
     }
 
-    private static double ToRadians(double deg) => deg * Math.PI / 180.0;
+    private static double ToRadians(double deg)
+    {
+        return deg * Math.PI / 180.0;
+    }
 
     // ── Text signal ──────────────────────────────────────────────────────────
 
@@ -282,10 +283,10 @@ public static class Matcher
         return sb.ToString();
     }
 
-    private static readonly char[] SlugSeparators = { '-' };
+    private static readonly char[] SlugSeparators = ['-'];
 
     private static readonly char[] AddressSeparators =
-        { ' ', ',', '.', '/', '(', ')', ':', ';', '-', '"', '\t' };
+        [' ', ',', '.', '/', '(', ')', ':', ';', '-', '"', '\t'];
 
     /// <summary>
     /// One combined token set per candidate: slug tokens and address tokens,

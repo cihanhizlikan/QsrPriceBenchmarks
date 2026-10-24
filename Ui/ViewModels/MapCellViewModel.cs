@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Windows.Media;
 
 namespace QsrPriceBenchmarks.Ui.ViewModels;
@@ -24,10 +21,16 @@ public sealed class MapCellViewModel
     public double DotTop { get; init; }
 
     public int Total { get; init; }
-    public bool HasLocations => Total > 0;
+    public bool HasLocations
+    {
+        get
+        {
+            return Total > 0;
+        }
+    }
 
     /// <summary>Per-district lines for the tooltip, e.g. "Üsküdar (2)".</summary>
-    public IReadOnlyList<string> Districts { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> Districts { get; init; } = [];
 
     /// <summary>Number of districts shown per tooltip column before wrapping.</summary>
     public const int DistrictsPerColumn = 10;
@@ -41,10 +44,10 @@ public sealed class MapCellViewModel
     {
         get
         {
-            List<IReadOnlyList<string>> columns = new();
+            List<IReadOnlyList<string>> columns = [];
             for (int i = 0; i < Districts.Count; i += DistrictsPerColumn)
             {
-                columns.Add(Districts.Skip(i).Take(DistrictsPerColumn).ToList());
+                columns.Add([.. Districts.Skip(i).Take(DistrictsPerColumn)]);
             }
             return columns;
         }

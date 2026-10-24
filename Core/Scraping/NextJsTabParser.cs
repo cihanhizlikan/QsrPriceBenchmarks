@@ -36,14 +36,14 @@ public static partial class NextJsTabParser
     /// </param>
     public static List<MenuItem> Parse(string html, string? tabName = null)
     {
-        List<MenuItem> results = new();
+        List<MenuItem> results = [];
 
         foreach (Match blockMatch in NextFPushRegex().Matches(html))
         {
             string rawBlock = blockMatch.Groups[1].Value;
 
             // Only the block(s) containing actual product cards are useful.
-            if (!rawBlock.Contains("restaurant-card-title"))
+            if (!rawBlock.Contains("restaurant-card-title", StringComparison.Ordinal))
             {
                 continue;
             }
@@ -103,7 +103,7 @@ public static partial class NextJsTabParser
         private string? _currentSection;
         private string? _pendingTitle;
 
-        public List<MenuItem> Results { get; } = new();
+        public List<MenuItem> Results { get; } = [];
 
         public void Walk(JsonElement element)
         {
@@ -129,7 +129,7 @@ public static partial class NextJsTabParser
             string? className = GetStringProp(obj, "className") ?? "";
 
             // Section heading (e.g. "Popüler Ürünler") — pb-2 container
-            if (className.Contains("pb-2"))
+            if (className.Contains("pb-2", StringComparison.Ordinal))
             {
                 string? children = GetStringProp(obj, "children");
                 if (!string.IsNullOrWhiteSpace(children))
@@ -149,8 +149,8 @@ public static partial class NextJsTabParser
             }
 
             // Price: font-bold + (text-errorText | text-marker)
-            if (className.Contains("font-bold") &&
-                (className.Contains("text-errorText") || className.Contains("text-marker")))
+            if (className.Contains("font-bold", StringComparison.Ordinal) &&
+                (className.Contains("text-errorText", StringComparison.Ordinal) || className.Contains("text-marker", StringComparison.Ordinal)))
             {
                 string? priceStr = GetStringProp(obj, "children");
                 if (priceStr is not null && _pendingTitle is not null)
@@ -160,7 +160,7 @@ public static partial class NextJsTabParser
                     {
                         bool inSection = tabName is null
                             || (_currentSection is not null
-                                && _currentSection.Contains(tabName.Trim()));
+                                && _currentSection.Contains(tabName.Trim(), StringComparison.Ordinal));
 
                         if (inSection)
                         {

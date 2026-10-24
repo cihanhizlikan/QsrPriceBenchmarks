@@ -24,9 +24,14 @@ public static class BrandPalette
     public const string FallbackHex = "#2F2F2F";
 
     /// <summary>Return the chain's brand hex, or <see cref="FallbackHex"/> if unknown.</summary>
-    public static string HexFor(string chainName) =>
-        Hex.TryGetValue(chainName, out string? hex) ? hex : FallbackHex;
+    public static string HexFor(string chainName)
+    {
+        return Hex.TryGetValue(chainName, out string? hex) ? hex : FallbackHex;
+    }
 
     /// <summary>True when the chain has an explicit brand colour (not the fallback).</summary>
-    public static bool HasBrand(string chainName) => Hex.ContainsKey(chainName);
+    public static bool HasBrand(string chainName)
+    {
+        return Hex.ContainsKey(chainName);
+    }
 }

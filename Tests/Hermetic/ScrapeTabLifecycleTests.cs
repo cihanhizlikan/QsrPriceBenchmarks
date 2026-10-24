@@ -58,7 +58,7 @@ public sealed class ScrapeTabLifecycleTests
         List<string> tabs = Repository.LoadScrapeTabs(db.Conn, qsrId, platformId);
 
         string vanished = tabs[^1];
-        List<string> observed = tabs.Take(tabs.Count - 1).ToList();
+        List<string> observed = [.. tabs.Take(tabs.Count - 1)];
 
         List<string> deactivated =
             Repository.ReconcileScrapeTabs(db.Conn, qsrId, platformId, observed);
@@ -102,7 +102,7 @@ public sealed class ScrapeTabLifecycleTests
 
                 Repository.UpsertDiscoveredScrapeTab(conn, qsrId, platformId, "Tatlılar");
                 Repository.ReconcileScrapeTabs(conn, qsrId, platformId,
-                    tabs.Take(tabs.Count - 1).Append("Tatlılar").ToList());
+                    [.. tabs.Take(tabs.Count - 1), "Tatlılar"]);
 
                 rowsBefore = Convert.ToInt32(ScalarOn(conn,
                     "SELECT COUNT(*) FROM SCRAPE_TABS WHERE QSR_ID = $q AND PLATFORM_ID = $p;",

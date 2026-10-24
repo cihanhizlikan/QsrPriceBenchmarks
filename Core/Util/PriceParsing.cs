@@ -28,7 +28,7 @@ public static partial class PriceParsing
             return null;
         }
 
-        string integerPart = m.Groups[1].Value.Replace(".", "");
+        string integerPart = m.Groups[1].Value.Replace(".", "", StringComparison.Ordinal);
         string fractionPart = m.Groups[2].Success ? m.Groups[2].Value : "0";
 
         string normalised = $"{integerPart}.{fractionPart}";

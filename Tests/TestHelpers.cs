@@ -7,7 +7,7 @@ internal static class TestHelpers
 {
     // TG blocks plain HttpClient requests from the sitemap (returns 403/empty).
     // Use a browser-like UA + Accept headers to avoid it.
-    private static readonly HttpClient Http = new HttpClient(new HttpClientHandler
+    private static readonly HttpClient Http = new(new HttpClientHandler
     {
         AllowAutoRedirect = true,
     })
@@ -51,7 +51,7 @@ internal static class TestHelpers
             return null;
         }
 
-        var prefix = $"https://www.tiklagelsin.com/restoran/{platformSlug}/";
+        string prefix = $"https://www.tiklagelsin.com/restoran/{platformSlug}/";
         MatchCollection matches = Regex.Matches(sitemap,
             $@"<loc>\s*{Regex.Escape(prefix)}([^/\s<]+)",
             RegexOptions.IgnoreCase);

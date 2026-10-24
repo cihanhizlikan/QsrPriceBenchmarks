@@ -29,8 +29,13 @@ public sealed class PipelineOptions
     /// True when any step flag is set (selective run).
     /// False = normal full run (Steps 1->2->3).
     /// </summary>
-    public bool IsSelective =>
-        ForceCrawl || Geocode || GeocodeRematch || Export || ExportSince is not null;
+    public bool IsSelective
+    {
+        get
+        {
+            return ForceCrawl || Geocode || GeocodeRematch || Export || ExportSince is not null;
+        }
+    }
 
     /// <summary>Output folder for Excel files. Defaults to "output" beside the DB.</summary>
     public string OutputDir { get; init; } = "output";
