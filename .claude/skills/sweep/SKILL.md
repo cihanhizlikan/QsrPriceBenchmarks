@@ -212,7 +212,10 @@ is never an unambiguous correction: it is a package.
 merges it into `master` from the primary checkout, removes the worktree, deletes the branch, and opens the next.**
 A step with nothing to correct opens no branch.
 
-- **`/wp-start` runs from the PRIMARY checkout and needs a clean `master`.** Return there between steps.
+- **`/wp-start` runs from the PRIMARY checkout and needs a clean `master`.** Return there between steps. **In a
+  desktop-app session use `/wp-start`'s app variant instead** — branch inside the session's own worktree,
+  `git switch --detach master` between steps — because a hook refuses edits to any worktree the session did not
+  start in; the first run hit that refusal at step 1.
 - **`dotnet build-server shutdown` before `git worktree remove`.** A husk is retried, not reported.
 - **Never reach for `EnterWorktree`.**
 - **Merge with `--no-ff`** and a subject `merge: sweep <date> step <n> — <what>`, so a step stays one

@@ -60,7 +60,9 @@ every time — a new rule arrives with at most one sentence of example, and its 
 ## Worktrees
 
 - **Any session about to change files enters a worktree first**, under `.claude/worktrees/`, opened by
-  `/wp-start` from the primary checkout. The primary checkout stays on `master` and is nobody's workspace.
+  `/wp-start` from the primary checkout. The primary checkout stays on `master` and is nobody's workspace. **A
+  desktop-app session is already in one** and may not edit any other, so it branches inside its own worktree —
+  `/wp-start` says how.
 - **`/wp-start` names local `master` rather than using `EnterWorktree`**, which branches from `origin/master` —
   routinely behind, because a session never pushes — and can be called only once per session.
 - **`dotnet build-server shutdown` before `git worktree remove`**, or the build host holds the directory. A
