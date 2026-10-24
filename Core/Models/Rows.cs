@@ -1,13 +1,5 @@
 namespace QsrPriceBenchmarks.Core.Models;
 
-public sealed record LocationRow(
-    long Id, long QsrId, long? DistrictId, string Slug,
-    string? Name, string? Address, double? Latitude, double? Longitude);
-
-public sealed record PlatformLocationRow(
-    long Id, long QsrId, long PlatformId, long? LocationId, string Slug,
-    string? Name, string? Address, double? Latitude, double? Longitude);
-
 public sealed record ScrapeRunRow(long Id, long QsrId, string StartedAt, string? FinishedAt);
 
 /// <summary>
