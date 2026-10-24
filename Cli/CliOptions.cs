@@ -1,4 +1,4 @@
-namespace QsrPriceBenchmarks.Cli.Cli;
+namespace QsrPriceBenchmarks.Cli;
 
 public sealed class CliOptions
 {

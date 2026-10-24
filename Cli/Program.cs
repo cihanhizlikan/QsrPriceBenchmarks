@@ -1,5 +1,5 @@
 using Microsoft.Data.Sqlite;
-using QsrPriceBenchmarks.Cli.Cli;
+using QsrPriceBenchmarks.Cli;
 using QsrPriceBenchmarks.Core.Db;
 using QsrPriceBenchmarks.Core.Export;
 using QsrPriceBenchmarks.Core.Models;

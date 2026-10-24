@@ -148,7 +148,7 @@ what reaches each type solution-wide (`.cs` AND `.xaml`), and put every singleto
 **Before step 4, because removing code is what orphans a configuration knob.**
 
 ## 4. Configuration knobs
-The surface: `Cli/Cli/CliOptions.cs` (arguments), `Core/Services/PipelineOptions.cs`, the chain registry in
+The surface: `Cli/CliOptions.cs` (arguments), `Core/Services/PipelineOptions.cs`, the chain registry in
 `Core/Models/ChainConfig.cs`, the `QSR_BROWSER_CHANNEL` variable and `browser-channel.txt` marker read by
 `BrowserSession`, and the UI's option view models. Demote or remove what step 3 orphaned, and review **validation
 DESIGN**: every check takes exactly one of three behaviours — **refuse to start** (a CLI exit code with a message,
