@@ -4,15 +4,15 @@ using System.Text;
 namespace QsrPriceBenchmarks.Ui.ViewModels;
 
 /// <summary>
-/// Türkiye's 81 districts as vector outlines, generated from tr.svg
+/// Türkiye's 81 provinces as vector outlines, generated from tr.svg
 /// (simplemaps.com, free for commercial use). viewBox is 0 0 1000 422.
-/// Each entry: district name, SVG path 'd' (WPF Geometry mini-language
+/// Each entry: province name, SVG path 'd' (WPF Geometry mini-language
 /// compatible), and the path's bounding-box centre for the marker dot.
 /// A couple of source typos (Zinguldak, Kinkkale) are corrected here.
 /// </summary>
 public static class TurkeyMap
 {
-    public static readonly IReadOnlyList<(string Name, string PathData, double Cx, double Cy)> Districts = new[]
+    public static readonly IReadOnlyList<(string Name, string PathData, double Cx, double Cy)> Provinces = new[]
     {
         ("Ardahan", "M889.7 82.2l-3.1 1.1-4.8 2.7-7.7 3.3-7.8 3.3-5.7 3-1.1 4.8-0.7 7.5-0.9 4.5-5.7 0.6-5.5 1.1-1.4-2.6-1.9-1.9-1.4-2.1-1-2.4-1.3-1.7-1.8-1.2-2.4-3.7-1-4.9 3-5.9 4.1-4.6 4-2 1.2-4.2-1.3-4.4-0.9-2.3-0.4-0.7-0.5-1.5-0.3-2.7-0.7-3.6 0.5 0 1-0.7 1.4-2.2 1.1-1 0.5-1.1 0.4-2.6 0.5-1 0.9-0.8 0.1 0 0.2 0 0.9-0.4 2.4-0.2 6.7 0.6 0.9 0.4-0.4 0.6-0.1 0.7-0.1 0.6-0.2 0.6-0.4 0.4-1 0.8-0.4 0.7 1.3 0.7 0.9 1 0.9 0.3 1.1-1.4 0.7-0.4 0.3 0.4 0.3 0.8 0.4 0.7 0.3 0.3 1.4 0.4 0.3 0.3 0.2 0.3 0.2 0.2 0.5 0.2 0.3 0.4 1.4 2.7 0.7 0.8 3.5 2.4 2.3 2 1.5 0.7 1.4 0.2 0 0.3-0.6 0.9-0.7 0.6-2.6 1.3 1.3 0.4 1.1-0.1 0.9 0.1 1 1.1 1.1 2.8 0.7 0.5 4.4-1.2 1.3-0.1 1.5 0.4 1.3 0.8 1.3 1.2 0.7 1.5-0.5 1.6z", 862.3, 82.9),
         ("Artvin", "M842.7 61.7l0.7 3.6 0.3 2.7 0.5 1.5 0.4 0.7 0.9 2.3 1.3 4.4-1.2 4.2-4 2-4.1 4.6-3 5.9-2.8 0.3-2.8 0.6-3.3-0.3-3.2 0.3-1.6 0.8-1.5 1.3-0.6 2.5 0.3 2.7-1.2 2.5-1.9 1.9-0.9 2.5-0.1 2.8-2.2 3.3-4-2.3-3.8-1.1-3.7 1.1-4 2.6-4.4 1.7-3.2-2.9 0.6-5.3 1.3-2.2-0.4-2.1-1.7-0.6-5.9-0.9-3.7-2.1 0.7-2.5 4.5-5.3 1.1-0.6 1-0.9 0.4-1.3 0.7-1.3 2.6-1.7 1.3-2.9-1.4-1.6-1.9-0.9-0.5-1.1-0.6-1.1-0.9-0.6-0.9-0.9-0.9-2.1-0.4-2.5-1.3-3.3-0.1-0.2 4.1-3.3 1.2-0.4 1-0.6 0.5-0.2 1.7-0.2 0.6-0.2 0.9-0.7 0.7-1.1 0.5-1.4 0.2-1.4 0.5-0.3 2.7-2.5 0.7-1.2 5 2.2 0.7 0.1 1.4-0.1 1.2-0.6 0.3 0 0.1 0.3-0.1 0.5 0 0.5 0.2 0.4 0.6 0.2 1.4 0.2 0.6 0.2 1.9 1.7 0.6 0.3 0.4-0.3 1.9-1.6 1.5-2.1 0.7-0.5 1.9-0.8 3.4 1.3 1.7-0.5 0.6-0.4 0.7-0.1 0.7 0.1 0.7 0.4 1.4-0.5 0.8 0 0.6 0.5 0.8 0.7 1.2 0.1 2.3-0.1 8.3 3.2 0.7 0z", 813.3, 86.6),

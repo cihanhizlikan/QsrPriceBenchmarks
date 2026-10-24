@@ -442,8 +442,8 @@ public sealed class MainViewModel : ViewModelBase
     {
         if (_mapGeo is null)
         {
-            List<(string, Geometry, double, double)> list = new(TurkeyMap.Districts.Count);
-            foreach ((string name, string d, double cx, double cy) in TurkeyMap.Districts)
+            List<(string, Geometry, double, double)> list = new(TurkeyMap.Provinces.Count);
+            foreach ((string name, string d, double cx, double cy) in TurkeyMap.Provinces)
             {
                 Geometry g;
                 try

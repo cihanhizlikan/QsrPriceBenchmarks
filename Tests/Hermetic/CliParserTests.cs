@@ -1,4 +1,4 @@
-using QsrPriceBenchmarks.Cli.Cli;
+using QsrPriceBenchmarks.Cli;
 using Xunit;
 
 namespace QsrPriceBenchmarks.IntegrationTests.Hermetic;

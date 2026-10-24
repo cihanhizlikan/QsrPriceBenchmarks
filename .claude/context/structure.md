@@ -35,15 +35,16 @@ neither host is known to `Core`.
   misplaced, and so is pipeline logic sitting in a host.
 - *Reach* — `Core` references no host, no WPF and no SQLite bundle. `Cli` and `Ui` reference `Core` and never
   each other. `Tests` may reference `Core` and `Cli`.
-- *Folder* — namespace follows folder. A folder that repeats its project's name (`Cli/Cli/`) adds a word that
-  rules nothing out.
+- *Folder* — namespace follows folder. A folder that repeats its project's name adds a word that rules nothing
+  out.
 
 ### Worked examples
 
 | Case | Falls | Why |
 |---|---|---|
-| `ConsoleColouriser` in `Core/Util` | Core, provisionally | it turns `LogMarkup` into ANSI, which only the CLI prints — but `Tests` exercises it, and moving it needs the sweep's step 1 to read its callers |
+| `ConsoleColouriser` in `Core/Util` | misplaced — Cli | measured 2026-10-24: its only production caller is `Cli/Program.cs`. Moving it crosses a project boundary, so it is a plan package rather than a sweep correction |
 | `LogLineColouriser` in `Ui/` root | Ui | WPF-only rendering of the same markup |
-| `TurkeyMap` in `Ui/ViewModels` | open | it is geometry data, not a view model |
+| `TurkeyMap` in `Ui/ViewModels` | stays | geometry data with one reader, the map view model; a folder of its own would hold one file |
+| `CliOptions` in `Cli/Cli/` | `Cli/` | the folder repeated its project's name; moved 2026-10-24 |
 
 This table is where an open case is settled; add a row when one is.
