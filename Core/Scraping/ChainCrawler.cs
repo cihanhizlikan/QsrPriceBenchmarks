@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.Data.Sqlite;
 using Microsoft.Playwright;
 using AngleSharp.Dom;
@@ -24,7 +23,6 @@ namespace QsrPriceBenchmarks.Core.Scraping;
 /// </summary>
 public static class ChainCrawler
 {
-    [SuppressMessage("Maintainability", "CA1502", Justification = "Measured 30. Decomposing the crawl loop must keep its per-item catches and cancellation checks; plan WP-M1.")]
     public static async Task CrawlAsync(
         ChainConfig chain, SqliteConnection conn,
         IProgress<string>? progress = null, CancellationToken ct = default,
@@ -94,24 +92,13 @@ public static class ChainCrawler
             string provinceSlug = UrlUtils.SplitPath(new Uri(provinceUrl).AbsolutePath).LastOrDefault() ?? provinceUrl;
             progress?.Report($"  [{i + 1}/{provinceLinks.Count}] Province: {LogMarkup.Value(provinceSlug)}");
 
-            IDocument provinceDoc;
-            try
+            IDocument? provinceDoc = await TryFetchDocumentAsync(page, provinceUrl, ct, ex =>
             {
-                string provinceHtml = await PageFetcher.FetchHtmlAsync(page, provinceUrl, ct: ct);
-                provinceDoc = await PageFetcher.ParseHtmlAsync(provinceHtml, provinceUrl);
-            }
-            catch (OperationCanceledException)
-            {
-                throw; // cancellation must propagate
-            }
-            catch (Exception ex)
-            {
-                if (ct.IsCancellationRequested)
-                {
-                    throw new OperationCanceledException(ct);
-                }
                 failed.Add(provinceSlug);
                 progress?.Report($"    ⚠ skipped province {LogMarkup.Value(provinceSlug)} — {DescribeError(ex)}");
+            });
+            if (provinceDoc is null)
+            {
                 continue; // skip this province only; keep crawling the rest
             }
 
@@ -139,24 +126,13 @@ public static class ChainCrawler
                 string provSlug = UrlUtils.SplitPath(new Uri(provUrl).AbsolutePath).LastOrDefault() ?? provUrl;
                 progress?.Report($"    ↳ {LogMarkup.Value(provSlug)}");
 
-                IDocument provDoc;
-                try
+                IDocument? provDoc = await TryFetchDocumentAsync(page, provUrl, ct, ex =>
                 {
-                    string provHtml = await PageFetcher.FetchHtmlAsync(page, provUrl, ct: ct);
-                    provDoc = await PageFetcher.ParseHtmlAsync(provHtml, provUrl);
-                }
-                catch (OperationCanceledException)
-                {
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    if (ct.IsCancellationRequested)
-                    {
-                        throw new OperationCanceledException(ct);
-                    }
                     failed.Add(provSlug);
                     progress?.Report($"      ⚠ skipped {LogMarkup.Value(provSlug)} — {DescribeError(ex)}");
+                });
+                if (provDoc is null)
+                {
                     continue; // skip this district only
                 }
 
@@ -178,12 +154,56 @@ public static class ChainCrawler
                 $"  ⚠ Could not scrape {failed.Count} page(s) (skipped): {string.Join(", ", failed)}");
         }
 
-        // Soft-close locations the chain no longer lists — but only after a crawl
-        // we can trust. If any page failed, or the crawl somehow found nothing
-        // (e.g. the site's markup changed and parsing yielded zero cards), skip
-        // the reconcile so a transient error or a parser break can't mass-close
-        // every location. A real closure simply waits for the next clean crawl.
-        if (failed.Count == 0 && total > 0)
+        ReconcileClosedLocations(conn, qsrId, crawlStart, failed.Count, total, progress);
+
+        // Authoritative tally, taken from the database after the reconcile —
+        // the same activeOnly count the Locations tab shows, so the two can
+        // never disagree again.
+        int activeInDb = Repository.CountLocations(conn, qsrId, activeOnly: true);
+        progress?.Report($"  ✓ {activeInDb} active location(s) now in database");
+    }
+
+    /// <summary>
+    /// Fetch and parse one province or district page. Cancellation always
+    /// propagates; any other failure is handed to <paramref name="onSkipped"/>
+    /// and null is returned, so the caller skips that page alone and keeps
+    /// crawling the rest.
+    /// </summary>
+    private static async Task<IDocument?> TryFetchDocumentAsync(
+        IPage page, string url, CancellationToken ct, Action<Exception> onSkipped)
+    {
+        try
+        {
+            string html = await PageFetcher.FetchHtmlAsync(page, url, ct: ct);
+            return await PageFetcher.ParseHtmlAsync(html, url);
+        }
+        catch (OperationCanceledException)
+        {
+            throw; // cancellation must propagate
+        }
+        catch (Exception ex)
+        {
+            if (ct.IsCancellationRequested)
+            {
+                throw new OperationCanceledException(ct);
+            }
+            onSkipped(ex);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Soft-close locations the chain no longer lists — but only after a crawl
+    /// we can trust. If any page failed, or the crawl somehow found nothing
+    /// (e.g. the site's markup changed and parsing yielded zero cards), skip the
+    /// reconcile so a transient error or a parser break can't mass-close every
+    /// location. A real closure simply waits for the next clean crawl.
+    /// </summary>
+    private static void ReconcileClosedLocations(
+        SqliteConnection conn, long qsrId, string crawlStart, int failedCount, int total,
+        IProgress<string>? progress)
+    {
+        if (failedCount == 0 && total > 0)
         {
             int closed = Repository.DeactivateStaleLocations(conn, qsrId, crawlStart);
             if (closed > 0)
@@ -199,14 +219,8 @@ public static class ChainCrawler
         else
         {
             progress?.Report(
-                $"  ⚠ {failed.Count} page(s) failed — skipped closed-location reconcile to avoid false closures");
+                $"  ⚠ {failedCount} page(s) failed — skipped closed-location reconcile to avoid false closures");
         }
-
-        // Authoritative tally, taken from the database after the reconcile —
-        // the same activeOnly count the Locations tab shows, so the two can
-        // never disagree again.
-        int activeInDb = Repository.CountLocations(conn, qsrId, activeOnly: true);
-        progress?.Report($"  ✓ {activeInDb} active location(s) now in database");
     }
 
     /// <summary>Short, human-readable reason for a skipped page.</summary>
