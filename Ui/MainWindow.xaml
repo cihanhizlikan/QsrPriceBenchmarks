@@ -45,7 +45,7 @@
     </Grid.RowDefinitions>
 
     <!-- ── Header ──────────────────────────────────────────────────────────── -->
-    <Border Grid.Row="0" Background="#111111"
+    <Border Grid.Row="0" Background="{StaticResource BrushBgChrome}"
             BorderBrush="{StaticResource BrushBorder}" BorderThickness="0 0 0 1">
       <DockPanel Margin="16 0">
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -122,7 +122,7 @@
       </Grid.ColumnDefinitions>
 
       <!-- ── Left sidebar: chain selector (ListBox) ─────────────────────────── -->
-      <Border Grid.Column="0" Background="#111111"
+      <Border Grid.Column="0" Background="{StaticResource BrushBgChrome}"
               BorderBrush="{StaticResource BrushBorder}" BorderThickness="0 0 1 0">
         <DockPanel Margin="10">
           <TextBlock DockPanel.Dock="Top" Text="SELECT CHAIN"
@@ -334,16 +334,16 @@
               <!-- District outline: dimmed cyan, brighter where the chain has
                    locations, brightest on hover. -->
               <Style x:Key="DistrictPath" TargetType="Path">
-                <Setter Property="Fill" Value="#1A00B3B3"/>
-                <Setter Property="Stroke" Value="#8000B3B3"/>
+                <Setter Property="Fill" Value="{StaticResource BrushMapFill}"/>
+                <Setter Property="Stroke" Value="{StaticResource BrushMapStroke}"/>
                 <Setter Property="StrokeThickness" Value="0.5"/>
                 <Style.Triggers>
                   <DataTrigger Binding="{Binding HasLocations}" Value="True">
-                    <Setter Property="Fill" Value="#3D00FFFF"/>
+                    <Setter Property="Fill" Value="{StaticResource BrushMapFillActive}"/>
                     <Setter Property="Cursor" Value="Hand"/>
                   </DataTrigger>
                   <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Fill" Value="#6000FFFF"/>
+                    <Setter Property="Fill" Value="{StaticResource BrushMapFillHover}"/>
                     <Setter Property="Stroke" Value="{StaticResource BrushLightCyan}"/>
                     <Setter Property="StrokeThickness" Value="1"/>
                   </Trigger>
@@ -353,7 +353,7 @@
               <!-- Dark-gray, rounded, light-cyan outlined tooltip. -->
               <Style x:Key="MapToolTip" TargetType="ToolTip">
                 <Setter Property="Foreground" Value="{StaticResource BrushLightCyan}"/>
-                <Setter Property="Background" Value="#202020"/>
+                <Setter Property="Background" Value="{StaticResource BrushToolTipBg}"/>
                 <Setter Property="Template">
                   <Setter.Value>
                     <ControlTemplate TargetType="ToolTip">

@@ -21,6 +21,13 @@
     <Color x:Key="ColorDanger">#C62828</Color>
     <Color x:Key="ColorPurple">#FF00FF</Color>        <!-- ANSI 95  bright magenta -->
     <Color x:Key="ColorChromeCyan">#33C4CC</Color>    <!-- UI furniture only, not log text -->
+    <Color x:Key="ColorBgChrome">#111111</Color>      <!-- header bar and chain sidebar -->
+    <Color x:Key="ColorToolTipBg">#202020</Color>
+    <!-- Map provinces: translucent cyan, stronger where the chain has locations. -->
+    <Color x:Key="ColorMapFill">#1A00B3B3</Color>
+    <Color x:Key="ColorMapStroke">#8000B3B3</Color>
+    <Color x:Key="ColorMapFillActive">#3D00FFFF</Color>
+    <Color x:Key="ColorMapFillHover">#6000FFFF</Color>
 
     <SolidColorBrush x:Key="BrushBg"        Color="{StaticResource ColorBg}"/>
     <SolidColorBrush x:Key="BrushBg2"       Color="{StaticResource ColorBg2}"/>
@@ -35,6 +42,12 @@
     <SolidColorBrush x:Key="BrushDanger"    Color="{StaticResource ColorDanger}"/>
     <SolidColorBrush x:Key="BrushPurple"    Color="{StaticResource ColorPurple}"/>
     <SolidColorBrush x:Key="BrushChromeCyan" Color="{StaticResource ColorChromeCyan}"/>
+    <SolidColorBrush x:Key="BrushBgChrome"  Color="{StaticResource ColorBgChrome}"/>
+    <SolidColorBrush x:Key="BrushToolTipBg" Color="{StaticResource ColorToolTipBg}"/>
+    <SolidColorBrush x:Key="BrushMapFill"       Color="{StaticResource ColorMapFill}"/>
+    <SolidColorBrush x:Key="BrushMapStroke"     Color="{StaticResource ColorMapStroke}"/>
+    <SolidColorBrush x:Key="BrushMapFillActive" Color="{StaticResource ColorMapFillActive}"/>
+    <SolidColorBrush x:Key="BrushMapFillHover"  Color="{StaticResource ColorMapFillHover}"/>
 
     <!-- ── Base control styles ─────────────────────────────────────────────── -->
 

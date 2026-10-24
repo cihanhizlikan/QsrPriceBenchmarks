@@ -14,7 +14,7 @@ namespace QsrPriceBenchmarks.Ui;
 ///   numbers / symbols (✓ ✗ → ↳)  →  light cyan   #00FFFF
 ///   scraped values / URLs         →  dim cyan     #00B3B3
 ///   all other text                →  white        #FFFFFF
-///   errors (lines starting ✗)     →  purple       #FF55FF
+///   errors (lines starting ✗)     →  purple       #FF00FF
 ///   info / warning (⚠ ℹ) / seps   →  dim cyan
 ///   [Step N] / SKIP / FORCE       →  dark-gray bg #1C1C1C, number light cyan
 ///
