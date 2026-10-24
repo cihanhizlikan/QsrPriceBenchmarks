@@ -22,7 +22,7 @@ internal static class ReportSeed
         long locId = Repository.UpsertLocation(conn, "Istanbul", "Kadikoy", "loc-1", qsr)!.Value;
         Repository.UpdateLocationDetails(conn, "loc-1", "BK Kadikoy", "Caferaga Mah No 1", qsr);
 
-        long plId = Repository.UpsertPlatformLocation(conn, qsr, plat, "pl-1", "BK Kadikoy")!.Value;
+        long plId = TestData.InsertPlatformLocation(conn, qsr, plat, "pl-1", "BK Kadikoy");
         Repository.UpdatePlatformLocation(conn, plId, address: "Caferaga Mah No 1");
         Repository.SetPlatformLocationMatch(conn, plId, locId);
 

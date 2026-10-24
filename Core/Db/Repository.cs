@@ -409,37 +409,6 @@ public static class Repository
 
     // ── PLATFORM_LOCATIONS ───────────────────────────────────────────────────
 
-    /// <summary>
-    /// Insert a PLATFORM_LOCATIONS row if not present. Returns its ID, or
-    /// null when the slug contains "test".
-    /// </summary>
-    public static long? UpsertPlatformLocation(
-        SqliteConnection conn, long qsrId, long platformId, string slug, string? name = null)
-    {
-        if (TextNormalization.IsTestSlug(slug))
-        {
-            return null;
-        }
-
-        object? existing = Scalar(conn, """
-            SELECT ID FROM PLATFORM_LOCATIONS
-            WHERE QSR_ID = $qsr AND PLATFORM_ID = $plat AND SLUG = $slug;
-            """,
-            ("$qsr", qsrId), ("$plat", platformId), ("$slug", slug));
-        if (existing is not null)
-        {
-            return Convert.ToInt64(existing, CultureInfo.InvariantCulture);
-        }
-
-        return Convert.ToInt64(Scalar(conn, """
-            INSERT INTO PLATFORM_LOCATIONS (QSR_ID, PLATFORM_ID, SLUG, NAME)
-            VALUES ($qsr, $plat, $slug, $name);
-            SELECT last_insert_rowid();
-            """,
-            ("$qsr", qsrId), ("$plat", platformId), ("$slug", slug),
-            ("$name", TextNormalization.Title(name))), CultureInfo.InvariantCulture);
-    }
-
     /// <summary>Outcome of one sitemap census applied to PLATFORM_LOCATIONS.</summary>
     /// <param name="Inserted">Slugs seen for the first time (new rows).</param>
     /// <param name="Reactivated">Previously soft-deleted slugs the census contains again.</param>

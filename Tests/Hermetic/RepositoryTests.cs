@@ -143,7 +143,7 @@ public sealed class RepositoryTests
     {
         using TempDb db = new();
         (long qsr, long plat) = Ids(db);
-        long plId = Repository.UpsertPlatformLocation(db.Conn, qsr, plat, "pl1")!.Value;
+        long plId = TestData.InsertPlatformLocation(db.Conn, qsr, plat, "pl1");
 
         Repository.UpdatePlatformLocation(db.Conn, plId, address: "Eski Adres No 1");
         Repository.UpdatePlatformLocation(db.Conn, plId, lat: 40.0, lon: 29.0);
@@ -173,7 +173,7 @@ public sealed class RepositoryTests
     {
         using TempDb db = new();
         (long qsr, long plat) = Ids(db);
-        long plId = Repository.UpsertPlatformLocation(db.Conn, qsr, plat, "pl1")!.Value;
+        long plId = TestData.InsertPlatformLocation(db.Conn, qsr, plat, "pl1");
         long item = Repository.GetOrCreateMenuItem(db.Conn, qsr, "Whopper");
 
         long run = Repository.StartScrapeRun(db.Conn, qsr);

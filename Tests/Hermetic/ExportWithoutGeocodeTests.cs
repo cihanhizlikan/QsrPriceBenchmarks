@@ -25,7 +25,7 @@ public sealed class ExportWithoutGeocodeTests
         long qsr = Repository.QsrId(conn, Chain);
         long plat = Repository.PlatformId(conn, "Tıkla Gelsin");
 
-        long plId = Repository.UpsertPlatformLocation(conn, qsr, plat, "pl-x", "BK Avcilar")!.Value;
+        long plId = TestData.InsertPlatformLocation(conn, qsr, plat, "pl-x", "BK Avcilar");
         Repository.UpdatePlatformLocation(conn, plId, address: "Merkez Mah No 5");
         // Deliberately NO SetPlatformLocationMatch → LOCATION_ID stays NULL.
 
