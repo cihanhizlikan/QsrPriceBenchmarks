@@ -21,7 +21,8 @@
 - `Services/` — `PipelineRunner`, the single entry point both hosts call, and its option and progress types.
 - `Export/` — `ExcelExporter`.
 - `Models/` — chain configuration and row types.
-- `Util/` — pure helpers: text normalisation, price parsing, log markup and its console colouring.
+- `Util/` — pure helpers: text normalisation, price parsing, and the log markup both hosts render (the CLI as
+  ANSI in `Cli/ConsoleColouriser`, the UI as WPF runs in `Ui/LogLineColouriser`).
 
 **Progress is `IProgress<string>` and cancellation is a `CancellationToken` on every async `Core` method**, so
 neither host is known to `Core`.
@@ -42,7 +43,7 @@ neither host is known to `Core`.
 
 | Case | Falls | Why |
 |---|---|---|
-| `ConsoleColouriser` in `Core/Util` | misplaced — Cli | measured 2026-10-24: its only production caller is `Cli/Program.cs`. Moving it crosses a project boundary, so it is a plan package rather than a sweep correction |
+| `ConsoleColouriser` | `Cli/` | only the CLI prints ANSI; moved from `Core/Util` 2026-10-24 (plan WP-S1). `LogMarkup` stays in Core: both hosts read it |
 | `LogLineColouriser` in `Ui/` root | Ui | WPF-only rendering of the same markup |
 | `TurkeyMap` in `Ui/ViewModels` | stays | geometry data with one reader, the map view model; a folder of its own would hold one file |
 | `CliOptions` in `Cli/Cli/` | `Cli/` | the folder repeated its project's name; moved 2026-10-24 |

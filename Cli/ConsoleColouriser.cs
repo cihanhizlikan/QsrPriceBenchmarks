@@ -1,7 +1,8 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using QsrPriceBenchmarks.Core.Util;
 
-namespace QsrPriceBenchmarks.Core.Util;
+namespace QsrPriceBenchmarks.Cli;
 
 /// <summary>
 /// Faithful C# port of the Python prototype's <c>_colourise()</c> pipeline.
