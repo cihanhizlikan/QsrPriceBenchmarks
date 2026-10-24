@@ -47,6 +47,16 @@ public sealed class CliParserTests
         Assert.Throws<CliArgumentException>(() =>
             CliParser.Parse(new[] { "--chain", "x", "--export", "--export-since", "3" }));
 
+    [Fact(DisplayName = "Two maintenance commands are refused, not one silently dropped")]
+    public void MaintenanceCommands_MutuallyExclusive() =>
+        Assert.Throws<CliArgumentException>(() =>
+            CliParser.Parse(new[] { "--delete-scrape-run", "3", "--delete-scrape-runs-before-id", "10" }));
+
+    [Fact(DisplayName = "A maintenance command is refused alongside a pipeline step")]
+    public void Maintenance_WithPipelineStep_Throws() =>
+        Assert.Throws<CliArgumentException>(() =>
+            CliParser.Parse(new[] { "--chain", "x", "--list-scrape-runs", "--export" }));
+
     [Fact(DisplayName = "A flag expecting a value throws when it's missing")]
     public void MissingValue_Throws() =>
         Assert.Throws<CliArgumentException>(() => CliParser.Parse(new[] { "--db" }));

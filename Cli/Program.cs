@@ -68,7 +68,20 @@ Log(ConsoleColouriser.DbLine(Path.GetFullPath(opts.Db)));
 Log(ConsoleColouriser.Separator(56));
 Console.WriteLine();
 
-using SqliteConnection conn = Database.Open(opts.Db);
+// Database.Open refuses a file that is not ours (InvalidOperationException) and
+// SQLite refuses one that is not a database at all; either way nothing can run,
+// so say why and exit rather than printing a stack trace.
+SqliteConnection? opened;
+try
+{
+    opened = Database.Open(opts.Db);
+}
+catch (Exception ex) when (ex is InvalidOperationException or SqliteException)
+{
+    Console.Error.WriteLine($"error: {ex.Message}");
+    return 1;
+}
+using SqliteConnection conn = opened;
 
 // ── Maintenance commands ──────────────────────────────────────────────────────
 if (opts.ListScrapeRuns)

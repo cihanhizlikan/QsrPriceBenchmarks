@@ -80,6 +80,26 @@ public static class CliParser
             return opts;
         }
 
+        // Each maintenance command runs alone and exits, so a second command
+        // (or a pipeline step) on the same line would be silently dropped —
+        // and two of them delete runs. Refuse rather than guess which was meant.
+        int maintenanceCommands = (opts.ListScrapeRuns ? 1 : 0)
+            + (opts.DeleteScrapeRun is not null ? 1 : 0)
+            + (opts.DeleteScrapeRunsBeforeId is not null ? 1 : 0);
+        if (maintenanceCommands > 1)
+        {
+            throw new CliArgumentException(
+                "--list-scrape-runs, --delete-scrape-run and --delete-scrape-runs-before-id " +
+                "are mutually exclusive");
+        }
+
+        if (opts.IsMaintenance && opts.IsSelective)
+        {
+            throw new CliArgumentException(
+                "maintenance commands run alone; they cannot be combined with " +
+                "--force-crawl, --geocode, --geocode-rematch, --export or --export-since");
+        }
+
         if (!opts.IsMaintenance && opts.Chain is null)
         {
             throw new CliArgumentException(
