@@ -208,15 +208,6 @@ public static class Repository
         return ReadStrings(cmd);
     }
 
-    public static string PlatformSlugFor(SqliteConnection conn, long qsrId, long platformId)
-    {
-        object? result = Scalar(conn,
-            "SELECT SLUG FROM QSR_PLATFORMS WHERE QSR_ID = $qsr AND PLATFORM_ID = $plat;",
-            ("$qsr", qsrId), ("$plat", platformId))
-            ?? throw new InvalidOperationException("QSR_PLATFORMS row not found");
-        return (string)result;
-    }
-
     // ── Provinces / Districts ────────────────────────────────────────────────
 
     private static long GetOrCreateProvince(SqliteConnection conn, string name)

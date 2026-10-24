@@ -126,36 +126,6 @@
         </Style.Triggers>
     </Style>
 
-    <!-- Chain selector radio-button restyled as a card -->
-    <Style x:Key="ChainCard" TargetType="RadioButton">
-        <Setter Property="Background"    Value="{StaticResource BrushBg2}"/>
-        <Setter Property="Foreground"    Value="{StaticResource BrushText}"/>
-        <Setter Property="BorderBrush"   Value="{StaticResource BrushBorder}"/>
-        <Setter Property="Cursor"        Value="Hand"/>
-        <Setter Property="Margin"        Value="0 0 0 6"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="RadioButton">
-                    <Border Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="1" CornerRadius="6" Padding="10 8">
-                        <ContentPresenter/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background"  Value="{StaticResource BrushBg3}"/>
-                            <Setter Property="BorderBrush" Value="{StaticResource BrushDimCyan}"/>
-                        </Trigger>
-                        <Trigger Property="IsChecked" Value="True">
-                            <Setter Property="Background"  Value="{StaticResource BrushAccentBg}"/>
-                            <Setter Property="BorderBrush" Value="{StaticResource BrushLightCyan}"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
     <!-- TabControl — fully retemplated so the header strip uses the dark
          window background (the default template paints it white/system colour)
          and the tab headers render as rounded pill buttons like the rest of

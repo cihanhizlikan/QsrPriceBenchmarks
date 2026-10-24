@@ -34,12 +34,3 @@ public sealed class NullToVisibilityConverter : IValueConverter
     public object ConvertBack(object v, Type t, object p, CultureInfo c) =>
         throw new NotSupportedException();
 }
-
-[ValueConversion(typeof(decimal), typeof(string))]
-public sealed class PriceChangeColorConverter : IValueConverter
-{
-    public object Convert(object v, Type t, object p, CultureInfo c) =>
-        v is decimal d ? (d > 0 ? "#EF5350" : d < 0 ? "#66BB6A" : "#9E9E9E") : "#9E9E9E";
-    public object ConvertBack(object v, Type t, object p, CultureInfo c) =>
-        throw new NotSupportedException();
-}
