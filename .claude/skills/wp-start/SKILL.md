@@ -35,9 +35,9 @@ in a session.
 - **Work from the worktree path, with absolute paths.** A tool that resolves against the primary checkout edits
   `master`'s files.
 - **The first build in a fresh worktree restores packages** and takes longer; that is not a hang.
-- **The Playwright browser is per-build-output.** The live tests need `pwsh bin/Debug/net10.0/playwright.ps1
-  install chromium` once per output folder; if a live test fails with "Executable doesn't exist", that is the
-  cause, and running that script is the maintainer's call (see `working-agreement.md`).
+- **The live tests install their own Playwright browser.** `Tests/Fixtures/PlaywrightFixture.cs` runs the
+  install on first use, so the first live run in a fresh worktree downloads Chromium (~150 MB) once and is
+  slow; that is not a hang.
 - **Use `awk 'NR==n'` to read a line, never `sed -n 'a,bp'`** — MSYS `sed` has been off by one against `grep -n`.
 
 ## What this skill does NOT do
