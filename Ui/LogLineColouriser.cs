@@ -6,7 +6,7 @@ using QsrPriceBenchmarks.Core.Util;
 namespace QsrPriceBenchmarks.Ui;
 
 /// <summary>
-/// WPF equivalent of the Core <c>ConsoleColouriser</c>: turns a single log
+/// WPF equivalent of the CLI's <c>ConsoleColouriser</c>: turns a single log
 /// line into a sequence of coloured <see cref="Run"/> elements using the exact
 /// same three-level rule as the Python prototype and the CLI:
 ///

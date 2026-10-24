@@ -3,7 +3,7 @@ namespace QsrPriceBenchmarks.Core.Util;
 /// <summary>
 /// Colour-agnostic markers for log messages. Core wraps scraped text values
 /// (e.g. province / district names) with <see cref="Value"/>; the CLI
-/// (<see cref="ConsoleColouriser"/>) and WPF (LogLineColouriser) renderers each
+/// (the CLI's <c>ConsoleColouriser</c>) and WPF (LogLineColouriser) renderers each
 /// recognise the marker pair, render the enclosed text in <b>dim cyan</b> — the
 /// same treatment the Python prototype gave scraped values — and then strip the
 /// markers. Keeping the markers colour-agnostic means Core never has to know

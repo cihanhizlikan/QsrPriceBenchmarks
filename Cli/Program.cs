@@ -4,7 +4,6 @@ using QsrPriceBenchmarks.Core.Db;
 using QsrPriceBenchmarks.Core.Export;
 using QsrPriceBenchmarks.Core.Models;
 using QsrPriceBenchmarks.Core.Services;
-using QsrPriceBenchmarks.Core.Util;
 
 // Colour output matches the Python prototype exactly via ConsoleColouriser.
 // Disable colour when stdout is redirected (mirrors Python's os.isatty(1)).

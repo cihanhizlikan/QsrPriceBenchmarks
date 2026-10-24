@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using QsrPriceBenchmarks.Cli;
 using QsrPriceBenchmarks.Core.Util;
 using Xunit;
 
