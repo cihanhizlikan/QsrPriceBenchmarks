@@ -64,7 +64,7 @@ public sealed class MatcherTests
 
     private static MatchResult ResultFor(List<MatchResult> results, long plId)
     {
-        return Assert.Single(results.Where(x => x.PlatformLocationId == plId));
+        return Assert.Single(results, x => x.PlatformLocationId == plId);
     }
 
     [Fact(DisplayName = "Turkish folding: ASCII slug tokens meet Turkish address tokens")]
