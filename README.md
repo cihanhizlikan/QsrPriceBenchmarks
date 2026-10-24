@@ -1,5 +1,9 @@
 # QSR Price Benchmarks — v2 (Core + CLI + WPF)
 
+Scrapes quick-service-restaurant chains' own websites and their Tıkla Gelsin
+listings, matches the two sets of locations, keeps every scrape run in a SQLite
+database, and exports price comparisons to Excel.
+
 ## Solution structure
 
 ```
@@ -18,28 +22,43 @@ dotnet restore
 dotnet build
 ```
 
-Playwright browser (one-time, after first restore):
+Playwright browser (one-time, after first restore — the live tests install it
+themselves):
 ```
 pwsh Core/bin/Debug/net10.0/playwright.ps1 install chromium
 ```
 
+## Test
+
+```
+dotnet test                                   # everything, including live sites
+dotnet test --filter "Category!=Integration"  # offline half only
+```
+
+The `Category=Integration` tests scrape the real chain websites and Tıkla
+Gelsin, so they need the internet and can fail when a site changes.
+
 ## Usage
 
-**CLI** — same contract as v1:
+**CLI** (`qsr --help` lists every option):
 ```
-qsr --qsr burger-king               # full run
-qsr --qsr popeyes --geocode-rematch
-qsr --qsr arbys --export-since 5
+qsr --chain burger-king               # full run
+qsr --chain popeyes --geocode-rematch
+qsr --chain arbys --export-since 5
 qsr --list-scrape-runs
 qsr --delete-scrape-run 3
 ```
+
+Maintenance commands (`--list-scrape-runs`, `--delete-scrape-run`,
+`--delete-scrape-runs-before-id`) run alone and cannot be combined.
 
 **UI**
 ```
 qsr-ui
 ```
 Select a chain in the left sidebar, choose pipeline options,
-click Run. The Scrape Runs tab handles run management.
+click Run. The Scrape Runs tab handles run management and export;
+the Locations tab maps where the chain's restaurants are.
 
 ## Installer (self-contained MSI)
 
@@ -68,4 +87,5 @@ uses a `CancellationTokenSource`; CLI wires `Console.CancelKeyPress`.
 
 Chain logos are stored as `LOGO_BLOB` (nullable) in the `QSR` table.
 When null, the UI shows a coloured initials badge (e.g. "BK", "PY").
-Use the "Upload Logo" button in the UI to store a PNG/JPG per chain.
+The app currently has no control for storing a logo, so the badge is
+what every chain shows.
