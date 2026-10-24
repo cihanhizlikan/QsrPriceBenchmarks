@@ -687,10 +687,10 @@ public static class Repository
         using SqliteDataReader reader = cmd.ExecuteReader();
         while (reader.Read())
         {
-            string  qsrName = reader.GetString(0);
-            string? name    = reader.IsDBNull(1) ? null : reader.GetString(1);
+            string qsrName = reader.GetString(0);
+            string? name = reader.IsDBNull(1) ? null : reader.GetString(1);
             string? address = reader.IsDBNull(2) ? null : reader.GetString(2);
-            string  slug    = reader.GetString(3);
+            string slug = reader.GetString(3);
 
             string chainSlug = slugByChain.GetValueOrDefault(qsrName, "");
             string url = string.IsNullOrEmpty(chainSlug)

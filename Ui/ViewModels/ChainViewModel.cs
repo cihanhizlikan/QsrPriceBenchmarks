@@ -79,7 +79,7 @@ public sealed class ChainViewModel(ChainConfig chain, byte[]? logoBytes) : ViewM
     /// </summary>
     public SolidColorBrush BadgeForeground { get; } = PickReadableText(BuildBadgeColor(chain.Name));
 
-    private static readonly SolidColorBrush DarkText  = Frozen(Color.FromRgb(0x14, 0x14, 0x14));
+    private static readonly SolidColorBrush DarkText = Frozen(Color.FromRgb(0x14, 0x14, 0x14));
     private static readonly SolidColorBrush LightText = Frozen(Color.FromRgb(0xFF, 0xFF, 0xFF));
 
     private static SolidColorBrush PickReadableText(Color bg)

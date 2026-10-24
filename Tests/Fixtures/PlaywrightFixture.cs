@@ -20,7 +20,7 @@ namespace QsrPriceBenchmarks.IntegrationTests.Fixtures;
 public sealed class PlaywrightFixture : IAsyncLifetime
 {
     private IPlaywright? _playwright;
-    public  IBrowser?    Browser { get; private set; }
+    public IBrowser? Browser { get; private set; }
 
     public async Task InitializeAsync()
     {
@@ -37,7 +37,7 @@ public sealed class PlaywrightFixture : IAsyncLifetime
         }
 
         _playwright = await Playwright.CreateAsync();
-        Browser     = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
+        Browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
         {
             Headless = true,
         });
@@ -55,10 +55,10 @@ public sealed class PlaywrightFixture : IAsyncLifetime
     /// </summary>
     public async Task<(IBrowserContext Context, IPage Page)> NewPageAsync()
     {
-        var ctx  = await Browser!.NewContextAsync(new BrowserNewContextOptions
+        var ctx = await Browser!.NewContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1280, Height = 900 },
-            UserAgent    = BrowserSession.DefaultUserAgent,
+            UserAgent = BrowserSession.DefaultUserAgent,
             Locale = "tr-TR",
             IgnoreHTTPSErrors = true,
         });

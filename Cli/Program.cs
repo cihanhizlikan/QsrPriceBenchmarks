@@ -58,7 +58,7 @@ void PrintHelp() => Console.WriteLine("""
 
 // ── Parse ─────────────────────────────────────────────────────────────────────
 CliOptions opts;
-try                             { opts = CliParser.Parse(args); }
+try { opts = CliParser.Parse(args); }
 catch (CliArgumentException ex) { Console.Error.WriteLine($"error: {ex.Message}"); return 1; }
 
 if (opts.Help) { PrintBanner(); PrintHelp(); return 0; }
@@ -131,15 +131,15 @@ Console.WriteLine();
 
 PipelineOptions pipeOpts = new()
 {
-    Chain          = chain,
-    ForceCrawl     = opts.ForceCrawl,
-    Geocode        = opts.Geocode,
+    Chain = chain,
+    ForceCrawl = opts.ForceCrawl,
+    Geocode = opts.Geocode,
     GeocodeRematch = opts.GeocodeRematch,
-    Export         = opts.Export,
-    ExportSince    = opts.ExportSince,
+    Export = opts.Export,
+    ExportSince = opts.ExportSince,
     // Tabs intentionally left null: the CLI has no tab picker, so a full run
     // always scrapes every configured tab.
-    OutputDir      = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(opts.Db))!, "output"),
+    OutputDir = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(opts.Db))!, "output"),
 };
 
 // Close the maintenance connection — PipelineRunner opens its own.

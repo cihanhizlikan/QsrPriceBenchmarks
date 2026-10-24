@@ -12,11 +12,11 @@ public sealed class PipelineOptions
     public required Models.ChainConfig Chain { get; init; }
 
     // Step flags — same semantics as CLI flags:
-    public bool ForceCrawl      { get; init; }
-    public bool Geocode         { get; init; }
-    public bool GeocodeRematch  { get; init; }
-    public bool Export          { get; init; }
-    public long? ExportSince    { get; init; }
+    public bool ForceCrawl { get; init; }
+    public bool Geocode { get; init; }
+    public bool GeocodeRematch { get; init; }
+    public bool Export { get; init; }
+    public long? ExportSince { get; init; }
 
     /// <summary>
     /// Optional subset of TG menu tab names to scrape during a full run

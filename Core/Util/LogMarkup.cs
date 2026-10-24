@@ -16,7 +16,7 @@ namespace QsrPriceBenchmarks.Core.Util;
 public static class LogMarkup
 {
     public const char ValueStart = '\uE000';
-    public const char ValueEnd   = '\uE001';
+    public const char ValueEnd = '\uE001';
 
     /// <summary>Mark <paramref name="text"/> as a scraped value (rendered dim cyan).</summary>
     public static string Value(string text) => $"{ValueStart}{text}{ValueEnd}";

@@ -19,13 +19,13 @@ namespace QsrPriceBenchmarks.Core.Util;
 public static class ConsoleColouriser
 {
     // ── Raw ANSI codes (identical to Python) ──────────────────────────────────
-    private const string Esc   = "\u001b";
+    private const string Esc = "\u001b";
     private const string Reset = "\u001b[0m";
-    private const string Bg    = "48;5;234";   // very dark gray background
-    private const string W     = "97";         // white foreground
-    private const string Lc    = "96";         // light cyan foreground
+    private const string Bg = "48;5;234";   // very dark gray background
+    private const string W = "97";         // white foreground
+    private const string Lc = "96";         // light cyan foreground
     private const string DimLc = "2;96";       // dim cyan foreground
-    private const string Pur   = "95";         // purple foreground
+    private const string Pur = "95";         // purple foreground
 
     public static bool Enabled { get; set; } = true;
 
@@ -33,24 +33,24 @@ public static class ConsoleColouriser
     private static string Wrap(string code, string text) =>
         Enabled ? $"{Esc}[{code}m{text}{Reset}" : text;
 
-    public static string LightCyan(string t) => Wrap(Lc,    t);
-    public static string DimCyan(string t)   => Wrap(DimLc, t);
-    public static string White(string t)     => Wrap(W,     t);
-    public static string Purple(string t)    => Wrap(Pur,   t);
-    public static string Bold(string t)      => Wrap("1",   t);
+    public static string LightCyan(string t) => Wrap(Lc, t);
+    public static string DimCyan(string t) => Wrap(DimLc, t);
+    public static string White(string t) => Wrap(W, t);
+    public static string Purple(string t) => Wrap(Pur, t);
+    public static string Bold(string t) => Wrap("1", t);
 
     /// <summary>Dark-gray bg, white text — for SKIP/FORCE labels.</summary>
-    private static string DGrayBg(string t)  => Wrap($"{Bg};{W}", t);
+    private static string DGrayBg(string t) => Wrap($"{Bg};{W}", t);
 
     // ── Pre-compiled regexes (mirror Python's _RE_* constants) ────────────────
-    private static readonly Regex ReSkipForce  = new(@"\b(SKIP|FORCE)\b", RegexOptions.Compiled);
-    private static readonly Regex ReUrl         = new(@"https?://\S+", RegexOptions.Compiled);
-    private static readonly Regex ReSymbolsNum  = new(@"[✓✗→↳]|(?<![\w/._-])\d[\d,.]*(?![\w/._-])", RegexOptions.Compiled);
-    private static readonly Regex ReStepTag     = new(@"\[Step\s+(\w+)\]", RegexOptions.Compiled);
-    private static readonly Regex ReRatio       = new(@"\[(\d+)/(\d+)\]", RegexOptions.Compiled);
-    private static readonly Regex ReSeparator   = new(@"^[-=]{3,}", RegexOptions.Compiled);
-    private static readonly Regex ReTagSuffix   = new(@"^(.*?)(\d+\w*)$", RegexOptions.Compiled);
-    private static readonly Regex ReValue       = new($"{LogMarkup.ValueStart}(.*?){LogMarkup.ValueEnd}", RegexOptions.Compiled);
+    private static readonly Regex ReSkipForce = new(@"\b(SKIP|FORCE)\b", RegexOptions.Compiled);
+    private static readonly Regex ReUrl = new(@"https?://\S+", RegexOptions.Compiled);
+    private static readonly Regex ReSymbolsNum = new(@"[✓✗→↳]|(?<![\w/._-])\d[\d,.]*(?![\w/._-])", RegexOptions.Compiled);
+    private static readonly Regex ReStepTag = new(@"\[Step\s+(\w+)\]", RegexOptions.Compiled);
+    private static readonly Regex ReRatio = new(@"\[(\d+)/(\d+)\]", RegexOptions.Compiled);
+    private static readonly Regex ReSeparator = new(@"^[-=]{3,}", RegexOptions.Compiled);
+    private static readonly Regex ReTagSuffix = new(@"^(.*?)(\d+\w*)$", RegexOptions.Compiled);
+    private static readonly Regex ReValue = new($"{LogMarkup.ValueStart}(.*?){LogMarkup.ValueEnd}", RegexOptions.Compiled);
 
     // ── [n/m] ratio widget: numbers light cyan, brackets+slash white, dark bg ─
     private static string Ratio(string cur, string tot)
@@ -188,7 +188,7 @@ public static class ConsoleColouriser
         return lines;
     }
 
-    public static string BannerTitle()    => Bold(LightCyan("  QSR Price Benchmarks"));
+    public static string BannerTitle() => Bold(LightCyan("  QSR Price Benchmarks"));
     public static string Separator(int n) => DimCyan("  " + new string('─', n));
     public static string DbLine(string path) => DimCyan($"  DB: {path}");
 }

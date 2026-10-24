@@ -10,4 +10,40 @@
   <PropertyGroup>
     <Version>1.5.5</Version>
   </PropertyGroup>
+
+  <!--
+    Code style and analysis, for the C# projects only — the WiX project imports
+    this file too and has no use for analyzers. Ported from Yalbuz 2026-10-24
+    (plan WP-S4); the rules themselves are in .editorconfig.
+  -->
+  <PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
+    <!-- Makes the .editorconfig style rules compiler warnings rather than IDE hints. -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <!-- PINNED so a warning count means the same thing twice running: the default
+         `latest` floats with the installed SDK, so an SDK update could change the
+         inventory with no line of code changed. Raise it deliberately with the
+         target framework, and read the new warnings as a change. -->
+    <AnalysisLevel>10.0</AnalysisLevel>
+    <!-- Stated rather than left empty: AnalysisMode=All was measured 2026-10-24 at
+         349 sites across Core/Cli/Ui, led by CA2007 (ConfigureAwait, wrong for a WPF
+         app that must resume on the UI thread) and CA1062 (null guards that nullable
+         reference types already check). The rules worth having are opted in one by
+         one in .editorconfig instead. -->
+    <AnalysisMode>Default</AnalysisMode>
+    <!-- Required for IDE0005 (unused usings) to surface as a build warning;
+         see dotnet/roslyn#41640. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- XML docs are written selectively, not exhaustively; the flag above is on for
+         IDE0005, so silence the missing-doc warning it would otherwise raise. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
+    <!-- ONE rule: RCS1211, coding-style.md rule 13 (no `else` after a branch that
+         exits), which no first-party analyzer implements. Everything else
+         Roslynator ships is switched off in .editorconfig. Roslynator is MIT,
+         actively maintained (josefpihrt/roslynator), and analysis-only: never
+         flowed to anything that references these projects. -->
+    <PackageReference Include="Roslynator.Analyzers" Version="5.0.0" PrivateAssets="all" />
+  </ItemGroup>
 </Project>

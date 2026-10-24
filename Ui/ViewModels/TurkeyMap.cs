@@ -99,12 +99,12 @@ public static class TurkeyMap
 
     private static readonly Dictionary<string, string> Aliases = new()
     {
-        ["ICEL"]   = "MERSIN",
-        ["AFYON"]  = "AFYONKARAHISAR",
-        ["MARAS"]  = "KAHRAMANMARAS",
+        ["ICEL"] = "MERSIN",
+        ["AFYON"] = "AFYONKARAHISAR",
+        ["MARAS"] = "KAHRAMANMARAS",
         ["KMARAS"] = "KAHRAMANMARAS",
-        ["URFA"]   = "SANLIURFA",
-        ["ANTEP"]  = "GAZIANTEP",
+        ["URFA"] = "SANLIURFA",
+        ["ANTEP"] = "GAZIANTEP",
     };
 
     /// <summary>

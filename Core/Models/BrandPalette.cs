@@ -11,11 +11,11 @@ public static class BrandPalette
 {
     private static readonly Dictionary<string, string> Hex = new(StringComparer.Ordinal)
     {
-        ["Arby's"]      = "#D91C22", // red
+        ["Arby's"] = "#D91C22", // red
         ["Burger King"] = "#FAB111", // amber/yellow
-        ["Popeyes"]     = "#FF7C00", // orange
-        ["Sbarro"]      = "#CA0D2A", // red
-        ["Subway"]      = "#005543", // dark green
+        ["Popeyes"] = "#FF7C00", // orange
+        ["Sbarro"] = "#CA0D2A", // red
+        ["Subway"] = "#005543", // dark green
         ["Usta Dönerci"] = "#D93832", // red
         ["Usta Pideci"] = "#E12325", // red
     };

@@ -41,31 +41,31 @@ public sealed class MainViewModel : ViewModelBase
     }
 
     // ── State ─────────────────────────────────────────────────────────────────
-    private string       _dbPath      = DefaultDbPath();
+    private string _dbPath = DefaultDbPath();
     private ChainViewModel? _selected;
-    private bool         _isRunning;
-    private bool         _forceCrawl;
-    private bool         _geocode;
-    private bool         _geocodeRematch;
-    private bool         _export;
-    private string       _exportSince = "";
-    private string       _deleteBeforeId = "";
-    private string?      _lastOutputPath;
-    private int          _progressDone;
-    private int          _progressTotal;
-    private string       _progressText = "";
+    private bool _isRunning;
+    private bool _forceCrawl;
+    private bool _geocode;
+    private bool _geocodeRematch;
+    private bool _export;
+    private string _exportSince = "";
+    private string _deleteBeforeId = "";
+    private string? _lastOutputPath;
+    private int _progressDone;
+    private int _progressTotal;
+    private string _progressText = "";
     private CancellationTokenSource? _cts;
 
     // Export runs on its own cancellation source, independent of a pipeline run.
     private CancellationTokenSource? _exportCts;
-    private int          _exportDone;
-    private int          _exportTotal;
-    private string       _exportText = "";
+    private int _exportDone;
+    private int _exportTotal;
+    private string _exportText = "";
 
     // ── Observable collections ────────────────────────────────────────────────
-    public ObservableCollection<ChainViewModel>    Chains    { get; } = new();
-    public ObservableCollection<string>            LogLines  { get; } = new();
-    public ObservableCollection<ScrapeRunViewModel> Runs     { get; } = new();
+    public ObservableCollection<ChainViewModel> Chains { get; } = new();
+    public ObservableCollection<string> LogLines { get; } = new();
+    public ObservableCollection<ScrapeRunViewModel> Runs { get; } = new();
     public ObservableCollection<MapCellViewModel> MapCells { get; } = new();
 
     // Total LOCATIONS for the selected chain, shown atop the Locations tab.
@@ -152,7 +152,7 @@ public sealed class MainViewModel : ViewModelBase
     public bool IsBusy => IsRunning || IsExporting;
 
     // ── Step-3 geocoding progress bar ─────────────────────────────────────────
-    public int ProgressDone  { get => _progressDone;  private set { Set(ref _progressDone, value);  Notify(nameof(ProgressVisible)); } }
+    public int ProgressDone { get => _progressDone; private set { Set(ref _progressDone, value); Notify(nameof(ProgressVisible)); } }
     public int ProgressTotal { get => _progressTotal; private set { Set(ref _progressTotal, value); Notify(nameof(ProgressVisible)); } }
     public string ProgressText { get => _progressText; private set => Set(ref _progressText, value); }
 
@@ -160,7 +160,7 @@ public sealed class MainViewModel : ViewModelBase
     public bool ProgressVisible => IsRunning && _progressTotal > 0;
 
     // ── Excel export progress bar (Scrape Runs tab) ───────────────────────────
-    public int ExportDone  { get => _exportDone;  private set => Set(ref _exportDone, value); }
+    public int ExportDone { get => _exportDone; private set => Set(ref _exportDone, value); }
     public int ExportTotal { get => _exportTotal; private set => Set(ref _exportTotal, value); }
     public string ExportText { get => _exportText; private set => Set(ref _exportText, value); }
 
@@ -168,7 +168,7 @@ public sealed class MainViewModel : ViewModelBase
     public bool ExportProgressVisible => IsExporting;
 
     // Step flags — mutually exclusive pairs enforced via property setters
-    public bool ForceCrawl      { get => _forceCrawl;      set { Set(ref _forceCrawl, value); NotifyRunModeChanged(); } }
+    public bool ForceCrawl { get => _forceCrawl; set { Set(ref _forceCrawl, value); NotifyRunModeChanged(); } }
     public bool Geocode
     {
         get => _geocode;
@@ -286,38 +286,38 @@ public sealed class MainViewModel : ViewModelBase
 
     // ── Commands ──────────────────────────────────────────────────────────────
     public AsyncRelayCommand RunCommand { get; }
-    public RelayCommand      CancelCommand { get; }
-    public RelayCommand      BrowseDbCommand { get; }
+    public RelayCommand CancelCommand { get; }
+    public RelayCommand BrowseDbCommand { get; }
     public AsyncRelayCommand ReloadRunsCommand { get; }
-    public RelayCommand      OpenUrlCommand { get; }
+    public RelayCommand OpenUrlCommand { get; }
     public AsyncRelayCommand DeleteRunCommand { get; }
     public AsyncRelayCommand ExportRunCommand { get; }
-    public RelayCommand      CancelExportCommand { get; }
+    public RelayCommand CancelExportCommand { get; }
     public AsyncRelayCommand ResumeRunCommand { get; }
     public AsyncRelayCommand DeleteBeforeIdCommand { get; }
-    public RelayCommand      OpenOutputCommand { get; }
-    public RelayCommand      OpenFolderCommand { get; }
+    public RelayCommand OpenOutputCommand { get; }
+    public RelayCommand OpenFolderCommand { get; }
 
     // ── Constructor ───────────────────────────────────────────────────────────
     public MainViewModel()
     {
-        RunCommand          = new AsyncRelayCommand(_ => RunAsync(),     _ => !IsRunning && SelectedChain is not null);
-        CancelCommand       = new RelayCommand(_ => RequestCancel(),
+        RunCommand = new AsyncRelayCommand(_ => RunAsync(), _ => !IsRunning && SelectedChain is not null);
+        CancelCommand = new RelayCommand(_ => RequestCancel(),
             _ => IsRunning && _cts is { IsCancellationRequested: false });
-        BrowseDbCommand     = new RelayCommand(_ => BrowseDb(), _ => !IsRunning);
-        ReloadRunsCommand   = new AsyncRelayCommand(_ => ReloadRunsAsync());
-        OpenUrlCommand      = new RelayCommand(p => OpenUrl(p as string), p => p is string s && s.Length > 0);
+        BrowseDbCommand = new RelayCommand(_ => BrowseDb(), _ => !IsRunning);
+        ReloadRunsCommand = new AsyncRelayCommand(_ => ReloadRunsAsync());
+        OpenUrlCommand = new RelayCommand(p => OpenUrl(p as string), p => p is string s && s.Length > 0);
         // Export/Delete of a completed run are allowed while a scrape run is in
         // progress (WAL makes concurrent read/write safe); only a second export
         // is blocked, since exports share one cancellation source and progress UI.
-        DeleteRunCommand    = new AsyncRelayCommand(p  => DeleteRunAsync(p), _ => !IsExporting);
-        ExportRunCommand    = new AsyncRelayCommand(p  => ExportRunAsync(p), _ => !IsExporting);
+        DeleteRunCommand = new AsyncRelayCommand(p => DeleteRunAsync(p), _ => !IsExporting);
+        ExportRunCommand = new AsyncRelayCommand(p => ExportRunAsync(p), _ => !IsExporting);
         CancelExportCommand = new RelayCommand(_ => CancelExport(),
             _ => IsExporting && _exportCts is { IsCancellationRequested: false });
-        ResumeRunCommand    = new AsyncRelayCommand(p  => ResumeRunAsync(p), _ => !IsBusy);
+        ResumeRunCommand = new AsyncRelayCommand(p => ResumeRunAsync(p), _ => !IsBusy);
         DeleteBeforeIdCommand = new AsyncRelayCommand(_ => DeleteBeforeIdAsync(), _ => !IsBusy);
-        OpenOutputCommand   = new RelayCommand(_ => OpenOutput(), _ => !string.IsNullOrEmpty(LastOutputPath));
-        OpenFolderCommand   = new RelayCommand(_ => OpenFolder());
+        OpenOutputCommand = new RelayCommand(_ => OpenOutput(), _ => !string.IsNullOrEmpty(LastOutputPath));
+        OpenFolderCommand = new RelayCommand(_ => OpenFolder());
 
         // Seed the chain list from the registry, sorted alphabetically by name.
         foreach (ChainConfig chain in ChainRegistry.All.OrderBy(c => c.Name, StringComparer.CurrentCulture))
@@ -352,8 +352,8 @@ public sealed class MainViewModel : ViewModelBase
         Progress<StepProgress> progressCount = new(p =>
         {
             ProgressTotal = p.Total;
-            ProgressDone  = p.Done;
-            ProgressText  = p.Total > 0 ? $"{p.Phase}  {p.Done} / {p.Total}" : "";
+            ProgressDone = p.Done;
+            ProgressText = p.Total > 0 ? $"{p.Phase}  {p.Done} / {p.Total}" : "";
         });
         // Fires (on the UI thread) as Step 1 commits location batches, so the
         // Locations tab can refresh live while a crawl is in progress.
@@ -372,14 +372,14 @@ public sealed class MainViewModel : ViewModelBase
 
         PipelineOptions opts = new()
         {
-            Chain          = SelectedChain.Chain,
-            ForceCrawl     = ForceCrawl,
-            Geocode        = Geocode,
+            Chain = SelectedChain.Chain,
+            ForceCrawl = ForceCrawl,
+            Geocode = Geocode,
             GeocodeRematch = GeocodeRematch,
-            Export         = Export,
-            ExportSince    = exportSinceId,
-            Tabs           = selectedTabs,
-            OutputDir      = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(DbPath))!, "output"),
+            Export = Export,
+            ExportSince = exportSinceId,
+            Tabs = selectedTabs,
+            OutputDir = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(DbPath))!, "output"),
         };
 
         CancellationToken token = _cts.Token;
@@ -583,11 +583,11 @@ public sealed class MainViewModel : ViewModelBase
                 byProvince.TryGetValue(TurkeyMap.Normalize(name), out (int Total, List<string> Districts) agg);
                 cells.Add(new MapCellViewModel
                 {
-                    ProvinceName  = name, // the map's proper Turkish district name
-                    Shape     = shape,
-                    DotLeft   = cx - MapCellViewModel.DotBox / 2,
-                    DotTop    = cy - MapCellViewModel.DotBox / 2,
-                    Total     = agg.Total,
+                    ProvinceName = name, // the map's proper Turkish district name
+                    Shape = shape,
+                    DotLeft = cx - MapCellViewModel.DotBox / 2,
+                    DotTop = cy - MapCellViewModel.DotBox / 2,
+                    Total = agg.Total,
                     Districts = (agg.Districts ?? new List<string>())
                                 .OrderBy(d => d, StringComparer.CurrentCulture).ToList(),
                 });
@@ -847,12 +847,12 @@ public sealed class MainViewModel : ViewModelBase
 
         Microsoft.Win32.OpenFileDialog dlg = new()
         {
-            Title            = "Select or create database file",
-            Filter           = "SQLite (*.sqlite)|*.sqlite|All files (*.*)|*.*",
-            CheckFileExists  = false,
+            Title = "Select or create database file",
+            Filter = "SQLite (*.sqlite)|*.sqlite|All files (*.*)|*.*",
+            CheckFileExists = false,
             // Pre-filled so browsing to any folder and pressing Open creates
             // a database file there — no file has to exist yet.
-            FileName         = currentFile,
+            FileName = currentFile,
             InitialDirectory = currentDir,
         };
         if (dlg.ShowDialog() != true)
@@ -976,7 +976,7 @@ public sealed class MainViewModel : ViewModelBase
             _cts?.Dispose();
             _cts = null;
             await ReloadRunsAsync();
-                await RebuildMapAsync();
+            await RebuildMapAsync();
         }
     }
 }

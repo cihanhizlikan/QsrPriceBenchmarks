@@ -1,0 +1,111 @@
+root = true
+
+# QSR Price Benchmarks C# style — build-enforced (EnforceCodeStyleInBuild is on in Directory.Build.props).
+# Ported from Yalbuz on 2026-10-24 (plan WP-S4). Encodes .claude/rules/coding-style.md so its rules are compiler
+# warnings rather than per-session instructions. The baseline is ZERO warnings: every site was fixed or suppressed
+# at its site with a reason when this file landed, so the next warning to fire is new.
+
+[*]
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+# CRLF because that is what core.autocrlf=true checks out. The INDEX stays LF (`* text=auto` in .gitattributes);
+# this only tells `dotnet format` what to write in the working tree.
+end_of_line = crlf
+
+[*.cs]
+indent_style = space
+indent_size = 4
+
+# --- Pattern matching over type-check-and-cast / as-with-null-check (rules 5 and 6)
+csharp_style_pattern_matching_over_is_with_cast_check = true:warning
+csharp_style_pattern_matching_over_as_with_null_check = true:warning
+csharp_style_prefer_pattern_matching = true:warning
+csharp_style_prefer_switch_expression = true:warning
+csharp_style_prefer_not_pattern = true:warning
+
+# --- is null / is not null over == null and ReferenceEquals
+dotnet_style_prefer_is_null_check_over_reference_equality_method = true:warning
+csharp_style_conditional_delegate_call = true:warning
+
+# --- Unused usings surface as build warnings (needs GenerateDocumentationFile; see Directory.Build.props)
+dotnet_diagnostic.IDE0005.severity = warning
+
+# --- Explicit types, never var (rule 1)
+csharp_style_var_for_built_in_types = false:warning
+csharp_style_var_when_type_is_apparent = false:warning
+csharp_style_var_elsewhere = false:warning
+# Braces on every control-flow block (rule 2)
+csharp_prefer_braces = true:warning
+# Target-typed new where the type is apparent (rule 1)
+csharp_style_implicit_object_creation_when_type_is_apparent = true:warning
+# Range operators over Substring arithmetic (rule 8)
+csharp_style_prefer_range_operator = true:warning
+# Collection expressions (rule 7)
+dotnet_style_prefer_collection_expression = when_types_loosely_match:warning
+# Primary constructors (rule 11). A captured parameter is NOT readonly and can be SHADOWED by a member's parameter
+# of the same name; coding-style.md rule 11 says when to keep an explicit `private readonly` field instead.
+csharp_style_prefer_primary_constructors = true:warning
+dotnet_diagnostic.IDE0290.severity = warning
+
+# --- Code metrics. They ship in the SDK analyzers but sit in no globalconfig, so even AnalysisMode=All leaves them
+# off and they read as "clean" when they are simply not running. SDK defaults: CA1502 cyclomatic complexity 25,
+# CA1505 maintainability index 10, CA1506 class coupling 95.
+dotnet_diagnostic.CA1502.severity = warning
+dotnet_diagnostic.CA1505.severity = warning
+dotnet_diagnostic.CA1506.severity = warning
+
+# --- Off at SDK defaults and turned on for the same reason as the metrics: an analyzer that is off is not
+# evidence of absence. CA2100 SQL text that is not a compile-time constant, CA3003 a file path built from external
+# input, CA1001 a type that owns an IDisposable field and is not disposable itself.
+dotnet_diagnostic.CA2100.severity = warning
+dotnet_diagnostic.CA3003.severity = warning
+dotnet_diagnostic.CA1001.severity = warning
+
+# --- The culture-sensitive string family. This codebase parses Turkish prices and folds Turkish diacritics with
+# InvariantGlobalization deliberately off, so the dotted/dotless I makes a culture comparison and an ordinal one
+# disagree on real data. The three are NOT interchangeable:
+#   CA1305 — a result that depends on the current culture: interpolation, ToString, Parse.
+#   CA1307 — a comparison that does not SAY which it wants, on members already ordinal by default. Clarity.
+#   CA1310 — a comparison that is CULTURE-SENSITIVE by default: StartsWith, EndsWith, IndexOf(string). Correctness.
+dotnet_diagnostic.CA1305.severity = warning
+dotnet_diagnostic.CA1307.severity = warning
+dotnet_diagnostic.CA1310.severity = warning
+
+# CA2000 is deliberately NOT enabled: it cannot see ownership transfers (a factory returning what the caller
+# `using`s, a browser context the session disposes), so it would be held above zero by sites nobody intends to fix.
+
+# --- Roslynator, opted IN one rule at a time. Both switches are deliberate: the first is Roslynator's own
+# default-off, the second the analyzer-category severity the SDK understands; a rule enabled below wins over both.
+# RCS1211 is rule 13 — no `else` after a branch that exits — which no first-party analyzer implements (IDE0046
+# rewrites the pair as a conditional expression, which rule 10 does not want).
+roslynator_analyzers.enabled_by_default = false
+dotnet_analyzer_diagnostic.category-roslynator.severity = none
+dotnet_diagnostic.RCS1211.severity = warning
+
+# --- Shape rules (rule 10)
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_style_expression_bodied_properties = false:warning
+csharp_style_expression_bodied_accessors = false:warning
+csharp_style_expression_bodied_indexers = false:warning
+csharp_style_expression_bodied_methods = false:warning
+
+# --- Sensible companions kept at suggestion (not part of the mandate; no warning noise)
+dotnet_style_object_initializer = true:suggestion
+dotnet_style_collection_initializer = true:suggestion
+
+# --- Test scoping. These sections come LAST on purpose: EditorConfig gives later matching sections precedence, so
+# an override placed above the `[*.cs]` block would silently lose to it.
+[Tests/**.cs]
+# The culture family: a test's `Assert.Contains(expected, actual)` over a string it produced itself IS the
+# assertion, and a test parses its own literals.
+dotnet_diagnostic.CA1305.severity = none
+dotnet_diagnostic.CA1307.severity = none
+dotnet_diagnostic.CA1310.severity = none
+# Class coupling is a production design metric; a test legitimately touches many types.
+dotnet_diagnostic.CA1506.severity = none
+# SQL injection is about external input; a test builds its own throwaway database from its own literals.
+dotnet_diagnostic.CA2100.severity = none
+# A test helper reading `private static Foo Make() => new();` is idiomatic; rule 10's block bodies describe
+# production style.
+csharp_style_expression_bodied_methods = false:silent

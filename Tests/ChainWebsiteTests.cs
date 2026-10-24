@@ -38,8 +38,8 @@ public sealed class ChainWebsiteTests(PlaywrightFixture pw)
         var (ctx, page) = await pw.NewPageAsync();
         await using var _ = ctx;
 
-        var html      = await FetchWithScrollAsync(page, chain.RootUrl!, chain.ContentSelector);
-        var doc       = await PageFetcher.ParseHtmlAsync(html, chain.RootUrl!);
+        var html = await FetchWithScrollAsync(page, chain.RootUrl!, chain.ContentSelector);
+        var doc = await PageFetcher.ParseHtmlAsync(html, chain.RootUrl!);
         List<string> provinceLinks = UrlUtils.ParseDepthLinks(doc, chain.RootUrl!, depthOffset: 1);
 
         Assert.True(provinceLinks.Count > 0,
@@ -65,8 +65,8 @@ public sealed class ChainWebsiteTests(PlaywrightFixture pw)
         await using var _ = ctx;
 
         // ── Root → first province link ────────────────────────────────────────────
-        var rootHtml  = await FetchWithScrollAsync(page, chain.RootUrl!, chain.ContentSelector);
-        var rootDoc   = await PageFetcher.ParseHtmlAsync(rootHtml, chain.RootUrl!);
+        var rootHtml = await FetchWithScrollAsync(page, chain.RootUrl!, chain.ContentSelector);
+        var rootDoc = await PageFetcher.ParseHtmlAsync(rootHtml, chain.RootUrl!);
         List<string> provinceLinks = UrlUtils.ParseDepthLinks(rootDoc, chain.RootUrl!, depthOffset: 1);
 
         Assert.True(provinceLinks.Count > 0,
@@ -104,7 +104,7 @@ public sealed class ChainWebsiteTests(PlaywrightFixture pw)
         await page.GotoAsync(url, new PageGotoOptions
         {
             WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout   = 30_000,
+            Timeout = 30_000,
         });
 
         await PageFetcher.DismissCookieBannerAsync(page);
@@ -159,7 +159,7 @@ public sealed class ChainWebsiteTests(PlaywrightFixture pw)
                 continue;
             }
 
-            var doc   = await PageFetcher.ParseHtmlAsync(html, url);
+            var doc = await PageFetcher.ParseHtmlAsync(html, url);
             List<RestaurantCard> cards = RestaurantCardParser.Parse(doc, url);
 
             // A "real" restaurant card has a name AND sits at URL depth > root.

@@ -21,7 +21,7 @@ public sealed class MapCellViewModel
 
     /// <summary>Top-left of the dot container so its centre sits on the centroid.</summary>
     public double DotLeft { get; init; }
-    public double DotTop  { get; init; }
+    public double DotTop { get; init; }
 
     public int Total { get; init; }
     public bool HasLocations => Total > 0;

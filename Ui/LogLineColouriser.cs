@@ -27,18 +27,18 @@ public static class LogLineColouriser
     // names), URLs and secondary lines render in a genuinely dimmer cyan, so the
     // two read differently — matching the muted cyan of the inactive buttons.
     private static readonly Brush LightCyan = Freeze("#00FFFF");   // ANSI 96   bright cyan
-    private static readonly Brush DimCyan   = Freeze("#00B3B3");   // ANSI 2;96 dimmed cyan
-    private static readonly Brush White     = Freeze("#FFFFFF");   // ANSI 97
-    private static readonly Brush Purple    = Freeze("#FF00FF");   // ANSI 95
-    private static readonly Brush StepBg     = Freeze("#1C1C1C");  // ANSI 48;5;234
+    private static readonly Brush DimCyan = Freeze("#00B3B3");   // ANSI 2;96 dimmed cyan
+    private static readonly Brush White = Freeze("#FFFFFF");   // ANSI 97
+    private static readonly Brush Purple = Freeze("#FF00FF");   // ANSI 95
+    private static readonly Brush StepBg = Freeze("#1C1C1C");  // ANSI 48;5;234
 
-    private static readonly Regex ReSkipForce  = new(@"\b(SKIP|FORCE)\b", RegexOptions.Compiled);
-    private static readonly Regex ReUrl         = new(@"https?://\S+", RegexOptions.Compiled);
-    private static readonly Regex ReSymbolsNum  = new(@"[✓✗→↳]|(?<![\w/._-])\d[\d,.]*(?![\w/._-])", RegexOptions.Compiled);
-    private static readonly Regex ReStepTag     = new(@"\[Step\s+(\w+)\]", RegexOptions.Compiled);
-    private static readonly Regex ReRatio       = new(@"\[(\d+)/(\d+)\]", RegexOptions.Compiled);
-    private static readonly Regex ReSeparator   = new(@"^[-=]{3,}", RegexOptions.Compiled);
-    private static readonly Regex ReValue       = new($"{LogMarkup.ValueStart}(.*?){LogMarkup.ValueEnd}", RegexOptions.Compiled);
+    private static readonly Regex ReSkipForce = new(@"\b(SKIP|FORCE)\b", RegexOptions.Compiled);
+    private static readonly Regex ReUrl = new(@"https?://\S+", RegexOptions.Compiled);
+    private static readonly Regex ReSymbolsNum = new(@"[✓✗→↳]|(?<![\w/._-])\d[\d,.]*(?![\w/._-])", RegexOptions.Compiled);
+    private static readonly Regex ReStepTag = new(@"\[Step\s+(\w+)\]", RegexOptions.Compiled);
+    private static readonly Regex ReRatio = new(@"\[(\d+)/(\d+)\]", RegexOptions.Compiled);
+    private static readonly Regex ReSeparator = new(@"^[-=]{3,}", RegexOptions.Compiled);
+    private static readonly Regex ReValue = new($"{LogMarkup.ValueStart}(.*?){LogMarkup.ValueEnd}", RegexOptions.Compiled);
 
     private static SolidColorBrush Freeze(string hex)
     {

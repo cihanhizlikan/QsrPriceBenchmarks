@@ -138,7 +138,7 @@ public sealed class TgMenuTests(PlaywrightFixture pw)
         var data = await GetChainDataAsync(platformSlug);
         if (data is null || data.Items.Count == 0) return;
 
-        var names    = data.Items.Select(i => i.Name).ToList();
+        var names = data.Items.Select(i => i.Name).ToList();
         var distinct = names.Distinct().ToList();
 
         Assert.True(distinct.Count == names.Count,

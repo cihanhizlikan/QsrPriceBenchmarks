@@ -7,7 +7,7 @@ namespace QsrPriceBenchmarks.Ui.Converters;
 [ValueConversion(typeof(bool), typeof(Visibility))]
 public sealed class BoolToVisibilityConverter : IValueConverter
 {
-    public Visibility WhenTrue  { get; set; } = Visibility.Visible;
+    public Visibility WhenTrue { get; set; } = Visibility.Visible;
     public Visibility WhenFalse { get; set; } = Visibility.Collapsed;
     public object Convert(object v, Type t, object p, CultureInfo c) =>
         v is true ? WhenTrue : WhenFalse;
@@ -27,7 +27,7 @@ public sealed class InverseBoolConverter : IValueConverter
 /// <summary>Returns Collapsed when value is null (any reference type), Visible otherwise.</summary>
 public sealed class NullToVisibilityConverter : IValueConverter
 {
-    public Visibility WhenNull    { get; set; } = Visibility.Collapsed;
+    public Visibility WhenNull { get; set; } = Visibility.Collapsed;
     public Visibility WhenNotNull { get; set; } = Visibility.Visible;
     public object Convert(object v, Type t, object p, CultureInfo c) =>
         v is null ? WhenNull : WhenNotNull;
