@@ -520,7 +520,7 @@ public static class Database
         // deterministic across machine locales; for the current names it matches
         // the alphabetical sidebar order. Existing rows keep their IDs (GetOrCreate
         // matches on NAME), so this only affects DBs built from scratch.
-        foreach (ChainConfig chain in Models.Chains.All.OrderBy(c => c.Name, StringComparer.Ordinal))
+        foreach (ChainConfig chain in Models.ChainRegistry.All.OrderBy(c => c.Name, StringComparer.Ordinal))
         {
             long qsrId = GetOrCreate(conn, tx, "QSR",
                 new() { ["NAME"] = chain.Name },

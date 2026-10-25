@@ -110,7 +110,7 @@ internal static class TestHelpers
     }
 
     public static ChainConfig RequireChain(string platformSlug) =>
-        Chains.FindByPlatformSlug(platformSlug)
+        ChainRegistry.FindByPlatformSlug(platformSlug)
         ?? throw new InvalidOperationException(
             $"No chain registered with platform slug '{platformSlug}'. " +
             "Check ChainConfig.cs for the correct slug.");

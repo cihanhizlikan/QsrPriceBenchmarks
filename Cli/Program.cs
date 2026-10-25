@@ -117,11 +117,11 @@ if (opts.DeleteScrapeRunsBeforeId is not null)
 }
 
 // ── Chain ─────────────────────────────────────────────────────────────────────
-ChainConfig? chain = Chains.FindByPlatformSlug(opts.Chain!);
+ChainConfig? chain = ChainRegistry.FindByPlatformSlug(opts.Chain!);
 if (chain is null)
 {
     Log($"  ✗ Unknown chain slug: '{opts.Chain}'");
-    Log($"  Available: {string.Join(", ", Chains.AllPlatformSlugs())}");
+    Log($"  Available: {string.Join(", ", ChainRegistry.AllPlatformSlugs())}");
     return 1;
 }
 

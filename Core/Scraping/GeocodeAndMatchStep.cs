@@ -146,7 +146,7 @@ public static class GeocodeAndMatchStep
 
         // QSR_ID → chain display name, so the matcher can discount the chain's
         // own brand tokens ("burger", "king") that sit in every platform slug.
-        Dictionary<long, string> chainNames = Models.Chains.All.ToDictionary(
+        Dictionary<long, string> chainNames = Models.ChainRegistry.All.ToDictionary(
             c => Repository.QsrId(conn, c.Name),
             c => c.Name);
 

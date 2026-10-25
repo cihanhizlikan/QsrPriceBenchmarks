@@ -9,7 +9,6 @@ using Microsoft.Data.Sqlite;
 using QsrPriceBenchmarks.Core.Db;
 using QsrPriceBenchmarks.Core.Export;
 using QsrPriceBenchmarks.Core.Models;
-using ChainRegistry = QsrPriceBenchmarks.Core.Models.Chains;
 using QsrPriceBenchmarks.Core.Services;
 
 namespace QsrPriceBenchmarks.Ui.ViewModels;

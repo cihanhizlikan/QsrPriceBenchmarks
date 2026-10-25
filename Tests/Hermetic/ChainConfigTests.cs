@@ -5,7 +5,7 @@ namespace QsrPriceBenchmarks.IntegrationTests.Hermetic;
 
 /// <summary>
 /// Hermetic validation of the chain registry. These run over every entry in
-/// <see cref="Chains.All"/> — including the newer chains (Arby's, Sbarro,
+/// <see cref="ChainRegistry.All"/> — including the newer chains (Arby's, Sbarro,
 /// Subway, Popeyes, Usta Dönerci, Usta Pideci) — so a typo in a slug or a
 /// mismatched Base/Root URL fails the build instead of silently producing an
 /// empty or broken scrape. (Menu tabs are not validated here: they are no
@@ -15,9 +15,9 @@ namespace QsrPriceBenchmarks.IntegrationTests.Hermetic;
 public sealed class ChainConfigTests
 {
     public static IEnumerable<object[]> AllChains() =>
-        Chains.All.Select(c => new object[] { c.Name });
+        ChainRegistry.All.Select(c => new object[] { c.Name });
 
-    private static ChainConfig Chain(string name) => Chains.All.First(c => c.Name == name);
+    private static ChainConfig Chain(string name) => ChainRegistry.All.First(c => c.Name == name);
 
     private static bool IsAbsHttpUrl(string? s) =>
         Uri.TryCreate(s, UriKind.Absolute, out Uri? u) && (u.Scheme == "http" || u.Scheme == "https");
@@ -59,28 +59,28 @@ public sealed class ChainConfigTests
         // Each slug resolves back to this chain.
         foreach (string slug in c.PlatformSlugs.Values)
         {
-            Assert.Same(c, Chains.FindByPlatformSlug(slug));
+            Assert.Same(c, ChainRegistry.FindByPlatformSlug(slug));
         }
     }
 
     [Fact(DisplayName = "Chain names and platform slugs are globally unique")]
     public void Names_And_Slugs_AreUnique()
     {
-        List<string> names = [.. Chains.All.Select(c => c.Name)];
+        List<string> names = [.. ChainRegistry.All.Select(c => c.Name)];
         Assert.Equal(names.Count, names.Distinct().Count());
 
-        IReadOnlyList<string> slugs = Chains.AllPlatformSlugs();
+        IReadOnlyList<string> slugs = ChainRegistry.AllPlatformSlugs();
         Assert.Equal(slugs.Count, slugs.Distinct().Count());
     }
 
     [Fact(DisplayName = "FindByPlatformSlug is case-insensitive and returns null for unknowns")]
     public void FindByPlatformSlug_Behaviour()
     {
-        ChainConfig first = Chains.All.First();
+        ChainConfig first = ChainRegistry.All.First();
         string slug = first.PlatformSlugs.Values.First();
 
-        Assert.Same(first, Chains.FindByPlatformSlug(slug.ToUpperInvariant()));
-        Assert.Same(first, Chains.FindByPlatformSlug($"  {slug}  ")); // trimmed
-        Assert.Null(Chains.FindByPlatformSlug("no-such-slug-xyz"));
+        Assert.Same(first, ChainRegistry.FindByPlatformSlug(slug.ToUpperInvariant()));
+        Assert.Same(first, ChainRegistry.FindByPlatformSlug($"  {slug}  ")); // trimmed
+        Assert.Null(ChainRegistry.FindByPlatformSlug("no-such-slug-xyz"));
     }
 }

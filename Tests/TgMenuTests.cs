@@ -27,7 +27,7 @@ public sealed class TgMenuTests(PlaywrightFixture pw)
 
     // Covers every chain in the registry — adding a chain tests it here too.
     public static IEnumerable<object[]> AllSlugs() =>
-        Core.Models.Chains.AllPlatformSlugs().Select(s => new object[] { s });
+        Core.Models.ChainRegistry.AllPlatformSlugs().Select(s => new object[] { s });
 
     // ── Single cached fetch per chain (shared by every test below) ───────────
 

@@ -19,7 +19,7 @@ public sealed class ScrapeTabLifecycleTests
 {
     private static (long QsrId, long PlatformId) Ids(SqliteConnection conn)
     {
-        ChainConfig chain = Chains.All.First(c => c.Name == "Burger King");
+        ChainConfig chain = ChainRegistry.All.First(c => c.Name == "Burger King");
         return (Repository.QsrId(conn, chain.Name),
                 Repository.PlatformId(conn, chain.PrimaryPlatform));
     }
