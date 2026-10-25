@@ -225,6 +225,10 @@
         <Setter Property="CanUserAddRows"      Value="False"/>
         <Setter Property="MinRowHeight"        Value="34"/>
         <Setter Property="FontFamily"          Value="Consolas"/>
+        <!-- Column headers only: the default (All) also draws a row-header column
+             and corner that nothing here styles, which rendered as a light strip
+             down the left of every grid. Selection is shown by the cell highlight. -->
+        <Setter Property="HeadersVisibility"   Value="Column"/>
     </Style>
 
     <Style TargetType="DataGridColumnHeader">
