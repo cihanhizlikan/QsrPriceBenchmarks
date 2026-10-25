@@ -15,13 +15,13 @@ namespace QsrPriceBenchmarks.IntegrationTests.Hermetic;
 public sealed class ScrapeTabSeedTests
 {
     public static IEnumerable<object[]> AllChains() =>
-        Chains.All.Select(c => new object[] { c.Name });
+        ChainRegistry.All.Select(c => new object[] { c.Name });
 
     [Theory(DisplayName = "Fresh database seeds no tabs — discovery is the only source")]
     [MemberData(nameof(AllChains))]
     public void FreshDatabase_HasNoSeededTabs(string name)
     {
-        ChainConfig chain = Chains.All.First(c => c.Name == name);
+        ChainConfig chain = ChainRegistry.All.First(c => c.Name == name);
 
         using TempDb db = new();
         long qsrId = Repository.QsrId(db.Conn, chain.Name);

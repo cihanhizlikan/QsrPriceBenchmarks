@@ -22,7 +22,7 @@ public sealed class DatabaseTests
                 using SqliteCommand cmd = conn.CreateCommand();
                 cmd.CommandText = "SELECT COUNT(*) FROM QSR;";
                 firstCount = Convert.ToInt64(cmd.ExecuteScalar());
-                Assert.Equal(Chains.All.Count, (int)firstCount);
+                Assert.Equal(ChainRegistry.All.Count, (int)firstCount);
             }
 
             // Re-opening the same file must not duplicate seed rows.

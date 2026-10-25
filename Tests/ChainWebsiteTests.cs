@@ -24,7 +24,7 @@ public sealed class ChainWebsiteTests(PlaywrightFixture pw)
     // Covers every chain in the registry — add a chain and it's tested here
     // automatically (no InlineData to keep in sync).
     public static IEnumerable<object[]> AllSlugs() =>
-        Core.Models.Chains.AllPlatformSlugs().Select(s => new object[] { s });
+        Core.Models.ChainRegistry.AllPlatformSlugs().Select(s => new object[] { s });
 
     // ── Province-link discovery ───────────────────────────────────────────────────
 

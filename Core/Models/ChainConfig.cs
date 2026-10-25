@@ -46,7 +46,7 @@ public sealed record ChainConfig(
 /// The full registry of chains this program scrapes. Mirrors CHAINS from the
 /// Python prototype, plus four new chains: Arby's, Sbarro, Usta Pideci, Subway.
 /// </summary>
-public static class Chains
+public static class ChainRegistry
 {
     private const string TgSitemap = "https://www.tiklagelsin.com/sitemap/sitemap/restoranlar.xml";
 

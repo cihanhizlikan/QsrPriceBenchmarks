@@ -630,7 +630,7 @@ public static class Repository
     {
         // chain display name -> Tıkla Gelsin path slug, for building the URL
         // (the chain slug lives in ChainConfig, not the DB).
-        Dictionary<string, string> slugByChain = Chains.All.ToDictionary(
+        Dictionary<string, string> slugByChain = ChainRegistry.All.ToDictionary(
             c => c.Name,
             c => c.PlatformSlugs.TryGetValue(c.PrimaryPlatform, out string? s) ? s ?? "" : "",
             StringComparer.OrdinalIgnoreCase);
