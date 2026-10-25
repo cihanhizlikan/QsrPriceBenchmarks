@@ -7,6 +7,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Microsoft.Data.Sqlite;
 using QsrPriceBenchmarks.Core.Db;
+using QsrPriceBenchmarks.Core.Util;
 using QsrPriceBenchmarks.Ui;
 using QsrPriceBenchmarks.Ui.ViewModels;
 using Xunit;
@@ -111,6 +112,14 @@ public sealed class WindowCapture(ITestOutputHelper output)
 
         window.Show();
         Settle(window, () => model.Runs.Count > 0 && model.MapCells.Count > 0);
+        // One line of each kind LogLineColouriser tells apart, so the log's colours
+        // are on screen: a step widget, a ratio widget with a marked value, a
+        // district sub-line, a URL, numbers and symbols, SKIP, a warning, an error.
+        foreach (string line in SampleLog())
+        {
+            model.LogLines.Add(line);
+        }
+        Settle(window, () => true);
         written.Add(Save(window, into, "run-pipeline.png"));
 
         Select(window, "LocationsTab");
@@ -122,6 +131,18 @@ public sealed class WindowCapture(ITestOutputHelper output)
         written.Add(Save(window, into, "scrape-runs.png"));
 
         window.Close();
+    }
+
+    private static IEnumerable<string> SampleLog()
+    {
+        yield return "[Step 1] Crawling https://www.burgerking.com.tr/restoranlar";
+        yield return "  ✓ 79 provinces found";
+        yield return $"  [1/79] Province: {LogMarkup.Value("adana")}";
+        yield return $"    ↳ {LogMarkup.Value("seyhan")}";
+        yield return "[Step 2] SKIP — no tabs known for this chain yet";
+        yield return "  ⚠ skipped province mersin — navigation timed out";
+        yield return "  ✗ Fatal: the database is locked";
+        yield return "──────────────────────────────────────────────";
     }
 
     private static void Select(Window window, string tabName)
