@@ -2,9 +2,10 @@
   <!--
     Single source of truth for the product version. Auto-imported by every
     MSBuild project under this folder (Core / Ui / Cli / Tests AND the WiX
-    installer project). Bump this — and only this — for each new build:
-    the assemblies, the in-app "vX.Y.Z" badge, and the MSI ProductVersion
-    all follow. MSI major-upgrade replacement keys on this number, so two
+    installer project). Bump this — and only this — with every change that
+    ships, sized patch/minor/major by the Versioning section of
+    .claude/context/working-agreement.md: the assemblies, the in-app
+    "vX.Y.Z" badge, and the MSI ProductVersion all follow. MSI major-upgrade replacement keys on this number, so two
     builds must never ship with the same version.
   -->
   <PropertyGroup>

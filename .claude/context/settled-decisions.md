@@ -53,3 +53,13 @@ fallback palette and its text colours stay in code: they are per-chain identity 
 kind of thing as `Core/Models/BrandPalette.cs`, not theme. **Measured**: changing only the theme's `ColorPurple`
 turned the log's error line from magenta to orange in the window capture.
 **Re-opened by** a second theme (a light one, say), which would make the badge text colours theme-dependent.
+
+## The version moves with every change that ships (2026-10-25)
+
+**Decision** (maintainer). `Version` in `Directory.Build.props` is bumped in the commit of every change that alters
+the built assemblies or the MSI, sized patch / minor / major by `working-agreement.md`'s *Versioning* section — not
+cut by hand at release time, which for 1.6.0 meant tracing 24 commits after the fact. Two choices inside it:
+- **Changes that ship nothing do not bump** (docs, tests, `.claude/`, formatting), so every version number means a
+  different installer. Re-opened by a need to version something other than the installer.
+- **Every sweep step that corrects shipped code bumps**, rather than the sweep bumping once at the end, so `master`
+  is never between versions. Re-opened by sweeps producing so many numbers that they stop meaning anything.

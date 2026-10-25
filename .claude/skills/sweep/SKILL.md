@@ -226,6 +226,9 @@ A step with nothing to correct opens no branch.
 - **Never reach for `EnterWorktree`.**
 - **Merge with `--no-ff`** and a subject `merge: sweep <date> step <n> — <what>`, so a step stays one
   revertable unit.
+- **Each step that corrects shipped code bumps the version**, through `/wp-finish` like any package (maintainer,
+  2026-10-25), so one sweep may advance several numbers and every merge to `master` is a complete versioned change.
+  A step that corrects only docs or tests does not bump; its body says so.
 
 When the last step closes, **the plan is revised** — what landed retired, every reference to a concept that no
 longer exists struck.
