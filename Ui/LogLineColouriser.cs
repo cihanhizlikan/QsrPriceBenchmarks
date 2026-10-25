@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using System.Windows;
 using System.Windows.Documents;
 using System.Windows.Media;
 using QsrPriceBenchmarks.Core.Util;
@@ -7,29 +8,39 @@ namespace QsrPriceBenchmarks.Ui;
 
 /// <summary>
 /// WPF equivalent of the CLI's <c>ConsoleColouriser</c>: turns a single log
-/// line into a sequence of coloured <see cref="Run"/> elements using the exact
-/// same three-level rule as the Python prototype and the CLI:
+/// line into a sequence of coloured <see cref="Run"/> elements using the same
+/// three-level rule as the Python prototype and the CLI, in theme brushes:
 ///
-///   numbers / symbols (✓ ✗ → ↳)  →  light cyan   #00FFFF
-///   scraped values / URLs         →  dim cyan     #00B3B3
-///   all other text                →  white        #FFFFFF
-///   errors (lines starting ✗)     →  purple       #FF00FF
-///   info / warning (⚠ ℹ) / seps   →  dim cyan
-///   [Step N] / SKIP / FORCE       →  dark-gray bg #1C1C1C, number light cyan
+///   numbers / symbols (✓ ✗ → ↳)  →  BrushLightCyan
+///   scraped values / URLs         →  BrushDimCyan
+///   all other text                →  BrushText
+///   errors (lines starting ✗)     →  BrushPurple
+///   info / warning (⚠ ℹ) / seps   →  BrushDimCyan
+///   [Step N] / SKIP / FORCE       →  BrushBg3 background, number BrushLightCyan
 ///
 /// Returns Runs (not a styled string) so the colours render natively in a WPF
 /// TextBlock without embedding ANSI codes.
 /// </summary>
 public static class LogLineColouriser
 {
-    // Numbers/symbols render in bright cyan; scraped values (province/district
-    // names), URLs and secondary lines render in a genuinely dimmer cyan, so the
-    // two read differently — matching the muted cyan of the inactive buttons.
-    private static readonly Brush LightCyan = Freeze("#00FFFF");   // ANSI 96   bright cyan
-    private static readonly Brush DimCyan = Freeze("#00B3B3");   // ANSI 2;96 dimmed cyan
-    private static readonly Brush White = Freeze("#FFFFFF");   // ANSI 97
-    private static readonly Brush Purple = Freeze("#FF00FF");   // ANSI 95
-    private static readonly Brush StepBg = Freeze("#1C1C1C");  // ANSI 48;5;234
+    // The colours come from Ui/Themes/Dark.xaml, the one place the app defines a
+    // colour (plan WP-U1); the theme's comments record which ANSI code each one
+    // stands for. Numbers/symbols render in bright cyan; scraped values
+    // (province/district names), URLs and secondary lines in a genuinely dimmer
+    // cyan, so the two read differently.
+    private static readonly Brush LightCyan = ThemeBrush("BrushLightCyan");
+    private static readonly Brush DimCyan = ThemeBrush("BrushDimCyan");
+    private static readonly Brush White = ThemeBrush("BrushText");
+    private static readonly Brush Purple = ThemeBrush("BrushPurple");
+    private static readonly Brush StepBg = ThemeBrush("BrushBg3");
+
+    /// <summary>
+    /// Explicit, so the brushes are looked up on first use — after the
+    /// application has merged its theme — and never earlier.
+    /// </summary>
+    static LogLineColouriser()
+    {
+    }
 
     private static readonly Regex ReSkipForce = new(@"\b(SKIP|FORCE)\b", RegexOptions.Compiled);
     private static readonly Regex ReUrl = new(@"https?://\S+", RegexOptions.Compiled);
@@ -39,11 +50,15 @@ public static class LogLineColouriser
     private static readonly Regex ReSeparator = new(@"^[-=]{3,}", RegexOptions.Compiled);
     private static readonly Regex ReValue = new($"{LogMarkup.ValueStart}(.*?){LogMarkup.ValueEnd}", RegexOptions.Compiled);
 
-    private static SolidColorBrush Freeze(string hex)
+    /// <summary>
+    /// A brush from the merged theme. A missing key throws rather than falling
+    /// back to a colour of its own, which would quietly re-create the second
+    /// palette this replaced.
+    /// </summary>
+    private static Brush ThemeBrush(string key)
     {
-        SolidColorBrush b = (SolidColorBrush)new System.Windows.Media.BrushConverter().ConvertFromString(hex)!;
-        b.Freeze();
-        return b;
+        return Application.Current?.TryFindResource(key) as Brush
+            ?? throw new InvalidOperationException($"The theme (Ui/Themes/Dark.xaml) defines no brush '{key}'.");
     }
 
     /// <summary>Convert one log line into coloured Runs.</summary>

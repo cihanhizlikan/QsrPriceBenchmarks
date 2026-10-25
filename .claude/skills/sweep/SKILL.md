@@ -183,7 +183,8 @@ show (`--help` text, status and error messages). Late because they describe what
 **There is no UI Register here**, so there is no authority for a drift finding, and this step does not invent
 one. What it can measure: **`Ui/Themes/Dark.xaml` is the only place a colour is defined** — a colour literal in
 any other `.xaml` or in a `.cs` under `Ui/` is drift from the theme, and is corrected. Chain brand colours in
-`Core/Models/BrandPalette.cs` are data, not theme, and are out of scope. Whether a register should exist was
+`Core/Models/BrandPalette.cs` are data, not theme, and are out of scope — and so is the initials-badge fallback
+palette in `Ui/ViewModels/ChainViewModel.cs`, by settled decision (2026-10-25). Whether a register should exist was
 answered on 2026-10-25 — not yet — and is in `settled-decisions.md`; do not re-raise it without the new fact that
 entry names.
 

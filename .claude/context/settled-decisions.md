@@ -43,3 +43,13 @@ Yalbuz. What a register's `read` rows would need first is the ability to LOOK at
 built: `UiTests/WindowCapture.cs` renders every tab to PNG against a throwaway database, gated on
 `QSR_CAPTURE_DIR`. Sweep step 8 uses it.
 **Re-opened by** the same UI decision being argued a second time, or a second window.
+
+## The log reads the theme; the initials-badge palette stays in code (2026-10-25)
+
+**Decision.** `Ui/LogLineColouriser` takes its five brushes from `Ui/Themes/Dark.xaml` (`BrushLightCyan`,
+`BrushDimCyan`, `BrushText`, `BrushPurple`, `BrushBg3`), so the theme is the one source of the app's colours; a
+missing key throws instead of falling back to a colour of its own. `Ui/ViewModels/ChainViewModel`'s initials-badge
+fallback palette and its text colours stay in code: they are per-chain identity colours chosen from data, the same
+kind of thing as `Core/Models/BrandPalette.cs`, not theme. **Measured**: changing only the theme's `ColorPurple`
+turned the log's error line from magenta to orange in the window capture.
+**Re-opened by** a second theme (a light one, say), which would make the badge text colours theme-dependent.
