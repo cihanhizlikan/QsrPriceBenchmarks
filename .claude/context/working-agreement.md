@@ -16,7 +16,9 @@ every time — a new rule arrives with at most one sentence of example, and its 
 - **The suite scrapes live sites.** A red in `Tests/ChainWebsiteTests.cs` or `Tests/TgMenuTests.cs` is first
   checked against the site, then against the code.
 - **There is no UI Register and no Office Run Acceptance register.** UI decisions and anything needing an
-  environment this machine lacks are plan rows until the maintainer decides those registers are wanted.
+  environment this machine lacks are plan rows; the UI Register was declined for now on 2026-10-25 (see
+  `settled-decisions.md`). What there IS instead: `UiTests/WindowCapture.cs`, which renders the window to PNG so a
+  UI change can be looked at — `/wp-verify` says how.
 - **Line endings**: `.gitattributes` says `* text=auto` and `core.autocrlf` is on, so the index holds LF and the
   working tree CRLF. Nothing in the suite checks endings; `git diff --stat` showing every line of a file changed
   is the tell of an ending flip.

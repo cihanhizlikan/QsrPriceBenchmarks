@@ -34,3 +34,12 @@ scrape run is a price observation at a moment in time.
 null guards that nullable reference types already check). CA2000 is off because it cannot see ownership
 transfers (a browser context the session disposes), so it could not be held at zero.
 **Re-opened by** a defect one of the declined rules would have caught.
+
+## No UI Register yet; a capture harness instead (2026-10-25)
+
+**Decision.** This repository does not keep Yalbuz's UI Register. It has one WPF window, no UI decision has been
+argued twice, and a register nobody consults decays — the failure `handoff.md` and `completed-work.md` died of in
+Yalbuz. What a register's `read` rows would need first is the ability to LOOK at the window, so that is what was
+built: `UiTests/WindowCapture.cs` renders every tab to PNG against a throwaway database, gated on
+`QSR_CAPTURE_DIR`. Sweep step 8 uses it.
+**Re-opened by** the same UI decision being argued a second time, or a second window.

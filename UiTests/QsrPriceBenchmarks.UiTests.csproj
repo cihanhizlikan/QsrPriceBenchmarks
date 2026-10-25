@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Tests that need a real WPF window. A second test project on purpose: the
+       main one targets plain net10.0 so its hermetic half can run anywhere, and
+       a net10.0 project cannot reference the net10.0-windows Ui project at all.
+       Adapted from Yalbuz's Konrul.Tests (plan WP-U2). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>QsrPriceBenchmarks.UiTests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- xunit v3 for Assert.SkipWhen: a capture that did not happen must read as
+         SKIPPED, not as a pass. The runner is the one the main test project uses,
+         and it drives v2 and v3 projects alike. -->
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Brings the app's own SQLite provider (bundle_winsqlite3) with it. -->
+    <ProjectReference Include="..\Ui\QsrPriceBenchmarks.Ui.csproj" />
+  </ItemGroup>
+</Project>
