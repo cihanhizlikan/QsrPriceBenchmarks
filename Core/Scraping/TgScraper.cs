@@ -4,7 +4,6 @@ using Microsoft.Data.Sqlite;
 using Microsoft.Playwright;
 using QsrPriceBenchmarks.Core.Db;
 using QsrPriceBenchmarks.Core.Models;
-using QsrPriceBenchmarks.Core.Util;
 
 namespace QsrPriceBenchmarks.Core.Scraping;
 
@@ -371,17 +370,25 @@ public static class TgScraper
                 tabsAttempted++;
 
                 // Subsequent tabs: click, then read the live re-rendered DOM.
+                // The previous tab's cards are still on screen when the click
+                // lands, so "a card exists" would pass at once and read them
+                // again; wait until this tab is active AND the first card has
+                // changed. A tab whose first product matches the last one's
+                // falls through to the timeout below.
+                string previousFirst = await FirstCardTitleAsync(page);
                 bool clicked = await TryClickTabAsync(page, tabName);
                 if (clicked)
                 {
                     try
                     {
-                        await page.WaitForFunctionAsync($$"""
-                            () => {
-                                const g = document.querySelector('.grid.lg\\:grid-cols-2');
-                                return g && g.querySelectorAll('[id="restaurant-card-title"]').length > 0;
+                        await page.WaitForFunctionAsync("""
+                            ([target, previous]) => {
+                                const active = document.querySelector('.ant-tabs-tab-active');
+                                if (!active || active.innerText.trim() !== target.trim()) return false;
+                                const first = document.querySelector('.grid.lg\\:grid-cols-2 [id^="product-card-"][id$="-title"]');
+                                return !!first && first.innerText.trim() !== previous;
                             }
-                            """, options: new PageWaitForFunctionOptions { Timeout = 3_000 });
+                            """, new[] { tabName, previousFirst }, new PageWaitForFunctionOptions { Timeout = 3_000 });
                     }
                     catch (TimeoutException)
                     {
@@ -692,49 +699,28 @@ public static class TgScraper
 
     /// <summary>
     /// Extract (name, price) pairs from the live re-rendered DOM after a tab
-    /// click. Uses id="restaurant-card-title" for the name — NOT
-    /// id="restaurant-card-description", which holds portion/detail text
-    /// like "6 Adet" that must never be stored as the item name.
+    /// click — the card shape is <see cref="TgMenuDomParser"/>'s.
     /// </summary>
     private static async Task<List<(string, decimal)>> ExtractFromLiveDomAsync(string html, string url)
     {
         IDocument doc = await PageFetcher.ParseHtmlAsync(html, url);
-        IElement? grid = doc.QuerySelectorAll("div.grid")
-            .FirstOrDefault(g => (g.ClassName ?? "").Contains("lg:grid-cols-2", StringComparison.Ordinal));
-        if (grid is null)
+        return [.. TgMenuDomParser.Parse(doc).Select(m => (m.Name, m.Price))];
+    }
+
+    /// <summary>The first product card title on screen, or "" when none is.</summary>
+    private static async Task<string> FirstCardTitleAsync(IPage page)
+    {
+        try
         {
-            return [];
+            return await page.EvaluateAsync<string>("""
+                () => document.querySelector('.grid.lg\\:grid-cols-2 [id^="product-card-"][id$="-title"]')
+                    ?.innerText?.trim() ?? ''
+                """);
         }
-
-        List<(string, decimal)> results = [];
-        HashSet<string> seen = [];
-
-        foreach (IElement titleEl in grid.QuerySelectorAll("#restaurant-card-title"))
+        catch (PlaywrightException)
         {
-            string name = System.Net.WebUtility.HtmlDecode(titleEl.TextContent).Trim();
-            if (string.IsNullOrEmpty(name) || !seen.Add(name))
-            {
-                continue;
-            }
-
-            IElement? card = titleEl.Closest("div.flex-col") ?? titleEl.ParentElement;
-            IElement? priceEl = card?.QuerySelectorAll("span, div")
-                .FirstOrDefault(e => (e.ClassName ?? "").Contains("text-marker", StringComparison.Ordinal) || (e.ClassName ?? "").Contains("text-errorText", StringComparison.Ordinal));
-            if (priceEl is null)
-            {
-                continue;
-            }
-
-            decimal? price = PriceParsing.ParsePrice(priceEl.TextContent);
-            if (price is null)
-            {
-                continue;
-            }
-
-            results.Add((name, price.Value));
+            return "";
         }
-
-        return results;
     }
 
     /// <summary>
