@@ -47,31 +47,14 @@ public sealed class WindowCapture(ITestOutputHelper output)
         Assert.SkipWhen(into.Length == 0, $"Set {DirectoryVariable} to a directory to capture the main window.");
 
         Directory.CreateDirectory(into);
-        FileState userDatabaseBefore = FileState.Of(UserDatabasePath());
-        string throwaway = Path.Combine(Path.GetTempPath(), $"qsr_capture_{Guid.NewGuid():N}.sqlite");
+        UserDatabaseFile userDatabaseBefore = UserDatabaseFile.State();
         List<string> written = [];
-        try
+        using (ThrowawayDatabase throwaway = new(Seed))
         {
-            Seed(throwaway);
-            WpfThread.Run(() => Shoot(into, throwaway, written));
-        }
-        finally
-        {
-            SqliteConnection.ClearAllPools();
-            foreach (string file in new[] { throwaway, throwaway + "-wal", throwaway + "-shm" })
-            {
-                try
-                {
-                    File.Delete(file);
-                }
-                catch (IOException)
-                {
-                    // best effort: a leftover temp file is harmless
-                }
-            }
+            WpfThread.Run(() => Shoot(into, throwaway.Path, written));
         }
 
-        Assert.Equal(userDatabaseBefore, FileState.Of(UserDatabasePath()));
+        Assert.Equal(userDatabaseBefore, UserDatabaseFile.State());
         output.WriteLine($"Wrote {written.Count} capture(s) to {Path.GetFullPath(into)}:");
         foreach (string file in written)
         {
@@ -84,9 +67,8 @@ public sealed class WindowCapture(ITestOutputHelper output)
     /// with three locations and one finished run, so the map and the runs grid
     /// have something on them.
     /// </summary>
-    private static void Seed(string path)
+    private static void Seed(SqliteConnection conn)
     {
-        using SqliteConnection conn = Database.Open(path);
         long qsrId = Repository.QsrId(conn, Chain);
         Repository.UpsertLocation(conn, "istanbul-avrupa", "besiktas", "bk-besiktas", qsrId);
         Repository.UpsertLocation(conn, "ankara", "cankaya", "bk-cankaya", qsrId);
@@ -213,23 +195,5 @@ public sealed class WindowCapture(ITestOutputHelper output)
         using FileStream stream = File.Create(Path.Combine(into, file));
         encoder.Save(stream);
         return file;
-    }
-
-    /// <summary>The same path MainViewModel defaults to.</summary>
-    private static string UserDatabasePath()
-    {
-        return Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "QsrPriceBenchmarks", Database.DefaultFileName);
-    }
-
-    /// <summary>Whether a file exists, and if so its size and last write.</summary>
-    private readonly record struct FileState(bool Exists, long Length, DateTime LastWriteUtc)
-    {
-        public static FileState Of(string path)
-        {
-            FileInfo info = new(path);
-            return info.Exists ? new FileState(true, info.Length, info.LastWriteTimeUtc) : default;
-        }
     }
 }
