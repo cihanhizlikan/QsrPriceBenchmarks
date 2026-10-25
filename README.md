@@ -13,7 +13,7 @@ Cli/        – console exe  (AssemblyName: qsr)
 Ui/         – WPF exe      (AssemblyName: qsr-ui), net10.0-windows
 Tests/      – xUnit tests  (hermetic unit tests + live integration tests)
 UiTests/    – xUnit tests that need a real WPF window, net10.0-windows
-Installer/  – WiX v5 MSI authoring (see build-installer.ps1)
+Installer/  – WiX v5 MSI authoring (built by the Ui project's Installer publish profiles)
 ```
 
 ## Build
@@ -74,14 +74,18 @@ the Locations tab maps where the chain's restaurants are.
 ## Installer (self-contained MSI)
 
 To hand the app to someone who can't install a .NET runtime, build a
-self-contained MSI that bundles .NET 10 **and** Chromium:
+self-contained MSI that bundles .NET 10 **and** Chromium. In Visual Studio:
+right-click **QsrPriceBenchmarks.Ui → Publish**, choose the **Installer**
+profile, and press **Publish**. From a terminal:
 
-```powershell
-pwsh ./build-installer.ps1
+```
+dotnet publish Ui -p:PublishProfile=Installer
 ```
 
 The single `Installer\bin\Release\QsrPriceBenchmarks-Setup.msi` installs with no
-prerequisites on the target PC. See `Installer/README.md` for details.
+prerequisites on the target PC. The **InstallerSystemEdge** profile builds a
+much smaller MSI that uses the PC's Microsoft Edge instead of bundling Chromium.
+See `Installer/README.md` for details.
 
 ## Architecture change from v1
 

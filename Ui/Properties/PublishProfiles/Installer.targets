@@ -1,0 +1,79 @@
+<Project>
+  <!--
+    The installer build, run by the two publish profiles in this folder
+    (Installer.pubxml, InstallerSystemEdge.pubxml) when QsrBuildInstaller is
+    true. It does what build-installer.ps1 does, without PowerShell:
+
+      1. empty the publish folder, so nothing from an earlier publish (or the
+         other profile's browser choice) is harvested into the MSI;
+      2. the publish itself (the profile's own properties);
+      3. bundle Chromium into <publish>\ms-playwright through the Playwright
+         driver the publish already copied in - or, for the system-Edge
+         profile, write browser-channel.txt instead;
+      4. build Installer\QsrPriceBenchmarks.Installer.wixproj against that
+         folder. Its version comes from Directory.Build.props, as always.
+
+    Works from Visual Studio (right-click QsrPriceBenchmarks.Ui > Publish) and
+    from the command line: dotnet publish Ui -p:PublishProfile=Installer
+  -->
+  <PropertyGroup>
+    <_QsrRepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\'))</_QsrRepoRoot>
+    <_QsrWixProject>$(_QsrRepoRoot)Installer\QsrPriceBenchmarks.Installer.wixproj</_QsrWixProject>
+  </PropertyGroup>
+
+  <Target Name="QsrCleanPublishFolder" BeforeTargets="PrepareForPublish"
+          Condition="'$(QsrBuildInstaller)' == 'true'">
+    <RemoveDir Directories="$(PublishDir)" Condition="Exists('$(PublishDir)')" />
+  </Target>
+
+  <!-- No debug symbols in the installer. The profile's DebugType=none reaches
+       the Ui project only, so the referenced Core project's .pdb was still
+       published (and an empty AllowedReferenceRelatedFileExtensions does not
+       help: Microsoft.Common.CurrentVersion.targets restores its default). -->
+  <Target Name="QsrDropSymbolsFromPublish" AfterTargets="ComputeResolvedFilesToPublishList"
+          Condition="'$(QsrBuildInstaller)' == 'true'">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Extension)' == '.pdb'" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="QsrBuildInstaller" AfterTargets="Publish"
+          Condition="'$(QsrBuildInstaller)' == 'true'">
+    <PropertyGroup>
+      <_QsrPublishFolder>$([System.IO.Path]::GetFullPath('$(PublishDir)'))</_QsrPublishFolder>
+      <!-- No trailing backslash when it is quoted on a command line: "…\ui\"
+           escapes the closing quote, WiX then harvests a path that does not
+           exist, and (before -warnaserror below) built an EMPTY MSI. -->
+      <_QsrPublishFolderArg>$(_QsrPublishFolder.TrimEnd('\'))</_QsrPublishFolderArg>
+      <_QsrDriverNode>$(_QsrPublishFolder).playwright\node\win32_x64\node.exe</_QsrDriverNode>
+      <_QsrDriverCli>$(_QsrPublishFolder).playwright\package\cli.js</_QsrDriverCli>
+      <_QsrWixPlatform>x64</_QsrWixPlatform>
+      <_QsrWixPlatform Condition="'$(RuntimeIdentifier)' == 'win-arm64'">arm64</_QsrWixPlatform>
+      <_QsrWixPlatform Condition="'$(RuntimeIdentifier)' == 'win-x86'">x86</_QsrWixPlatform>
+      <_QsrMsi>$(_QsrRepoRoot)Installer\bin\$(Configuration)\QsrPriceBenchmarks-Setup.msi</_QsrMsi>
+    </PropertyGroup>
+
+    <!-- 3a. Bundled Chromium: the target PC never downloads a browser. -->
+    <Error Condition="'$(QsrUseSystemBrowser)' != 'true' and !Exists('$(_QsrDriverNode)')"
+           Text="The Playwright driver was not published to $(_QsrPublishFolder).playwright - check Core.csproj's Microsoft.Playwright reference." />
+    <Exec Condition="'$(QsrUseSystemBrowser)' != 'true'"
+          Command="&quot;$(_QsrDriverNode)&quot; &quot;$(_QsrDriverCli)&quot; install chromium"
+          EnvironmentVariables="PLAYWRIGHT_BROWSERS_PATH=$(_QsrPublishFolder)ms-playwright" />
+
+    <!-- 3b. System Edge: BrowserSession.ResolveBrowserChannel reads this marker. -->
+    <WriteLinesToFile Condition="'$(QsrUseSystemBrowser)' == 'true'"
+                      File="$(_QsrPublishFolder)browser-channel.txt" Lines="msedge" Overwrite="true" />
+
+    <!-- 4. The MSI. dotnet build rather than an MSBuild task, so the WiX SDK
+         restores and builds exactly as it does from the command line, whichever
+         MSBuild (Visual Studio's or the SDK's) is running this target. -->
+    <!-- -warnaserror:WIX8601: a harvest that finds no directory must FAIL the
+         build, not produce an installer with nothing in it (measured: without
+         it, exit 0 and a 348 KB MSI). no-incremental: WiX's up-to-date check
+         sees neither the publish folder's contents nor the version passed in,
+         so an incremental build could keep the previous MSI. -->
+    <Exec Command="dotnet build &quot;$(_QsrWixProject)&quot; --no-incremental -c $(Configuration) &quot;-p:PublishDir=$(_QsrPublishFolderArg)&quot; -p:InstallerPlatform=$(_QsrWixPlatform) -warnaserror:WIX8601" />
+
+    <Message Importance="high" Text="Installer built: $(_QsrMsi)" />
+  </Target>
+</Project>

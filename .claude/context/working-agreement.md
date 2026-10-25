@@ -46,7 +46,9 @@ every time — a new rule arrives with at most one sentence of example, and its 
 - **Justify dependencies unprompted** — maintenance status and the first-party alternative.
 - **What may run on this machine.** The maintainer reviews commands; don't assume blanket trust. **Never hand over
   a PowerShell script to run** — Defender quarantines loose scripts. `build-installer.ps1` is the maintainer's to
-  run, not a session's. Say beforehand when a check needs something started, and ask.
+  run, not a session's; a session that needs an installer uses the `Installer` publish profile, which runs no
+  PowerShell (`dotnet publish Ui -p:PublishProfile=Installer`). Say beforehand when a check needs something
+  started, and ask.
 - **Never spawn a background task or a second session for an out-of-scope finding** — write it into the plan as a
   work package. The interruption is the problem, not the finding.
 - **Work arrives in packages, and each one stops for a merge.** Finish one, report, and wait.
@@ -152,6 +154,8 @@ measurement that refused it and what would re-open it.
    *committed, awaiting merge*.
 
 ## Delivering a build
-The MSI is built by the maintainer with `build-installer.ps1`. A source zip is `git archive --format=zip -o
+The MSI is built with the Ui project's `Installer` publish profile — Visual Studio's Publish, or `dotnet publish Ui
+-p:PublishProfile=Installer` (`InstallerSystemEdge` for the small Edge-driven MSI); see `Installer/README.md`.
+`build-installer.ps1` still does the same. A source zip is `git archive --format=zip -o
 <outside the repo>/qsr-<branch>.zip HEAD` — it archives the committed tree, so ignored paths are excluded by
 construction; uncommitted work is not in it.
