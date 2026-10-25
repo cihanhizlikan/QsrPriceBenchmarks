@@ -49,7 +49,7 @@ public static class ChainCrawler
             page, chain.RootUrl, waitForSelector: chain.ContentSelector);
         IDocument rootDoc = await PageFetcher.ParseHtmlAsync(rootHtml, chain.RootUrl);
 
-        List<string> provinceLinks = UrlUtils.ParseDepthLinks(rootDoc, chain.RootUrl, depthOffset: 1);
+        List<string> provinceLinks = ChainSiteUrls.ParseDepthLinks(rootDoc, chain.RootUrl, depthOffset: 1);
         progress?.Report($"  ✓ {provinceLinks.Count} provinces found");
 
         int total = 0;
@@ -89,7 +89,7 @@ public static class ChainCrawler
             ct.ThrowIfCancellationRequested();
 
             string provinceUrl = provinceLinks[i];
-            string provinceSlug = UrlUtils.SplitPath(new Uri(provinceUrl).AbsolutePath).LastOrDefault() ?? provinceUrl;
+            string provinceSlug = ChainSiteUrls.SplitPath(new Uri(provinceUrl).AbsolutePath).LastOrDefault() ?? provinceUrl;
             progress?.Report($"  [{i + 1}/{provinceLinks.Count}] Province: {LogMarkup.Value(provinceSlug)}");
 
             IDocument? provinceDoc = await TryFetchDocumentAsync(page, provinceUrl, ct, ex =>
@@ -103,7 +103,7 @@ public static class ChainCrawler
             }
 
             List<RestaurantCard> direct = RestaurantCardParser.Parse(provinceDoc, provinceUrl);
-            List<string> districtUrls = UrlUtils.ParseDepthLinks(provinceDoc, provinceUrl, depthOffset: 1);
+            List<string> districtUrls = ChainSiteUrls.ParseDepthLinks(provinceDoc, provinceUrl, depthOffset: 1);
 
             // Only treat a card as a confirmed restaurant when it has both a
             // name AND a real address (contains a digit). This excludes
@@ -123,7 +123,7 @@ public static class ChainCrawler
             {
                 ct.ThrowIfCancellationRequested();
 
-                string provSlug = UrlUtils.SplitPath(new Uri(provUrl).AbsolutePath).LastOrDefault() ?? provUrl;
+                string provSlug = ChainSiteUrls.SplitPath(new Uri(provUrl).AbsolutePath).LastOrDefault() ?? provUrl;
                 progress?.Report($"    ↳ {LogMarkup.Value(provSlug)}");
 
                 IDocument? provDoc = await TryFetchDocumentAsync(page, provUrl, ct, ex =>
@@ -261,7 +261,7 @@ public static class ChainCrawler
         (string Province, string District, string Slug) parts;
         try
         {
-            parts = UrlUtils.UrlToParts(rec.Url, chain.RootUrl!);
+            parts = ChainSiteUrls.UrlToParts(rec.Url, chain.RootUrl!);
         }
         catch (ArgumentException)
         {
