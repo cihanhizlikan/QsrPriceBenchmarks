@@ -8,7 +8,7 @@
     builds must never ship with the same version.
   -->
   <PropertyGroup>
-    <Version>1.5.5</Version>
+    <Version>1.6.0</Version>
   </PropertyGroup>
 
   <!--
@@ -36,6 +36,11 @@
     <!-- XML docs are written selectively, not exhaustively; the flag above is on for
          IDE0005, so silence the missing-doc warning it would otherwise raise. -->
     <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- Generate the XML docs (for IDE0005), never SHIP them: without these the
+         publish folder build-installer.ps1 harvests carried qsr-ui.xml and
+         QsrPriceBenchmarks.Core.xml into the MSI. Affects dotnet publish only. -->
+    <PublishDocumentationFile>false</PublishDocumentationFile>
+    <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
