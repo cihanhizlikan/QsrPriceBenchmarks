@@ -81,6 +81,19 @@ dotnet test --no-build --filter "Category!=Integration" > /tmp/qsr-hermetic.txt 
 — and re-run the failing live test once. A live red that the package's diff cannot reach, on a hermetic green,
 is the site; say so with the test's name rather than calling the package red or green.
 
+**ONE skip is the baseline and is not drift**: `UiTests/WindowCapture.cs`, a capture harness that produces images
+to LOOK at rather than something to assert, gated on `QSR_CAPTURE_DIR`. The suite reports two summary lines now,
+one per test project; read both.
+
+**A package that changes anything under `Ui/` runs the capture and looks at it** — no test sees a WPF layout:
+
+```bash
+QSR_CAPTURE_DIR="$(cygpath -w "$PWD")\\TestResults\\artifacts" dotnet test UiTests --no-build
+```
+
+It writes one PNG per tab to the gitignored `TestResults/artifacts`, against a throwaway database (it asserts
+that the user's own database is untouched). The window appears on screen for a few seconds while it runs.
+
 ## 7. A failed build means the rest never compiled
 
 When one project fails, everything downstream is skipped — **their silence is not a clean result.**

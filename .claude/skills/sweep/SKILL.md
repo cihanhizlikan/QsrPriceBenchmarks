@@ -183,8 +183,13 @@ show (`--help` text, status and error messages). Late because they describe what
 **There is no UI Register here**, so there is no authority for a drift finding, and this step does not invent
 one. What it can measure: **`Ui/Themes/Dark.xaml` is the only place a colour is defined** — a colour literal in
 any other `.xaml` or in a `.cs` under `Ui/` is drift from the theme, and is corrected. Chain brand colours in
-`Core/Models/BrandPalette.cs` are data, not theme, and are out of scope. Whether a register should exist is a plan row the first time this step runs, and never
-again once it is answered.
+`Core/Models/BrandPalette.cs` are data, not theme, and are out of scope. Whether a register should exist was
+answered on 2026-10-25 — not yet — and is in `settled-decisions.md`; do not re-raise it without the new fact that
+entry names.
+
+**Then LOOK at the window.** `UiTests/WindowCapture.cs` renders every tab against a throwaway database; run it
+with `QSR_CAPTURE_DIR` set to `TestResults/artifacts` (gitignored) and read the PNGs. A layout defect found there
+is drift from the theme or a plain bug, and is corrected or handed over like any other finding.
 
 ---
 
