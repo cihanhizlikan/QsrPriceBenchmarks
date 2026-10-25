@@ -12,6 +12,7 @@ Core/       – class library: all scraping, DB, export, matching logic
 Cli/        – console exe  (AssemblyName: qsr)
 Ui/         – WPF exe      (AssemblyName: qsr-ui), net10.0-windows
 Tests/      – xUnit tests  (hermetic unit tests + live integration tests)
+UiTests/    – xUnit tests that need a real WPF window, net10.0-windows
 Installer/  – WiX v5 MSI authoring (see build-installer.ps1)
 ```
 
@@ -37,6 +38,16 @@ dotnet test --filter "Category!=Integration"  # offline half only
 
 The `Category=Integration` tests scrape the real chain websites and Tıkla
 Gelsin, so they need the internet and can fail when a site changes.
+
+One test is always reported as skipped: the window capture in `UiTests/`,
+which renders every tab of the app to PNG so a UI change can be looked at. It
+runs only when the `QSR_CAPTURE_DIR` environment variable holds an absolute
+path to write the images into (the repository's `TestResults\artifacts` is
+gitignored), and it works against a throwaway database, never yours. With the
+variable set, run:
+```
+dotnet test UiTests
+```
 
 ## Usage
 
