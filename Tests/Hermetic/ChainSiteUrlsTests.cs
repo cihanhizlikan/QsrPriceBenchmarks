@@ -5,17 +5,17 @@ using Xunit;
 namespace QsrPriceBenchmarks.IntegrationTests.Hermetic;
 
 [Trait("Category", "Unit")]
-public sealed class UrlUtilsTests
+public sealed class ChainSiteUrlsTests
 {
     [Fact(DisplayName = "SplitPath drops empties")]
     public void SplitPath_DropsEmpties() =>
         Assert.Equal(new[] { "tr", "restoranlar" },
-            UrlUtils.SplitPath("/tr/restoranlar/").ToArray());
+            ChainSiteUrls.SplitPath("/tr/restoranlar/").ToArray());
 
     [Fact(DisplayName = "UrlToParts: 3 segments after root -> (province, district, slug)")]
     public void UrlToParts_ThreeSegments()
     {
-        (string province, string district, string slug) = UrlUtils.UrlToParts(
+        (string province, string district, string slug) = ChainSiteUrls.UrlToParts(
             "https://x.com/sube/istanbul/kadikoy/bk-1", "https://x.com/sube");
         Assert.Equal("istanbul", province);
         Assert.Equal("kadikoy", district);
@@ -25,7 +25,7 @@ public sealed class UrlUtilsTests
     [Fact(DisplayName = "UrlToParts: 2 segments after root -> province used as district")]
     public void UrlToParts_TwoSegments()
     {
-        (string province, string district, string slug) = UrlUtils.UrlToParts(
+        (string province, string district, string slug) = ChainSiteUrls.UrlToParts(
             "https://x.com/sube/istanbul/bk-1", "https://x.com/sube");
         Assert.Equal("istanbul", province);
         Assert.Equal("istanbul", district);
@@ -35,7 +35,7 @@ public sealed class UrlUtilsTests
     [Fact(DisplayName = "UrlToParts: off-tree URL throws")]
     public void UrlToParts_OffTree_Throws() =>
         Assert.Throws<ArgumentException>(() =>
-            UrlUtils.UrlToParts("https://x.com/other/istanbul/bk-1", "https://x.com/sube"));
+            ChainSiteUrls.UrlToParts("https://x.com/other/istanbul/bk-1", "https://x.com/sube"));
 
     [Fact(DisplayName = "AbsUrl resolves against a <base href> tag when present")]
     public async Task AbsUrl_UsesBaseTag()
@@ -45,7 +45,7 @@ public sealed class UrlUtilsTests
             "<html><head><base href=\"https://x.com/base/\"></head><body></body></html>", pageUrl);
 
         // Relative href must resolve against the <base>, not the page URL.
-        Assert.Equal("https://x.com/base/foo", UrlUtils.AbsUrl(doc, "foo", pageUrl));
+        Assert.Equal("https://x.com/base/foo", ChainSiteUrls.AbsUrl(doc, "foo", pageUrl));
     }
 
     [Fact(DisplayName = "ParseDepthLinks keeps only same-host links exactly one level deeper")]
@@ -62,7 +62,7 @@ public sealed class UrlUtilsTests
             """;
         IDocument doc = await PageFetcher.ParseHtmlAsync(html, root);
 
-        List<string> links = UrlUtils.ParseDepthLinks(doc, root, depthOffset: 1);
+        List<string> links = ChainSiteUrls.ParseDepthLinks(doc, root, depthOffset: 1);
 
         Assert.Equal(new[] { "https://x.com/r/a/" }, links.ToArray());
     }

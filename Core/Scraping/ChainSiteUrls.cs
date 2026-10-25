@@ -15,7 +15,7 @@ namespace QsrPriceBenchmarks.Core.Scraping;
 ///      (e.g. "/tr/restoranlar") — any "/tr/xxx/yyy" link at the same depth
 ///      would incorrectly match. The full root path must be a prefix.
 /// </summary>
-public static class UrlUtils
+public static class ChainSiteUrls
 {
     /// <summary>
     /// Resolve <paramref name="href"/> against the page's &lt;base&gt; tag if

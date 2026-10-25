@@ -29,7 +29,7 @@ public static class RestaurantCardParser
             string absHref;
             try
             {
-                absHref = UrlUtils.AbsUrl(document, href, baseUrl);
+                absHref = ChainSiteUrls.AbsUrl(document, href, baseUrl);
             }
             catch (UriFormatException)
             {

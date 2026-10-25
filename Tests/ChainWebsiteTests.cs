@@ -40,7 +40,7 @@ public sealed class ChainWebsiteTests(PlaywrightFixture pw)
 
         string html = await FetchWithScrollAsync(page, chain.RootUrl!, chain.ContentSelector);
         IDocument doc = await PageFetcher.ParseHtmlAsync(html, chain.RootUrl!);
-        List<string> provinceLinks = UrlUtils.ParseDepthLinks(doc, chain.RootUrl!, depthOffset: 1);
+        List<string> provinceLinks = ChainSiteUrls.ParseDepthLinks(doc, chain.RootUrl!, depthOffset: 1);
 
         Assert.True(provinceLinks.Count > 0,
             $"[{chain.Name}] Expected at least one province link under {chain.RootUrl}, got 0.");
@@ -67,7 +67,7 @@ public sealed class ChainWebsiteTests(PlaywrightFixture pw)
         // ── Root → first province link ────────────────────────────────────────────
         string rootHtml = await FetchWithScrollAsync(page, chain.RootUrl!, chain.ContentSelector);
         IDocument rootDoc = await PageFetcher.ParseHtmlAsync(rootHtml, chain.RootUrl!);
-        List<string> provinceLinks = UrlUtils.ParseDepthLinks(rootDoc, chain.RootUrl!, depthOffset: 1);
+        List<string> provinceLinks = ChainSiteUrls.ParseDepthLinks(rootDoc, chain.RootUrl!, depthOffset: 1);
 
         Assert.True(provinceLinks.Count > 0,
             $"[{chain.Name}] No province links found on root page.");
@@ -84,8 +84,8 @@ public sealed class ChainWebsiteTests(PlaywrightFixture pw)
             $"The site markup may have changed — check RestaurantCardParser strategies.");
 
         // Verify the card URL is deeper than root (it's a real restaurant page).
-        List<string> rootParts = UrlUtils.SplitPath(new Uri(chain.RootUrl!).AbsolutePath);
-        List<string> cardParts = UrlUtils.SplitPath(new Uri(namedCard!.Url).AbsolutePath);
+        List<string> rootParts = ChainSiteUrls.SplitPath(new Uri(chain.RootUrl!).AbsolutePath);
+        List<string> cardParts = ChainSiteUrls.SplitPath(new Uri(namedCard!.Url).AbsolutePath);
         Assert.True(cardParts.Count > rootParts.Count,
             $"[{chain.Name}] Card URL '{namedCard.Url}' is not deeper than root — " +
             $"looks like a navigation link was returned instead of a restaurant.");
@@ -163,10 +163,10 @@ public sealed class ChainWebsiteTests(PlaywrightFixture pw)
             List<RestaurantCard> cards = RestaurantCardParser.Parse(doc, url);
 
             // A "real" restaurant card has a name AND sits at URL depth > root.
-            List<string> rootParts = UrlUtils.SplitPath(new Uri(rootUrl).AbsolutePath);
+            List<string> rootParts = ChainSiteUrls.SplitPath(new Uri(rootUrl).AbsolutePath);
             RestaurantCard? named = cards.FirstOrDefault(c =>
                 c.Name is not null &&
-                UrlUtils.SplitPath(new Uri(c.Url).AbsolutePath).Count > rootParts.Count + 1);
+                ChainSiteUrls.SplitPath(new Uri(c.Url).AbsolutePath).Count > rootParts.Count + 1);
 
             if (named is not null)
             {
@@ -176,7 +176,7 @@ public sealed class ChainWebsiteTests(PlaywrightFixture pw)
             // Enqueue sub-links one hop deeper if we haven't reached maxDepth.
             if (depth < maxDepth)
             {
-                List<string> subLinks = UrlUtils.ParseDepthLinks(doc, url, depthOffset: 1);
+                List<string> subLinks = ChainSiteUrls.ParseDepthLinks(doc, url, depthOffset: 1);
                 foreach (string? sub in subLinks.Take(3)) // limit breadth for test speed
                 {
                     if (visited.Add(sub))
