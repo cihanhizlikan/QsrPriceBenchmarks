@@ -22,9 +22,15 @@ The commit body **is** the archive entry — there is no archive file. Subject w
 section says what ships and how big a bump each kind of change is. The candidate set, and whether it is bumped:
 
 ```bash
-git diff --name-only master -- Core Cli Ui Installer Directory.Build.props build-installer.ps1 ':(exclude)*.md'
-git diff master -- Directory.Build.props | grep '<Version>'
+git add -A
+git diff --cached --name-only master -- Core Cli Ui Installer Directory.Build.props build-installer.ps1 ':(exclude)*.md'
+git diff --cached master -- Directory.Build.props | grep '<Version>'
 ```
+
+**Stage first and diff the INDEX** (`--cached`): a plain `git diff` ignores untracked files, so a package that only
+ADDS shipped files read as "nothing ships" — measured 2026-10-26, when the dialog package's new
+`Ui/Dialogs/ThemedMessageBox.xaml(.cs)` were missing from the list until staged (plan WP-WF2). **Re-run the three
+lines after editing `<Version>`**, or the third still shows the index from before the bump.
 
 `:(exclude)*.md` because a README under `Installer/` ships nothing. **Read what the first command lists rather
 than counting it** — on the history it was tried against (2026-10-25) it caught a "test:" commit that had also
