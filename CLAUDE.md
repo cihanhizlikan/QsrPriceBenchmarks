@@ -27,6 +27,9 @@ this one is the ruling for this repository — the differences are deliberate an
   the measurement traps baked in, and `/wp-finish` writes the archive entry into the commit body, checks the size
   cap before committing, and stops without merging. A session invokes each at its moment; the maintainer does not
   have to type them.
+- **Every change that ships bumps the version.** `Version` in `Directory.Build.props`, in the package's own commit,
+  sized patch / minor / major by `working-agreement.md`'s *Versioning* section; docs, tests and workflow files
+  ship nothing and do not bump. `/wp-finish` runs the check.
 - **The suite touches the live internet.** `ChainWebsiteTests` and `TgMenuTests` (trait `Category=Integration`)
   scrape real sites, so a red there can be the site rather than the code. `/wp-verify` says how to tell which.
 - **A session never pushes.**

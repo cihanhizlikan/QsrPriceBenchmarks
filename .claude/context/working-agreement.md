@@ -98,6 +98,29 @@ other projects' plans and delegated agents' notes beside it.
 - Subject tags: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`.
 - **No separate `docs:` commit for a package's own archive entry** — it is that commit's body.
 
+## Versioning
+**Every change that ships bumps `Version` in `Directory.Build.props`, in the package's own commit**, sized by what
+it changes for a user (maintainer, 2026-10-25). `/wp-finish` runs the check; the two decisions behind the rule are
+in `settled-decisions.md`.
+
+- **What ships**: a change to the built assemblies or the MSI — anything under `Core/`, `Cli/`, `Ui/`, `Installer/`,
+  or `Directory.Build.props` / `build-installer.ps1` that changes build output. Docs, `Tests/`, `UiTests/`,
+  `.claude/`, `.editorconfig`-only, comment-only and whitespace-only changes do not ship and **do not bump** —
+  every version number then means a different installer.
+- **How much**, from `master`'s current version, by the largest kind in the package:
+
+| Bump | When | For example |
+|---|---|---|
+| **patch** `1.6.0 → 1.6.1` | shipped files change, but nothing a user does or relies on behaves differently | a bug fix with no other effect, a refactor, a dependency patch update, the publish no longer shipping XML docs |
+| **minor** `1.6.0 → 1.7.0` | a new capability, or behaviour a user would notice, still compatible with what they own | a new CLI option or UI feature; the CLI refusing input it used to mishandle; a scrape producing different data; an additive schema migration the previous version still opens |
+| **major** `1.6.0 → 2.0.0` | breaks something a user owns or relies on | a migration after which the previous version can no longer open the database; removing or renaming a CLI option, or changing what an exit code means; removing a feature; new install requirements |
+
+- **The commit body says which, on one line**: `Version: 1.6.0 → 1.6.1 (patch): <why this size>`, or `No version
+  bump: nothing that ships changed.`
+- **Every sweep step that corrects shipped code bumps** like any package, so one sweep may advance several numbers.
+- **Two branches bumping from the same base conflict on `<Version>`** at merge: the one merged second is re-bumped
+  from the newly merged version, by its own size.
+
 ## Test loop after committing
 Run the suite after each commit. If it fails: assume the CODE broke something real and fix that first. Modify or
 remove a test only when it demonstrably tests superseded behaviour, and say so in the commit message. Never weaken
