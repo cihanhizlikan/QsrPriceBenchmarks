@@ -100,5 +100,5 @@ When one project fails, everything downstream is skipped — **their silence is 
 
 ## Reporting
 
-One line: build exit and errors, distinct warning sites against `master`'s, formatter exit and count, suite
+One line: build exit and errors, distinct warning sites against `main`'s, formatter exit and count, suite
 passed/failed/skipped (and which half any failure was in). **Never `git checkout` a file to undo an experiment.**

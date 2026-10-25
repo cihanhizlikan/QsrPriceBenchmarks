@@ -7,7 +7,7 @@ disable-model-invocation: true
 # The sweep
 
 **One audit, eight steps, in an order that is itself the deliverable.** Adopted from Yalbuz's `/sweep` on
-2026-10-24 and adapted to this repository: `master` for `main`, no sinks, no web app, no registers, and a suite
+2026-10-24 and adapted to this repository: `main` for `main`, no sinks, no web app, no registers, and a suite
 that scrapes live sites.
 
 **What this is not.** A finding that is a LOOP — one rule ID standing over many sites, each needing a
@@ -27,7 +27,7 @@ propose one, with a reason.
 - **NEVER stop to ask.** Do not call `AskUserQuestion`; do not end a turn with a question. There is nobody there.
 - **Anything that WOULD have been a question is written into the plan and SKIPPED** — what was measured, the
   options, the recommendation — and the sweep moves on and does not come back to it.
-- **Merge, delete and continue.** Each step's branch is merged into `master` and deleted by the sweep itself,
+- **Merge, delete and continue.** Each step's branch is merged into `main` and deleted by the sweep itself,
   before the next step opens. **This is the explicit exception to `working-agreement.md`'s "merging is the
   maintainer's" and "a merge instruction is per-moment", granted for this skill** when the workflow was adopted
   from Yalbuz, where the maintainer granted it on 2026-09-08. `/wp-finish`'s *Report, and stop* is covered by the
@@ -74,7 +74,7 @@ so, or it left work behind.
 
 ## Preflight
 
-1. **Clean tree, green build, green suite** on `master`, from the primary checkout. **If it is not green, the run
+1. **Clean tree, green build, green suite** on `main`, from the primary checkout. **If it is not green, the run
    ENDS**; do not repair the baseline. A red that is only a live test the site broke is recorded and does not end
    the run — the hermetic half must be green.
 2. **Detector liveness.** Every tool a step names is **proven to emit a value on this repo, by running it**:
@@ -215,19 +215,19 @@ is never an unambiguous correction: it is a package.
 
 **Each step that has something to correct** opens its own worktree and branch with `/wp-start`
 (`sweep-<n>-<subject>`), is verified through `/wp-verify` and closed through `/wp-finish`, and then **the sweep
-merges it into `master` from the primary checkout, removes the worktree, deletes the branch, and opens the next.**
+merges it into `main` from the primary checkout, removes the worktree, deletes the branch, and opens the next.**
 A step with nothing to correct opens no branch.
 
-- **`/wp-start` runs from the PRIMARY checkout and needs a clean `master`.** Return there between steps. **In a
+- **`/wp-start` runs from the PRIMARY checkout and needs a clean `main`.** Return there between steps. **In a
   desktop-app session use `/wp-start`'s app variant instead** — branch inside the session's own worktree,
-  `git switch --detach master` between steps — because a hook refuses edits to any worktree the session did not
+  `git switch --detach main` between steps — because a hook refuses edits to any worktree the session did not
   start in; the first run hit that refusal at step 1.
 - **`dotnet build-server shutdown` before `git worktree remove`.** A husk is retried, not reported.
 - **Never reach for `EnterWorktree`.**
 - **Merge with `--no-ff`** and a subject `merge: sweep <date> step <n> — <what>`, so a step stays one
   revertable unit.
 - **Each step that corrects shipped code bumps the version**, through `/wp-finish` like any package (maintainer,
-  2026-10-25), so one sweep may advance several numbers and every merge to `master` is a complete versioned change.
+  2026-10-25), so one sweep may advance several numbers and every merge to `main` is a complete versioned change.
   A step that corrects only docs or tests does not bump; its body says so.
 
 When the last step closes, **the plan is revised** — what landed retired, every reference to a concept that no

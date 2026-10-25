@@ -23,8 +23,8 @@ section says what ships and how big a bump each kind of change is. The candidate
 
 ```bash
 git add -A
-git diff --cached --name-only master -- Core Cli Ui Installer Directory.Build.props build-installer.ps1 ':(exclude)*.md'
-git diff --cached master -- Directory.Build.props | grep '<Version>'
+git diff --cached --name-only main -- Core Cli Ui Installer Directory.Build.props build-installer.ps1 ':(exclude)*.md'
+git diff --cached main -- Directory.Build.props | grep '<Version>'
 ```
 
 **Stage first and diff the INDEX** (`--cached`): a plain `git diff` ignores untracked files, so a package that only
@@ -42,7 +42,7 @@ removed a method from `Core/Db/Repository.cs`, which did ship.
   nothing.
 - **First command lists nothing** (or nothing that ships) → no bump, and the body says
   `No version bump: nothing that ships changed.`
-- **Bump from `master`'s current version**, not the one the branch started from — if `master` moved, re-read it.
+- **Bump from `main`'s current version**, not the one the branch started from — if `main` moved, re-read it.
 
 ## 3. Measure the body BEFORE committing
 
