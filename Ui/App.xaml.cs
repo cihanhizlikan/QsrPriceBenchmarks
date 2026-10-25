@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Threading;
+using QsrPriceBenchmarks.Ui.Dialogs;
 
 namespace QsrPriceBenchmarks.Ui;
 
@@ -30,11 +31,21 @@ public partial class App : System.Windows.Application
     {
         LogCrash(e.Exception, "DispatcherUnhandledException");
         e.Handled = true;
-        MessageBox.Show(
+        string message =
             $"An unexpected error occurred:\n\n{e.Exception.Message}\n\n" +
             "The operation was cancelled; the application will keep running. " +
-            "Details were written to qsr-startup-error.log.",
-            "QSR Price Benchmarks", MessageBoxButton.OK, MessageBoxImage.Error);
+            "Details were written to qsr-startup-error.log.";
+        try
+        {
+            ThemedMessageBox.Show(message, "QSR Price Benchmarks", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        catch (Exception dialogError)
+        {
+            // The failure being reported may be the very thing that stops a WPF
+            // window from rendering; the native box still gets the message out.
+            LogCrash(dialogError, "ThemedMessageBox in DispatcherUnhandledException");
+            MessageBox.Show(message, "QSR Price Benchmarks", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     internal static void LogCrash(Exception? ex, string source)

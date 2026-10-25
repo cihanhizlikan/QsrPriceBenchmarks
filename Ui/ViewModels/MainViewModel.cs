@@ -10,6 +10,7 @@ using QsrPriceBenchmarks.Core.Db;
 using QsrPriceBenchmarks.Core.Export;
 using QsrPriceBenchmarks.Core.Models;
 using QsrPriceBenchmarks.Core.Services;
+using QsrPriceBenchmarks.Ui.Dialogs;
 
 namespace QsrPriceBenchmarks.Ui.ViewModels;
 
@@ -902,7 +903,7 @@ public sealed class MainViewModel : ViewModelBase
         catch (Exception ex)
         {
             // Surface failures here (not in the Run Pipeline log, which belongs to runs).
-            MessageBox.Show($"Export failed:\n\n{ex.Message}",
+            ThemedMessageBox.Show($"Export failed:\n\n{ex.Message}",
                 "Export", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
@@ -932,7 +933,7 @@ public sealed class MainViewModel : ViewModelBase
         {
             return;
         }
-        MessageBoxResult result = MessageBox.Show(
+        MessageBoxResult result = ThemedMessageBox.Show(
             $"Delete run {vm.Id} ({vm.QsrName}, {vm.StartedAt}) and {vm.SnapshotCount:N0} snapshot(s)?",
             "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Warning);
         if (result != MessageBoxResult.Yes)
@@ -952,7 +953,7 @@ public sealed class MainViewModel : ViewModelBase
         {
             // Can happen if a concurrent scrape held the write lock past the
             // busy_timeout. Surface it rather than letting it crash the app.
-            MessageBox.Show($"Delete failed:\n\n{ex.Message}",
+            ThemedMessageBox.Show($"Delete failed:\n\n{ex.Message}",
                 "Delete", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         await ReloadRunsAsync();
@@ -964,7 +965,7 @@ public sealed class MainViewModel : ViewModelBase
         {
             return;
         }
-        MessageBoxResult result = MessageBox.Show(
+        MessageBoxResult result = ThemedMessageBox.Show(
             $"Delete all scrape runs with ID < {id} and their snapshots?",
             "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Warning);
         if (result != MessageBoxResult.Yes)
@@ -1077,7 +1078,7 @@ public sealed class MainViewModel : ViewModelBase
         string? error = Database.ValidateFile(chosen);
         if (error is not null)
         {
-            MessageBox.Show(
+            ThemedMessageBox.Show(
                 $"Cannot use '{chosen}'.\n\n{error}",
                 "Database", MessageBoxButton.OK, MessageBoxImage.Error);
             return;

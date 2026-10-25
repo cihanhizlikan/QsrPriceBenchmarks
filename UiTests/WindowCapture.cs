@@ -9,6 +9,7 @@ using Microsoft.Data.Sqlite;
 using QsrPriceBenchmarks.Core.Db;
 using QsrPriceBenchmarks.Core.Util;
 using QsrPriceBenchmarks.Ui;
+using QsrPriceBenchmarks.Ui.Dialogs;
 using QsrPriceBenchmarks.Ui.ViewModels;
 using Xunit;
 
@@ -112,7 +113,27 @@ public sealed class WindowCapture(ITestOutputHelper output)
         Settle(window, () => model.Runs.Count > 0);
         written.Add(Save(window, into, "scrape-runs.png"));
 
+        // The app's message box, both kinds it shows: a delete confirmation and an
+        // error, worded as MainViewModel words them.
+        written.Add(SaveDialog(window, into, "dialog-confirm.png", new ThemedMessageBox(
+            "Delete run 1 (Burger King, 2026-10-25T13:55:27Z) and 177 snapshot(s)?",
+            "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Warning)));
+        written.Add(SaveDialog(window, into, "dialog-error.png", new ThemedMessageBox(
+            "Export failed:\n\nThe process cannot access the file 'Burger King.xlsx' because it is being used by another process.",
+            "Export", MessageBoxButton.OK, MessageBoxImage.Error)));
+
         window.Close();
+    }
+
+    private static string SaveDialog(Window owner, string into, string file, ThemedMessageBox dialog)
+    {
+        dialog.Owner = owner;
+        dialog.ShowActivated = false;
+        dialog.Show();
+        Settle(dialog, () => true);
+        string saved = Save(dialog, into, file);
+        dialog.Close();
+        return saved;
     }
 
     private static IEnumerable<string> SampleLog()
