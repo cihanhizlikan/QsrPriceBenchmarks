@@ -7,12 +7,22 @@ no Playwright/Chromium download** — all of it is bundled.
 
 ## Build it (on your machine)
 
-```powershell
-pwsh ./build-installer.ps1                   # bundles Chromium (fully self-contained)
-pwsh ./build-installer.ps1 -UseSystemBrowser # smaller MSI, drives installed Edge
-```
+Two publish profiles on the Ui project do the whole build — publish, bundle the
+browser, build the MSI:
 
-Output: `Installer\bin\Release\QsrPriceBenchmarks-Setup.msi`
+| Profile | MSI | Visual Studio | Terminal |
+|---|---|---|---|
+| **Installer** | bundles Chromium; fully self-contained (~355 MB) | right-click **QsrPriceBenchmarks.Ui → Publish → Installer → Publish** | `dotnet publish Ui -p:PublishProfile=Installer` |
+| **InstallerSystemEdge** | drives the PC's installed Edge (~87 MB) | same, choosing **InstallerSystemEdge** | `dotnet publish Ui -p:PublishProfile=InstallerSystemEdge` |
+
+Output: `Installer\bin\Release\QsrPriceBenchmarks-Setup.msi`. The steps after
+the publish live in `Ui\Properties\PublishProfiles\Installer.targets`; no
+PowerShell is involved. The older script still works and does the same:
+
+```powershell
+pwsh ./build-installer.ps1                   # = Installer profile
+pwsh ./build-installer.ps1 -UseSystemBrowser # = InstallerSystemEdge profile
+```
 
 ### Which browser mode?
 
@@ -31,21 +41,25 @@ installed Edge via its channel feature, so no Chromium is shipped or downloaded.
 You can also force this on any install by setting the `QSR_BROWSER_CHANNEL`
 environment variable (`msedge` or `chrome`).
 
-The script runs four steps:
+Both routes run the same steps:
 
-1. `dotnet publish` the WPF app **self-contained** for `win-x64` → bundles .NET 10.
-2. Installs Chromium into the publish folder (`ms-playwright\`) so scraping works offline.
-3. Builds the MSI with WiX v5, harvesting the whole publish tree.
-4. Prints the final `.msi` path and size.
+1. Empty `publish\ui`, so nothing from an earlier build is harvested.
+2. `dotnet publish` the WPF app **self-contained** for `win-x64` → bundles .NET 10
+   (no `.pdb` or `.xml` doc files).
+3. Install Chromium into the publish folder (`ms-playwright\`) so scraping works
+   offline — or, for system Edge, write `browser-channel.txt`.
+4. Build the MSI with WiX v5, harvesting the whole publish tree. A harvest that
+   finds no folder fails the build rather than producing an empty MSI.
 
-For ARM64 Windows: `pwsh ./build-installer.ps1 -Rid win-arm64`.
+For ARM64 Windows: `pwsh ./build-installer.ps1 -Rid win-arm64`, or add
+`-p:RuntimeIdentifier=win-arm64` to the `dotnet publish` line.
 
 ## Build-machine prerequisites (one-time)
 
 | Tool | Why | Get it |
 |------|-----|--------|
 | .NET 10 SDK | build/publish the app | already required to build the solution |
-| PowerShell 7 (`pwsh`) | runs `playwright install` | https://aka.ms/powershell |
+| PowerShell 7 (`pwsh`) | only for `build-installer.ps1`; the publish profiles don't need it | https://aka.ms/powershell |
 | WiX v5 SDK | builds the MSI | restored automatically on first `dotnet build` of the `.wixproj` |
 | Internet | downloads Chromium once | only on the build machine |
 
@@ -75,5 +89,5 @@ That's it — no runtime install, no browser download.
   present) fall back to the normal per-user Playwright cache.
 * **Not in the .sln**: the WiX project is intentionally left out of
   `QsrPriceBenchmarks.sln` so `dotnet build` of the solution doesn't require the
-  publish output to exist. Build it via the script (or `dotnet build` the
-  `.wixproj` directly after publishing).
+  publish output to exist. Build it through a publish profile (or the script, or
+  `dotnet build` the `.wixproj` directly after publishing).
