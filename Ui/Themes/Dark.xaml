@@ -50,13 +50,11 @@
     <SolidColorBrush x:Key="BrushMapFillHover"  Color="{StaticResource ColorMapFillHover}"/>
 
     <!-- ── Base control styles ─────────────────────────────────────────────── -->
-
-    <Style TargetType="Window">
-        <Setter Property="Background" Value="{StaticResource BrushBg}"/>
-        <Setter Property="Foreground" Value="{StaticResource BrushText}"/>
-        <Setter Property="FontFamily" Value="Segoe UI"/>
-        <Setter Property="FontSize"   Value="13"/>
-    </Style>
+    <!-- No implicit Window style: WPF applies implicit styles by exact type, so one
+         keyed to Window never reaches MainWindow (a subclass). Measured 2026-10-25:
+         MainWindow.Style null, FontSize 12, Background white - the one this file
+         carried described a window that does not exist. The window's look comes
+         from MainWindow.xaml's own root panels and the control styles below. -->
 
     <Style TargetType="TextBlock">
         <Setter Property="Foreground" Value="{StaticResource BrushText}"/>
