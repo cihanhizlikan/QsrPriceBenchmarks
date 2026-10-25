@@ -62,9 +62,11 @@ That's it — no runtime install, no browser download.
 * **Size**: the default MSI is large (~250–400 MB) because it embeds the .NET
   runtime and a Chromium build. `-UseSystemBrowser` drops the Chromium portion
   (~150 MB) by driving the PC's installed Edge instead.
-* **Versioning**: bump `Version` in `Package.wxs` for each release. Keep
-  `UpgradeCode` **unchanged** so new versions upgrade in place rather than
-  installing side-by-side.
+* **Versioning**: bump `Version` in `Directory.Build.props` at the solution
+  root for each release — `Package.wxs` reads it as `$(var.ProductVersion)`,
+  and so do the assemblies and the in-app version badge. Keep `UpgradeCode`
+  **unchanged** so new versions upgrade in place rather than installing
+  side-by-side.
 * **Why a browser at all**: the app scrapes JS-rendered pages by driving a
   browser engine through Playwright (automation, not the user's everyday
   browser). Default builds bundle Chromium and `BrowserSession.EnsureBrowsersPath()`
