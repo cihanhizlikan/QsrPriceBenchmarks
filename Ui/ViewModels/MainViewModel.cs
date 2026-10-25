@@ -494,6 +494,12 @@ public sealed class MainViewModel : ViewModelBase
     public async Task InitialiseAsync()
     {
         await LoadChainLogosAsync();
+        // Start with the sidebar's first chain selected: with none, Run is
+        // disabled, the tab list and the map are empty, and nothing on screen
+        // says why. Only after the logos load, because that replaces the
+        // ChainViewModel instances the sidebar holds; ??= keeps a selection
+        // already made.
+        SelectedChain ??= Chains.FirstOrDefault();
         await ReloadRunsAsync();
         await RebuildMapAsync();
     }
