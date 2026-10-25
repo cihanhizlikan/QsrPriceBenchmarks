@@ -10,6 +10,9 @@ Entries are appended; a superseded one is struck through with the date and the e
 `/wp-finish` around every package, the commit body as the archive entry, one plan outside the repository, and an
 unattended `/sweep`. The differences are listed in `working-agreement.md`.
 **Re-opened by** a rule of Yalbuz's that measurably costs more here than it saves.
+**The default branch is `main`**, as in Yalbuz (maintainer, 2026-10-26): `main` was created on origin from
+`master`'s tip (`40b1742`), made the default, and `master` deleted. Until then this repository's branch was the
+one difference the two working agreements had on it.
 
 ## The SQLite provider is chosen by the host, never by Core
 
@@ -61,5 +64,5 @@ the built assemblies or the MSI, sized patch / minor / major by `working-agreeme
 cut by hand at release time, which for 1.6.0 meant tracing 24 commits after the fact. Two choices inside it:
 - **Changes that ship nothing do not bump** (docs, tests, `.claude/`, formatting), so every version number means a
   different installer. Re-opened by a need to version something other than the installer.
-- **Every sweep step that corrects shipped code bumps**, rather than the sweep bumping once at the end, so `master`
+- **Every sweep step that corrects shipped code bumps**, rather than the sweep bumping once at the end, so `main`
   is never between versions. Re-opened by sweeps producing so many numbers that they stop meaning anything.

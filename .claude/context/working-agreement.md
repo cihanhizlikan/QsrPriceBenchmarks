@@ -9,7 +9,6 @@ every time — a new rule arrives with at most one sentence of example, and its 
 
 ## Where this repository differs from Yalbuz
 
-- **The default branch is `master`**, not `main`. Every recipe here names `master`.
 - **The database is the user's data** (see `CLAUDE.md`). Schema changes migrate; nothing drops their tables.
 - **There is no web app, no sink and no secrets file.** No gitignored settings file has to be copied into a
   worktree, and nothing a test or a run does publishes anywhere.
@@ -54,9 +53,9 @@ every time — a new rule arrives with at most one sentence of example, and its 
 - **Work arrives in packages, and each one stops for a merge.** Finish one, report, and wait.
 
 ## Branching
-- **Never check out `master` to work on it.** Its two uses are branching a new task off its tip and merging a
+- **Never check out `main` to work on it.** Its two uses are branching a new task off its tip and merging a
   finished branch into it.
-- Branch a new task from the current `master`, never from the last active branch — unless the maintainer names a
+- Branch a new task from the current `main`, never from the last active branch — unless the maintainer names a
   branch to continue, or the task is a fix spun directly out of in-progress work on a feature branch (then branch
   from that, and say so).
 - Name branches `feature/<slug>` or `fix/<slug>`; a sweep uses `sweep-<n>-<subject>`.
@@ -64,10 +63,10 @@ every time — a new rule arrives with at most one sentence of example, and its 
 ## Worktrees
 
 - **Any session about to change files enters a worktree first**, under `.claude/worktrees/`, opened by
-  `/wp-start` from the primary checkout. The primary checkout stays on `master` and is nobody's workspace. **A
+  `/wp-start` from the primary checkout. The primary checkout stays on `main` and is nobody's workspace. **A
   desktop-app session is already in one** and may not edit any other, so it branches inside its own worktree —
   `/wp-start` says how.
-- **`/wp-start` names local `master` rather than using `EnterWorktree`**, which branches from `origin/master` —
+- **`/wp-start` names local `main` rather than using `EnterWorktree`**, which branches from `origin/main` —
   routinely behind, because a session never pushes — and can be called only once per session.
 - **`dotnet build-server shutdown` before `git worktree remove`**, or the build host holds the directory. A
   removal that ends in `Permission denied` on an EMPTY directory is a husk: retry the `rm -rf` moments later.
@@ -95,7 +94,7 @@ other projects' plans and delegated agents' notes beside it.
 - **The plan carries no commit hashes and no test counts** — both change without the plan being touched.
 
 ## Committing
-- All changes happen on the task branch. Never commit to `master` directly.
+- All changes happen on the task branch. Never commit to `main` directly.
 - Commit after a coherent unit of work. Run `dotnet format` before committing (`/wp-verify` does).
 - Subject tags: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`.
 - **No separate `docs:` commit for a package's own archive entry** — it is that commit's body.
@@ -109,7 +108,7 @@ in `settled-decisions.md`.
   or `Directory.Build.props` / `build-installer.ps1` that changes build output. Docs, `Tests/`, `UiTests/`,
   `.claude/`, `.editorconfig`-only, comment-only and whitespace-only changes do not ship and **do not bump** —
   every version number then means a different installer.
-- **How much**, from `master`'s current version, by the largest kind in the package:
+- **How much**, from `main`'s current version, by the largest kind in the package:
 
 | Bump | When | For example |
 |---|---|---|

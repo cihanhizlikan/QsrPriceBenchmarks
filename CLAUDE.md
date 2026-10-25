@@ -17,13 +17,13 @@ this one is the ruling for this repository — the differences are deliberate an
   at a path they chose. So a schema change ships a data-preserving migration (`Database.MigrateLegacySchema` is
   the existing shape, `DatabaseMigrationTests` the guard), and nothing ever deletes or drops a table in a
   database the session did not create itself. This is the opposite of Yalbuz's `yalbuz.db` rule, on purpose.
-- **Never work directly on `master`** — only branch off its current tip or merge a finished branch into it. If
-  `master` is checked out and new work is requested, branch off it before touching anything.
+- **Never work directly on `main`** — only branch off its current tip or merge a finished branch into it. If
+  `main` is checked out and new work is requested, branch off it before touching anything.
 - **Work in a worktree.** Any session about to change files opens one with `/wp-start` and works there — not in
   the primary checkout, even for a one-line fix. A session doing only a merge, or only revising the plan, stays
   in the primary checkout.
 - **A work package runs through three skills, and they are not optional.** `/wp-start` opens its worktree
-  (branching from LOCAL `master`), `/wp-verify` builds, counts warnings, runs the formatter and the suite with
+  (branching from LOCAL `main`), `/wp-verify` builds, counts warnings, runs the formatter and the suite with
   the measurement traps baked in, and `/wp-finish` writes the archive entry into the commit body, checks the size
   cap before committing, and stops without merging. A session invokes each at its moment; the maintainer does not
   have to type them.
