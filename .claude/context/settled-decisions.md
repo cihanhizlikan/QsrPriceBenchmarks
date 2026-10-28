@@ -79,3 +79,13 @@ whatever the page showed first; it now reads every tab from the live DOM in page
 back to the payload. `Tests/TgAllTabsTests.cs` asserts every tab of a live page per chain yields items and that
 no tab repeats the previous one's products (red when the click is disabled).
 **Re-opened by** a need to scrape only an explicit allow-list, e.g. a chain whose new tabs are noise.
+
+## A tab no location READ this run showed is disabled, unread pages notwithstanding (2026-10-28)
+
+**Decision** (maintainer's rule, the relaxation is the assistant's). A finished, non-resumed run that saw any tab
+bar sets ACTIVE = 0 on every known tab no page it READ showed — never deleting it — and the next page that shows
+it re-enables it, ticked. Until then a single unreadable page blocked all disabling, and over hundreds of live
+pages one timeout is routine, so a vanished tab practically stayed forever. A tab disabled too early costs
+nothing lasting: it is re-enabled on sight, and a disabled tab is never in the exclusion set, so it is scraped
+the moment it reappears.
+**Re-opened by** a tab that exists only on a few locations being disabled and re-enabled run after run.

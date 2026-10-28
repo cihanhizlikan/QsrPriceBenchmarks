@@ -62,4 +62,32 @@ public sealed class TgTabSelectionTests
 
         Assert.Empty(excluded);
     }
+
+    [Fact(DisplayName = "A disabled tab is never left out, so the page that shows it again gets it scraped")]
+    public void DisabledTab_IsNotExcluded()
+    {
+        using TempDb db = new();
+        (long qsrId, long platformId) = Ids(db);
+        foreach (string tab in (string[])["Popüler Ürünler", "Kampanyalar"])
+        {
+            Repository.UpsertDiscoveredScrapeTab(db.Conn, qsrId, platformId, tab);
+        }
+        Repository.ReconcileScrapeTabs(db.Conn, qsrId, platformId, ["Popüler Ürünler"]);
+
+        // The UI lists only enabled tabs, so its selection can never contain the disabled one.
+        (HashSet<string> excluded, HashSet<string> known) =
+            TgScraper.ResolveTabs(db.Conn, qsrId, platformId, tabFilter: ["Popüler Ürünler"], progress: null);
+
+        Assert.DoesNotContain("Kampanyalar", excluded);
+        Assert.DoesNotContain("Kampanyalar", known); // so seeing it again re-enables it (RecordDiscoveredTabs)
+    }
+
+    [Theory(DisplayName = "Unseen tabs are disabled after a fresh run that saw any tab bar, never after a resume")]
+    [InlineData(false, 12, true)]
+    [InlineData(false, 0, false)]
+    [InlineData(true, 12, false)]
+    public void ShouldDisableUnseenTabs_Cases(bool resumed, int observedTabCount, bool expected)
+    {
+        Assert.Equal(expected, TgScraper.ShouldDisableUnseenTabs(resumed, observedTabCount));
+    }
 }

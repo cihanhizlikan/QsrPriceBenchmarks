@@ -52,7 +52,7 @@ public static class TgScraper
         // Union of tab names actually seen on pages during this run — feeds the
         // end-of-run soft-delete reconciliation of SCRAPE_TABS.
         HashSet<string> observedTabs = new(StringComparer.Ordinal);
-        bool anyPageTechnicallyFailed = false;
+        int unreadPages = 0;
 
         long runId = resumeRunId ?? Repository.StartScrapeRun(conn, qsrId);
         progress?.Report(resumeRunId is null
@@ -80,29 +80,30 @@ public static class TgScraper
 
                 if (IsTechnicalFailure(pageData))
                 {
-                    // A page we couldn't read might have shown a tab nobody else
-                    // has — one such gap forbids the soft-delete reconciliation.
-                    anyPageTechnicallyFailed = true;
+                    unreadPages++;
                 }
 
                 RecordDiscoveredTabs(conn, qsrId, platformId, pageData, knownTabs, observedTabs, progress);
                 RecordPage(conn, qsrId, runId, plId, pageData, progress);
             }
 
-            // Soft-delete reconciliation — only when this run is trustworthy as a
-            // full census of the chain's tabs: it completed (this line is inside
-            // the try, so cancellation and errors never reach it), it covered the
-            // whole queue (not a resume of a partial run), every page was read
-            // successfully, and at least one page actually showed a tab bar.
-            if (resumeRunId is null && queue.Count > 0
-                && !anyPageTechnicallyFailed && observedTabs.Count > 0)
+            // Disable (never delete) every known tab no page READ in this run showed. This line is inside the
+            // try, so a cancelled or failed run never reaches it. Pages that could not be read are not waited
+            // for: over hundreds of live pages one timeout is routine, and requiring a flawless run meant a
+            // vanished tab was practically never disabled. Disabling one too early costs nothing lasting — the
+            // next page that shows it re-enables it, ticked (RecordDiscoveredTabs).
+            if (ShouldDisableUnseenTabs(resumeRunId is not null, observedTabs.Count))
             {
                 List<string> deactivated =
                     Repository.ReconcileScrapeTabs(conn, qsrId, platformId, observedTabs);
                 foreach (string gone in deactivated)
                 {
                     progress?.Report(
-                        $"  ✂ Tab \"{gone}\" no longer appears on any platform location — soft-deleted");
+                        $"  ✂ Tab \"{gone}\" appeared on no location read this run — disabled until it reappears");
+                }
+                if (unreadPages > 0 && deactivated.Count > 0)
+                {
+                    progress?.Report($"    ({unreadPages} location(s) could not be read this run)");
                 }
             }
         }
@@ -146,6 +147,16 @@ public static class TgScraper
             progress?.Report("  Tabs: every tab each page shows");
         }
         return (excluded, knownTabs);
+    }
+
+    /// <summary>
+    /// Whether a finished run may disable the known tabs it never saw. Not after a resume, which visits only the
+    /// pages a previous run missed; and not when no page showed a tab bar at all, which says the platform failed,
+    /// not that every tab vanished. Unread pages do NOT stop it (see the caller).
+    /// </summary>
+    internal static bool ShouldDisableUnseenTabs(bool resumed, int observedTabCount)
+    {
+        return !resumed && observedTabCount > 0;
     }
 
     /// <summary>True when the page could not be read at all, as opposed to being read and empty.</summary>
