@@ -24,4 +24,8 @@
          Each host therefore selects exactly one provider; Core stays portable. -->
     <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.*" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- TgScraper.ResolveTabs (which tabs a run leaves out) is tested hermetically without widening it to public. -->
+    <InternalsVisibleTo Include="QsrPriceBenchmarks.IntegrationTests" />
+  </ItemGroup>
 </Project>
