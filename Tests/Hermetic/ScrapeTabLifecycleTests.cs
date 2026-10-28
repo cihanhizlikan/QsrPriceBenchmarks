@@ -6,9 +6,9 @@ using Xunit;
 namespace QsrPriceBenchmarks.IntegrationTests.Hermetic;
 
 /// <summary>
-/// SCRAPE_TABS lifecycle: Step 2 discovers tabs seen live on the platform
-/// (selectable from the NEXT run) and soft-deletes tabs a cleanly completed
-/// run no longer saw anywhere (ACTIVE = 0, LAST_SEEN_AT keeps recording the
+/// SCRAPE_TABS lifecycle: Step 2 records tabs seen live on the platform (and
+/// scrapes them on that same visit) and disables tabs a finished run saw on no
+/// page it read (ACTIVE = 0, never deleted; LAST_SEEN_AT keeps recording the
 /// last run that did see the tab). Nothing is hardcoded: discovery is the ONLY
 /// way tabs enter the database, and re-opening it must neither resurrect a
 /// soft-deleted tab nor erase a discovered one.
