@@ -716,8 +716,12 @@ public static class Database
             WHERE pt.ACTIVE = 1;
             """;
 
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = ddl;
-        cmd.ExecuteNonQuery();
+        // One write transaction around the whole DROP + CREATE: the UI opens the database from several tasks at
+        // once (choosing a chain rebuilds its tab list and its map together), and two opens interleaving their
+        // statements threw "view V_MARKETING_REPORT already exists". BeginTransaction() is BEGIN IMMEDIATE, so a
+        // second opener waits on busy_timeout here instead of racing.
+        using SqliteTransaction tx = conn.BeginTransaction();
+        ExecuteInTx(conn, tx, ddl);
+        tx.Commit();
     }
 }
