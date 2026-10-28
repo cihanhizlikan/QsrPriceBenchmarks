@@ -432,8 +432,8 @@ public sealed class MainViewModel : ViewModelBase
     /// <summary>
     /// True while the selected chain has no discovered tabs in the current
     /// database. The Run Pipeline tab shows an explanatory hint instead of an
-    /// empty list: the first Step 2 run discovers the tabs (and collects
-    /// names/addresses), and menu scraping starts from the following run.
+    /// empty list: the first Step 2 run discovers the tabs as it scrapes them
+    /// — every tab a page shows is scraped unless it is unticked here.
     /// </summary>
     public bool ShowNoTabsHint
     {

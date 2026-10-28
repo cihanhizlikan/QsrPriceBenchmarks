@@ -12,20 +12,26 @@ namespace QsrPriceBenchmarks.Core.Scraping;
 ///
 /// TG is a Next.js app. The first tab ("Popüler Ürünler") is server-rendered
 /// and its product data lives only in a <c>self.__next_f.push(...)</c> JSON
-/// payload — the static HTML grid has zero real DOM card nodes for it.
+/// payload; the live DOM gains its cards only once React hydrates (measured
+/// 2026-10-28: 14 cards on Popeyes' first tab after hydration).
 /// Clicking through to subsequent tabs makes React render real DOM nodes for
 /// that tab (and the JSON payload does NOT update on click — it's a one-time
-/// SSR snapshot) — so those tabs must be read from the live DOM instead.
+/// SSR snapshot) — so every tab is read from the live DOM, the first one
+/// falling back to the payload when its cards have not painted.
 /// </summary>
 public static class TgScraper
 {
     private const string TgBaseUrl = "https://www.tiklagelsin.com/restoran/";
 
-    /// <summary>One TG page's own NAME/ADDRESS plus its scraped (name, price) menu items.</summary>
-    private readonly record struct TgPageData(
+    /// <summary>
+    /// One TG page's own NAME/ADDRESS, its scraped (name, price) menu items (deduplicated across tabs), the tab
+    /// bar it showed, and the product names each scraped tab displayed, before deduplication.
+    /// <see cref="Reason"/> is set when the page yielded no menu for a reason other than its tabs.
+    /// </summary>
+    public readonly record struct TgPageData(
         string? Name, string? Address, List<(string Name, decimal Price)> Items,
-        int FirstTabCount = 0, int TabsAttempted = 0, int TabsWithItems = 0, string? Reason = null,
-        List<string>? PageTabs = null);
+        string? Reason = null, List<string>? PageTabs = null,
+        IReadOnlyDictionary<string, List<string>>? ItemNamesPerTab = null);
 
     public static async Task ScrapeAsync(
         ChainConfig chain, SqliteConnection conn,
@@ -40,7 +46,7 @@ public static class TgScraper
 
         await HarvestSitemapSlugsAsync(chain, conn, qsrId, platformId, platformSlug, progress);
 
-        (List<string> tabs, HashSet<string> knownTabs) =
+        (HashSet<string> excludedTabs, HashSet<string> knownTabs) =
             ResolveTabs(conn, qsrId, platformId, tabFilter, progress);
 
         // Union of tab names actually seen on pages during this run — feeds the
@@ -70,7 +76,7 @@ public static class TgScraper
 
                 ct.ThrowIfCancellationRequested();
                 TgPageData pageData = await ScrapeOnePageWithRetryAsync(
-                    page, platformSlug, slug, tabs, progress, ct);
+                    page, platformSlug, slug, excludedTabs, progress, ct);
 
                 if (IsTechnicalFailure(pageData))
                 {
@@ -110,38 +116,36 @@ public static class TgScraper
     }
 
     /// <summary>
-    /// The tabs this run scrapes (the ACTIVE set, narrowed to the user's filter,
-    /// in discovered order) and the known-tab set new tabs are discovered
-    /// against — every tab currently selectable, BEFORE the filter.
+    /// The tabs this run must NOT scrape — the known tabs the user left unticked — and the known-tab set new tabs
+    /// are discovered against. A selection is read as exclusions rather than as the whole list because the
+    /// pages, not the database, say which tabs exist: a fresh database knows none (its UI selection is empty),
+    /// and a tab TG adds mid-run was never offered for ticking. Both are scraped on the visit that finds them.
     /// </summary>
-    private static (List<string> Tabs, HashSet<string> KnownTabs) ResolveTabs(
+    internal static (HashSet<string> ExcludedTabs, HashSet<string> KnownTabs) ResolveTabs(
         SqliteConnection conn, long qsrId, long platformId,
         IReadOnlyCollection<string>? tabFilter, IProgress<string>? progress)
     {
         List<string> activeTabs = Repository.LoadScrapeTabs(conn, qsrId, platformId);
         HashSet<string> knownTabs = new(activeTabs, StringComparer.Ordinal);
-        List<string> tabs = activeTabs;
-        if (tabs.Count == 0)
-        {
-            // No tabs known yet (fresh database — tabs are never hardcoded, only
-            // discovered). This pass becomes a DISCOVERY run: every page is still
-            // visited and its restaurant name/address persisted, and the tab bar
-            // of each page feeds the discovery — so the tab list is fully
-            // populated for the next run — but no menu items can be collected yet.
-            progress?.Report("  ⓘ No tabs known for this chain yet — this run will discover them");
-            progress?.Report("    (menu items will be collected from the NEXT run on)");
-        }
+        HashSet<string> excluded = new(StringComparer.Ordinal);
         if (tabFilter is not null)
         {
-            // Keep only the user-selected tabs, preserving the discovered order.
-            HashSet<string> allowed = new(tabFilter, StringComparer.Ordinal);
-            tabs = [.. tabs.Where(allowed.Contains)];
+            excluded.UnionWith(activeTabs.Except(tabFilter, StringComparer.Ordinal));
         }
-        if (tabs.Count > 0)
+
+        if (activeTabs.Count == 0)
         {
-            progress?.Report($"  Tabs: {string.Join(", ", tabs)}");
+            progress?.Report("  ⓘ No tabs known for this chain yet — every tab each page shows is scraped");
         }
-        return (tabs, knownTabs);
+        else if (excluded.Count > 0)
+        {
+            progress?.Report($"  Tabs left out: {string.Join(", ", activeTabs.Where(excluded.Contains))}");
+        }
+        else
+        {
+            progress?.Report("  Tabs: every tab each page shows");
+        }
+        return (excluded, knownTabs);
     }
 
     /// <summary>True when the page could not be read at all, as opposed to being read and empty.</summary>
@@ -211,9 +215,11 @@ public static class TgScraper
 
         if (pageData.Reason is null)
         {
+            IReadOnlyDictionary<string, List<string>> perTab =
+                pageData.ItemNamesPerTab ?? new Dictionary<string, List<string>>();
             progress?.Report(
-                $"      → {items.Count} item(s)  [first tab {pageData.FirstTabCount}, " +
-                $"other tabs {pageData.TabsWithItems}/{pageData.TabsAttempted} produced items]");
+                $"      → {items.Count} item(s)  [{perTab.Count(t => t.Value.Count > 0)}/{perTab.Count} tab(s) " +
+                "produced items]");
         }
         else
         {
@@ -229,7 +235,7 @@ public static class TgScraper
     /// <see cref="MaxPageAttempts"/> times; cancellation is never retried.
     /// </summary>
     private static async Task<TgPageData> ScrapeOnePageWithRetryAsync(
-        IPage page, string platformSlug, string slug, List<string> tabs,
+        IPage page, string platformSlug, string slug, IReadOnlySet<string> excludedTabs,
         IProgress<string>? progress, CancellationToken ct)
     {
         for (int attempt = 1; attempt <= MaxPageAttempts; attempt++)
@@ -237,7 +243,7 @@ public static class TgScraper
             ct.ThrowIfCancellationRequested();
             try
             {
-                return await ScrapeOnePageAsync(page, platformSlug, slug, tabs, ct);
+                return await ScrapePageAsync(page, platformSlug, slug, excludedTabs, ct);
             }
             catch (OperationCanceledException)
             {
@@ -260,12 +266,12 @@ public static class TgScraper
     }
 
     /// <summary>
-    /// Scrape one TG restaurant page across every configured tab.
+    /// Scrape one TG restaurant page across every tab its tab bar shows except <paramref name="excludedTabs"/>.
     /// Returns deduplicated (name, price) pairs — later tabs never overwrite
     /// an item name already seen from an earlier tab.
     /// </summary>
-    private static async Task<TgPageData> ScrapeOnePageAsync(
-        IPage page, string platformSlug, string slug, List<string> tabs, CancellationToken ct = default)
+    public static async Task<TgPageData> ScrapePageAsync(
+        IPage page, string platformSlug, string slug, IReadOnlySet<string> excludedTabs, CancellationToken ct = default)
     {
         string url = $"{TgBaseUrl}{platformSlug}/{slug}?gel-al";
         List<(string, decimal)> results = [];
@@ -326,8 +332,8 @@ public static class TgScraper
         }
 
         // The page is alive — read the tab bar's actual tab names. This is what
-        // drives tab discovery and the end-of-run soft-delete reconciliation;
-        // the scraping below still uses only the configured/selected tab list.
+        // drives tab discovery, the end-of-run soft-delete reconciliation and
+        // the order the tabs are scraped in below.
         List<string> pageTabs = await ReadPageTabNamesAsync(page);
 
         // The restaurant's own name/address are NOT in the static HTML. The
@@ -349,36 +355,28 @@ public static class TgScraper
                 PageTabs: pageTabs);
         }
 
-        int firstTabCount = 0, tabsAttempted = 0, tabsWithItems = 0;
-
-        for (int tabIdx = 0; tabIdx < tabs.Count; tabIdx++)
+        // Scrape this page's own tabs, in the order it shows them, skipping only the ones the user unticked. The
+        // page — not the stored list — decides the order, because the tab active on load is the page's first one
+        // whatever the stored DISPLAY_ORDER says, and a tab this run discovers is scraped on this very visit.
+        Dictionary<string, List<string>> namesPerTab = new(StringComparer.Ordinal);
+        string? activeTab = pageTabs.FirstOrDefault();
+        foreach (string tabName in pageTabs)
         {
             ct.ThrowIfCancellationRequested();
-            string tabName = tabs[tabIdx];
-            List<(string, decimal)> tabItems;
-
-            if (tabIdx == 0)
+            if (excludedTabs.Contains(tabName))
             {
-                // First tab: SSR — product data lives in the Next.js script
-                // JSON payload, not real DOM nodes. Section headings aren't
-                // rendered in the static HTML, so pass tabName=null and take
-                // every item found.
-                tabItems = [.. NextJsTabParser.Parse(firstPageHtml, tabName: null).Select(m => (m.Name, m.Price))];
+                continue;
             }
-            else
-            {
-                tabsAttempted++;
 
-                // Subsequent tabs: click, then read the live re-rendered DOM.
-                // The previous tab's cards are still on screen when the click
-                // lands, so "a card exists" would pass at once and read them
-                // again; wait until this tab is active AND the first card has
-                // changed. A tab whose first product matches the last one's
-                // falls through to the timeout below.
+            if (tabName != activeTab)
+            {
+                // The previous tab's cards are still on screen when the click lands, so "a card exists" would
+                // pass at once and read them again; wait until this tab is active AND the first card has
+                // changed. A tab whose first product matches the last one's falls through to the timeout below.
                 string previousFirst = await FirstCardTitleAsync(page);
-                bool clicked = await TryClickTabAsync(page, tabName);
-                if (clicked)
+                if (await TryClickTabAsync(page, tabName))
                 {
+                    activeTab = tabName;
                     try
                     {
                         await page.WaitForFunctionAsync("""
@@ -388,41 +386,47 @@ public static class TgScraper
                                 const first = document.querySelector('.grid.lg\\:grid-cols-2 [id^="product-card-"][id$="-title"]');
                                 return !!first && first.innerText.trim() !== previous;
                             }
-                            """, new[] { tabName, previousFirst }, new PageWaitForFunctionOptions { Timeout = 3_000 });
+                            """, new[] { tabName, previousFirst }, new PageWaitForFunctionOptions { Timeout = 5_000 });
                     }
                     catch (TimeoutException)
                     {
                         await page.WaitForTimeoutAsync(600);
                     }
                 }
-
-                string html = await page.ContentAsync();
-                tabItems = await ExtractFromLiveDomAsync(html, url);
             }
 
-            int newCount = 0;
-            foreach ((string name, decimal price) in tabItems)
+            List<(string, decimal)> tabItems = await ExtractFromLiveDomAsync(await page.ContentAsync(), url);
+            if (tabItems.Count == 0 && tabName == pageTabs[0])
             {
-                if (seen.Add(name))
-                {
-                    results.Add((name, price));
-                    newCount++;
-                }
+                // The first tab is also server-rendered: when its live cards have not painted, the payload has it.
+                tabItems = [.. NextJsTabParser.Parse(firstPageHtml, tabName: null).Select(m => (m.Name, m.Price))];
             }
 
-            if (tabIdx == 0)
-            {
-                firstTabCount = newCount;
-            }
-            else if (newCount > 0)
-            {
-                tabsWithItems++;
-            }
+            namesPerTab[tabName] = [.. tabItems.Select(i => i.Item1)];
+            AddNew(tabItems, results, seen);
         }
 
-        return new TgPageData(restName, restAddress, results,
-            FirstTabCount: firstTabCount, TabsAttempted: tabsAttempted, TabsWithItems: tabsWithItems,
-            PageTabs: pageTabs);
+        if (pageTabs.Count == 0)
+        {
+            // No tab bar could be read: the server-rendered first tab is still a menu worth keeping.
+            AddNew([.. NextJsTabParser.Parse(firstPageHtml, tabName: null).Select(m => (m.Name, m.Price))], results, seen);
+        }
+
+        return new TgPageData(restName, restAddress, results, PageTabs: pageTabs, ItemNamesPerTab: namesPerTab);
+    }
+
+    /// <summary>
+    /// Appends the items whose names were not seen on an earlier tab — a later tab never overwrites one.
+    /// </summary>
+    private static void AddNew(List<(string, decimal)> tabItems, List<(string, decimal)> results, HashSet<string> seen)
+    {
+        foreach ((string name, decimal price) in tabItems)
+        {
+            if (seen.Add(name))
+            {
+                results.Add((name, price));
+            }
+        }
     }
 
     /// <summary>

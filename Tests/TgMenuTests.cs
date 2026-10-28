@@ -43,6 +43,15 @@ public sealed class TgMenuTests(PlaywrightFixture pw)
         _chainCache.GetOrAdd(platformSlug,
             ps => new Lazy<Task<ChainData?>>(() => FetchChainDataAsync(pw, ps))).Value;
 
+    // A chain with no menu in its sample FAILS rather than passing on nothing: these tests used to return early
+    // there, which is exactly how they stayed green while Step 2 recorded no prices.
+    private static ChainData RequireMenu(ChainData? data, string platformSlug)
+    {
+        Assert.True(data is { Items.Count: > 0 },
+            $"[{platformSlug}] no TG page with a menu among the sampled sitemap listings.");
+        return data!;
+    }
+
     /// <summary>
     /// Navigate to the chain's first ACTIVE restaurant on TG — sampling past
     /// inactive (digest) and empty (0-item) slugs — and return its menu items,
@@ -107,10 +116,7 @@ public sealed class TgMenuTests(PlaywrightFixture pw)
     public async Task TgPage_FirstSitemapSlug_ReturnsMenuItems(string platformSlug)
     {
         ChainData? data = await GetChainDataAsync(platformSlug);
-        if (data is null || data.Items.Count == 0)
-        {
-            return; // chain has no active menu on TG right now — informational skip
-        }
+        data = RequireMenu(data, platformSlug);
 
         Assert.All(data.Items, item =>
         {
@@ -133,10 +139,7 @@ public sealed class TgMenuTests(PlaywrightFixture pw)
     public async Task TgPage_Items_HaveReasonablePrices(string platformSlug)
     {
         ChainData? data = await GetChainDataAsync(platformSlug);
-        if (data is null || data.Items.Count == 0)
-        {
-            return;
-        }
+        data = RequireMenu(data, platformSlug);
 
         Assert.All(data.Items, item =>
             Assert.True(item.Price is > 0m and < 100_000m,
@@ -151,10 +154,7 @@ public sealed class TgMenuTests(PlaywrightFixture pw)
     public async Task TgPage_Items_HaveUniqueNames(string platformSlug)
     {
         ChainData? data = await GetChainDataAsync(platformSlug);
-        if (data is null || data.Items.Count == 0)
-        {
-            return;
-        }
+        data = RequireMenu(data, platformSlug);
 
         List<string> names = [.. data.Items.Select(i => i.Name)];
         List<string> distinct = [.. names.Distinct()];
@@ -174,10 +174,7 @@ public sealed class TgMenuTests(PlaywrightFixture pw)
     public async Task TgPage_HasRestaurantNameAndAddress(string platformSlug)
     {
         ChainData? data = await GetChainDataAsync(platformSlug);
-        if (data is null || data.Items.Count == 0)
-        {
-            return; // no active restaurant to read name/address from — skip
-        }
+        data = RequireMenu(data, platformSlug);
 
         Assert.False(string.IsNullOrWhiteSpace(data.Name),
             $"[{platformSlug}] No restaurant NAME extracted (page heading / <title>).");

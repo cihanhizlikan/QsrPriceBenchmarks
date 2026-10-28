@@ -142,7 +142,7 @@ public sealed class WindowCapture(ITestOutputHelper output)
         yield return "  ✓ 79 provinces found";
         yield return $"  [1/79] Province: {LogMarkup.Value("adana")}";
         yield return $"    ↳ {LogMarkup.Value("seyhan")}";
-        yield return "[Step 2] SKIP — no tabs known for this chain yet";
+        yield return "[Step 2] Starting new price round for Burger King";
         yield return "  ⚠ skipped province mersin — navigation timed out";
         yield return "  ✗ Fatal: the database is locked";
         yield return "──────────────────────────────────────────────";

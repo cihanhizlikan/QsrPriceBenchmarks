@@ -66,3 +66,16 @@ cut by hand at release time, which for 1.6.0 meant tracing 24 commits after the 
   different installer. Re-opened by a need to version something other than the installer.
 - **Every sweep step that corrects shipped code bumps**, rather than the sweep bumping once at the end, so `main`
   is never between versions. Re-opened by sweeps producing so many numbers that they stop meaning anything.
+
+## A Step 2 run scrapes every tab a page shows, except the ones unticked (2026-10-28)
+
+**Decision.** The UI's tab selection is read as EXCLUSIONS — the known tabs left unticked — not as the list to
+scrape. Each page's own tab bar decides which tabs exist and in what order. **Measured**: on the maintainer's
+database the first Arby's run visited 177 locations, discovered 12 tabs and stored 0 prices, because a fresh
+database knows no tabs, the UI passed an empty selection, and the old code scraped exactly that list; the
+"menu items from the next run on" hint described this as intended. A tab TG adds mid-run was likewise never
+scraped until the run after. The scraper also used to read the stored list's FIRST tab from the server payload
+whatever the page showed first; it now reads every tab from the live DOM in page order, the first one falling
+back to the payload. `Tests/TgAllTabsTests.cs` asserts every tab of a live page per chain yields items and that
+no tab repeats the previous one's products (red when the click is disabled).
+**Re-opened by** a need to scrape only an explicit allow-list, e.g. a chain whose new tabs are noise.

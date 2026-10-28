@@ -254,7 +254,7 @@
                              Foreground="{StaticResource BrushTextDim}" Margin="0 0 0 8"/>
                   <TextBlock Visibility="{Binding ShowNoTabsHint, Converter={StaticResource BoolVis}}"
                              TextWrapping="Wrap" Opacity="0.75" Margin="0 0 0 8"
-                             Text="No tabs discovered for this chain yet — tabs are learned from the platform's own pages, not hardcoded. Run Step 2 once to discover them (it also collects names and addresses); menu prices are scraped from the next run on."/>
+                             Text="No tabs discovered for this chain yet — tabs are learned from the platform's own pages, not hardcoded. Step 2 discovers them as it scrapes: a run scrapes every tab each page shows, except the ones unticked here."/>
                   <ItemsControl ItemsSource="{Binding ScrapeTabs}">
                     <ItemsControl.ItemsPanel>
                       <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
