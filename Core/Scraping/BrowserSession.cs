@@ -3,7 +3,7 @@ using Microsoft.Playwright;
 namespace QsrPriceBenchmarks.Core.Scraping;
 
 /// <summary>
-/// Owns a headless browser + one context + one page, created with the
+/// One context + one page on the process's shared headless browser, created with the
 /// project-standard viewport, Turkish locale, and desktop Chrome user-agent.
 /// Centralises the launch boilerplate that previously lived in
 /// <see cref="ChainCrawler"/>, <see cref="TgScraper"/>, and
@@ -16,8 +16,8 @@ namespace QsrPriceBenchmarks.Core.Scraping;
 /// <see cref="ResolveBrowserChannel"/> — to drive an already-installed Edge or
 /// Chrome instead, which avoids shipping/downloading Chromium at all.
 ///
-/// Dispose (via <c>await using</c>) closes the context and browser and frees
-/// the Playwright driver. The single <see cref="Page"/> closes with its
+/// Dispose (via <c>await using</c>) closes the context, and the browser and
+/// Playwright driver once no session is left. The single <see cref="Page"/> closes with its
 /// context, so callers no longer call <c>page.CloseAsync()</c> explicitly.
 /// </summary>
 public sealed class BrowserSession : IAsyncDisposable
@@ -31,22 +31,25 @@ public sealed class BrowserSession : IAsyncDisposable
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
         "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
-    private readonly IPlaywright _playwright;
-    private readonly IBrowser _browser;
+    // One browser per process, shared by every session alive at once: chains scraping together each get their
+    // own context and page, not their own Chromium (a few hundred MB apiece). Launched by the first session,
+    // closed by the last.
+    private static readonly SemaphoreSlim SharedLock = new(1, 1);
+    private static IPlaywright? _sharedPlaywright;
+    private static IBrowser? _sharedBrowser;
+    private static int _users;
 
     public IBrowserContext Context { get; }
     public IPage Page { get; }
 
-    private BrowserSession(IPlaywright playwright, IBrowser browser, IBrowserContext context, IPage page)
+    private BrowserSession(IBrowserContext context, IPage page)
     {
-        _playwright = playwright;
-        _browser = browser;
         Context = context;
         Page = page;
     }
 
     /// <summary>
-    /// Launch a headless browser and open a ready-to-use page.
+    /// Open a ready-to-use page in its own context on the shared headless browser.
     /// </summary>
     /// <param name="viewportHeight">
     /// Viewport height in pixels (width is fixed at 1280). Affects only how
@@ -54,22 +57,9 @@ public sealed class BrowserSession : IAsyncDisposable
     /// </param>
     public static async Task<BrowserSession> LaunchAsync(int viewportHeight = 900)
     {
-        string? channel = ResolveBrowserChannel();
-        if (channel is null)
-        {
-            EnsureBrowsersPath(); // only need a downloaded/bundled Chromium when NOT using a system channel
-        }
-
-        IPlaywright playwright = await Playwright.CreateAsync();
+        IBrowser browser = await AcquireBrowserAsync();
         try
         {
-            BrowserTypeLaunchOptions launchOptions = new() { Headless = true };
-            if (channel is not null)
-            {
-                launchOptions.Channel = channel; // drive the installed Edge/Chrome instead of a Chromium download
-            }
-
-            IBrowser browser = await playwright.Chromium.LaunchAsync(launchOptions);
             IBrowserContext context = await browser.NewContextAsync(new BrowserNewContextOptions
             {
                 ViewportSize = new ViewportSize { Width = 1280, Height = viewportHeight },
@@ -78,12 +68,11 @@ public sealed class BrowserSession : IAsyncDisposable
                 IgnoreHTTPSErrors = true, // some chain sites (e.g. usta-pideci) serve a mismatched cert
             });
             IPage page = await context.NewPageAsync();
-            return new BrowserSession(playwright, browser, context, page);
+            return new BrowserSession(context, page);
         }
         catch
         {
-            // Don't leak the driver process if context/page creation fails.
-            playwright.Dispose();
+            await ReleaseBrowserAsync(); // don't keep the browser alive for a session that never started
             throw;
         }
     }
@@ -91,8 +80,72 @@ public sealed class BrowserSession : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         try { await Context.CloseAsync(); } catch { /* already closing */ }
-        try { await _browser.CloseAsync(); } catch { /* already closing */ }
-        _playwright.Dispose();
+        await ReleaseBrowserAsync();
+    }
+
+    private static async Task<IBrowser> AcquireBrowserAsync()
+    {
+        await SharedLock.WaitAsync();
+        try
+        {
+            if (_sharedBrowser is not { IsConnected: true })
+            {
+                // First user, or the browser died under the sessions using it: start a new one.
+                await CloseSharedAsync();
+                _sharedBrowser = await LaunchBrowserAsync();
+            }
+            _users++;
+            return _sharedBrowser;
+        }
+        finally
+        {
+            SharedLock.Release();
+        }
+    }
+
+    private static async Task ReleaseBrowserAsync()
+    {
+        await SharedLock.WaitAsync();
+        try
+        {
+            if (--_users <= 0)
+            {
+                _users = 0;
+                await CloseSharedAsync();
+            }
+        }
+        finally
+        {
+            SharedLock.Release();
+        }
+    }
+
+    private static async Task<IBrowser> LaunchBrowserAsync()
+    {
+        string? channel = ResolveBrowserChannel();
+        if (channel is null)
+        {
+            EnsureBrowsersPath(); // only need a downloaded/bundled Chromium when NOT using a system channel
+        }
+
+        _sharedPlaywright = await Playwright.CreateAsync();
+        BrowserTypeLaunchOptions launchOptions = new() { Headless = true };
+        if (channel is not null)
+        {
+            launchOptions.Channel = channel; // drive the installed Edge/Chrome instead of a Chromium download
+        }
+        return await _sharedPlaywright.Chromium.LaunchAsync(launchOptions);
+    }
+
+    private static async Task CloseSharedAsync()
+    {
+        if (_sharedBrowser is not null)
+        {
+            try { await _sharedBrowser.CloseAsync(); } catch { /* already gone */ }
+            _sharedBrowser = null;
+        }
+        _sharedPlaywright?.Dispose();
+        _sharedPlaywright = null;
     }
 
     /// <summary>

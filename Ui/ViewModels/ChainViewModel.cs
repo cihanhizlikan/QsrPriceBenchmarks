@@ -9,9 +9,13 @@ namespace QsrPriceBenchmarks.Ui.ViewModels;
 /// and a lazily-generated placeholder logo (colored square with initials)
 /// shown when no LOGO_BLOB is stored in the database.
 /// </summary>
-public sealed class ChainViewModel(ChainConfig chain, byte[]? logoBytes) : ViewModelBase
+public sealed class ChainViewModel(ChainConfig chain, byte[]? logoBytes, ChainSessionViewModel session) : ViewModelBase
 {
     public ChainConfig Chain { get; } = chain;
+
+    /// <summary>This chain's run, whose status the sidebar card shows.</summary>
+    public ChainSessionViewModel Session { get; } = session;
+
     public string Name
     {
         get

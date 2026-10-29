@@ -15,8 +15,11 @@ public static class GeocodeAndMatchStep
     public static async Task RunAsync(
         SqliteConnection conn, long? chainQsrId, bool rematch,
         IProgress<string>? progress = null, CancellationToken ct = default,
-        IProgress<StepProgress>? progressCount = null)
+        IProgress<StepProgress>? progressCount = null,
+        RequestGate? gate = null)
     {
+        // Every Google Maps search takes a turn: other chains geocoding at the same time share Google.
+        gate ??= RequestGate.Unlimited;
         if (rematch)
         {
             using SqliteCommand resetCmd = conn.CreateCommand();
@@ -72,7 +75,7 @@ public static class GeocodeAndMatchStep
                     Task<Geocoder.GeocodeResult>[] tasks = new Task<Geocoder.GeocodeResult>[batchSize];
                     for (int b = 0; b < batchSize; b++)
                     {
-                        tasks[b] = Geocoder.GeocodeDetailedAsync(pages[b], work[idx + b].Query);
+                        tasks[b] = GeocodeInTurnAsync(gate, pages[b], work[idx + b].Query, ct);
                     }
                     Geocoder.GeocodeResult[] results = await Task.WhenAll(tasks);
 
@@ -324,5 +327,13 @@ public static class GeocodeAndMatchStep
                 reader.IsDBNull(4) ? null : reader.GetDouble(4)));
         }
         return result;
+    }
+
+    /// <summary>One Google Maps search, run only in this scrape's turn on Google (see <see cref="RequestScheduler"/>).</summary>
+    private static async Task<Geocoder.GeocodeResult> GeocodeInTurnAsync(
+        RequestGate gate, IPage page, string query, CancellationToken ct)
+    {
+        using IDisposable turn = await gate.TakeTurnAsync(RequestScheduler.GoogleMaps, ct);
+        return await Geocoder.GeocodeDetailedAsync(page, query);
     }
 }

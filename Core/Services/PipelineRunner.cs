@@ -23,7 +23,8 @@ public static class PipelineRunner
         CancellationToken ct = default,
         IProgress<StepProgress>? progressCount = null,
         IProgress<int>? onLocationsChanged = null,
-        IProgress<long>? onRunChanged = null)
+        IProgress<long>? onRunChanged = null,
+        RequestGate? gate = null)
     {
         using SqliteConnection conn = Db.Database.Open(dbPath);
         Models.ChainConfig chain = opts.Chain;
@@ -52,7 +53,7 @@ public static class PipelineRunner
                 Log(opts.GeocodeRematch
                     ? $"[Step 3] Rematching from scratch for {chain.Name}"
                     : $"[Step 3] Geocoding gaps and matching for {chain.Name}");
-                await GeocodeAndMatchStep.RunAsync(conn, qsrId, opts.GeocodeRematch, progress, ct, progressCount);
+                await GeocodeAndMatchStep.RunAsync(conn, qsrId, opts.GeocodeRematch, progress, ct, progressCount, gate);
             }
             // Export is not a pipeline step — use the Scrape Runs "Export" button
             // (UI) or the post-run export (CLI --export).
@@ -77,12 +78,13 @@ public static class PipelineRunner
             ct.ThrowIfCancellationRequested();
 
             Log($"[Step 2] Starting new price round for {chain.Name}");
-            await TgScraper.ScrapeAsync(chain, conn, progress, ct, opts.Tabs, onRunChanged: onRunChanged);
+            await TgScraper.ScrapeAsync(chain, conn, progress, ct, opts.Tabs,
+                onRunChanged: onRunChanged, progressCount: progressCount, gate: gate);
 
             ct.ThrowIfCancellationRequested();
 
             Log($"[Step 3] Geocoding gaps and matching for {chain.Name}");
-            await GeocodeAndMatchStep.RunAsync(conn, qsrId, rematch: false, progress, ct, progressCount);
+            await GeocodeAndMatchStep.RunAsync(conn, qsrId, rematch: false, progress, ct, progressCount, gate);
             // Export is no longer part of the pipeline — use the "Export" button
             // on the Scrape Runs tab to produce the Excel benchmark on demand.
         }
@@ -100,17 +102,19 @@ public static class PipelineRunner
         IProgress<string>? progress = null, CancellationToken ct = default,
         IReadOnlyCollection<string>? tabs = null,
         IProgress<StepProgress>? progressCount = null,
-        IProgress<long>? onRunChanged = null)
+        IProgress<long>? onRunChanged = null,
+        RequestGate? gate = null)
     {
         using SqliteConnection conn = Db.Database.Open(dbPath);
         long qsrId = Repository.QsrId(conn, chain.Name);
 
         progress?.Report($"[Resume] Continuing run {runId} for {chain.Name}");
-        await TgScraper.ScrapeAsync(chain, conn, progress, ct, tabs, resumeRunId: runId, onRunChanged: onRunChanged);
+        await TgScraper.ScrapeAsync(chain, conn, progress, ct, tabs, resumeRunId: runId,
+            onRunChanged: onRunChanged, progressCount: progressCount, gate: gate);
 
         ct.ThrowIfCancellationRequested();
 
         progress?.Report($"[Step 3] Geocoding gaps and matching for {chain.Name}");
-        await GeocodeAndMatchStep.RunAsync(conn, qsrId, rematch: false, progress, ct, progressCount);
+        await GeocodeAndMatchStep.RunAsync(conn, qsrId, rematch: false, progress, ct, progressCount, gate);
     }
 }

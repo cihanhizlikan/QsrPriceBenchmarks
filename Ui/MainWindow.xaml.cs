@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using QsrPriceBenchmarks.Ui.Dialogs;
 using QsrPriceBenchmarks.Ui.ViewModels;
 
 namespace QsrPriceBenchmarks.Ui;
@@ -33,6 +34,27 @@ public partial class MainWindow : Window
             App.LogCrash(ex, "OnContentRendered/InitialiseAsync");
             throw;
         }
+    }
+
+    /// <summary>
+    /// Closing with chains still being scraped asks first: Yes cancels every run and closes (each run is finalized
+    /// as it unwinds), No keeps the window open.
+    /// </summary>
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        if (_vm.IsAnyRunning)
+        {
+            MessageBoxResult answer = ThemedMessageBox.Show(
+                "Chains are still being scraped. Cancel their runs and close?",
+                "Close", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (answer != MessageBoxResult.Yes)
+            {
+                e.Cancel = true;
+                return;
+            }
+            _vm.CancelAllRuns();
+        }
+        base.OnClosing(e);
     }
 
     /// <summary>

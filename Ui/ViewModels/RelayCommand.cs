@@ -39,10 +39,16 @@ public sealed class RelayCommand(Action<object?> execute, Func<object?, bool>? c
     }
 }
 
-public sealed class AsyncRelayCommand(Func<object?, Task> execute, Func<object?, bool>? canExecute = null)
+/// <summary>
+/// An async command, which by default cannot run again while its previous execution is still going.
+/// <paramref name="allowsOverlap"/> lifts that for commands whose own <paramref name="canExecute"/> already guards
+/// what matters — Run and Resume, which act per chain and may run for several chains at once.
+/// </summary>
+public sealed class AsyncRelayCommand(
+    Func<object?, Task> execute, Func<object?, bool>? canExecute = null, bool allowsOverlap = false)
     : ICommand
 {
-    private bool _running;
+    private int _running;
 
     public event EventHandler? CanExecuteChanged
     {
@@ -59,17 +65,17 @@ public sealed class AsyncRelayCommand(Func<object?, Task> execute, Func<object?,
 
     public bool CanExecute(object? p)
     {
-        return !_running && (canExecute?.Invoke(p) ?? true);
+        return (allowsOverlap || _running == 0) && (canExecute?.Invoke(p) ?? true);
     }
 
     public async void Execute(object? p)
     {
-        _running = true;
+        _running++;
         CommandManager.InvalidateRequerySuggested();
         try { await execute(p); }
         finally
         {
-            _running = false;
+            _running--;
             CommandManager.InvalidateRequerySuggested();
         }
     }
