@@ -69,6 +69,9 @@ For ARM64 Windows: `pwsh ./build-installer.ps1 -Rid win-arm64`, or add
 2. Accept the Windows UAC prompt (per-machine install into Program Files).
 3. Launch **QSR Price Benchmarks** from the Start menu or Desktop.
 
+An upgrade to a version that changes the database's shape asks once, on first
+start, whether to start a new database: Yes keeps the old file beside it, renamed.
+
 That's it — no runtime install, no browser download.
 
 ## Notes
@@ -76,11 +79,11 @@ That's it — no runtime install, no browser download.
 * **Size**: the default MSI is large (~250–400 MB) because it embeds the .NET
   runtime and a Chromium build. `-UseSystemBrowser` drops the Chromium portion
   (~150 MB) by driving the PC's installed Edge instead.
-* **Versioning**: bump `Version` in `Directory.Build.props` at the solution
-  root for each release — `Package.wxs` reads it as `$(var.ProductVersion)`,
-  and so do the assemblies and the in-app version badge. Keep `UpgradeCode`
-  **unchanged** so new versions upgrade in place rather than installing
-  side-by-side.
+* **Versioning**: `Version` in `Directory.Build.props` at the solution root is
+  bumped with every change that ships (the working agreement sizes it) —
+  `Package.wxs` reads it as `$(var.ProductVersion)`, and so do the assemblies
+  and the in-app version badge. Keep `UpgradeCode` **unchanged** so new
+  versions upgrade in place rather than installing side-by-side.
 * **Why a browser at all**: the app scrapes JS-rendered pages by driving a
   browser engine through Playwright (automation, not the user's everyday
   browser). Default builds bundle Chromium and `BrowserSession.EnsureBrowsersPath()`
