@@ -85,12 +85,6 @@ public sealed class MainViewModel : ViewModelBase
         }
     }
 
-    /// <summary>The session of the chain called <paramref name="chainName"/>.</summary>
-    internal ChainSessionViewModel SessionOf(string chainName)
-    {
-        return _sessions[chainName];
-    }
-
     /// <summary>
     /// True while any chain's run is in progress — what the database path, Browse and "delete all before" wait for,
     /// and what the header's equalizer shows.
