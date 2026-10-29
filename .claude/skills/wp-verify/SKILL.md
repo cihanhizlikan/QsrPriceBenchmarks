@@ -15,8 +15,8 @@ dotnet build --no-incremental > /tmp/qsr-build.txt 2>&1; echo "exit=$?"
 ```
 
 `--no-incremental` because an incremental build re-emits warnings only for projects it rebuilt, so it
-under-reports. **This builds the solution, which includes the WiX installer project** — if that one alone fails
-for want of the WiX SDK, build the four C# projects by name and say so.
+under-reports. **This builds the solution: the five C# projects.** The WiX installer project is deliberately not
+in it (`Installer/README.md` says why); a publish profile builds it.
 
 ## 2. Errors
 

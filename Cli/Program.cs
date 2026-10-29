@@ -35,29 +35,30 @@ internal static class Program
             Console.WriteLine(ConsoleColouriser.BannerTitle());
         }
 
-        void PrintHelp() => Console.WriteLine("""
+        // The slugs come from the registry, so a chain added there is listed here too.
+        void PrintHelp() => Console.WriteLine($"""
 
             QSR Price Benchmarks — restaurant menu price scraper
 
             Usage:
-              qsr --chain CHAIN_SLUG [options]      Full run or selective steps
+              qsr --chain CHAIN_SLUG [options]      Only the steps named; with none, a full run (1 → 2 → 3)
               qsr --list-scrape-runs
               qsr --delete-scrape-run RUN_ID
               qsr --delete-scrape-runs-before-id RUN_ID
 
             Options:
-              --db DB                           Database path (default: QsrPriceBenchmarks.sqlite)
-              --chain CHAIN_SLUG                 Chain slug (e.g. burger-king, popeyes, usta-donerci)
-              --force-crawl                     Run Step 1: re-crawl chain website
-              --geocode                         Run Step 3 (geocoding + matching of unmatched rows)
-              --geocode-rematch                 Run Step 3: reset all matches first, then rematch
-              --export                          Run Step 4 (export all snapshots to Excel)
-              --export-since RUN_ID             Run Step 4 (export snapshots from RUN_ID onwards)
+              --db DB                           Database path (default: QsrPriceBenchmarks.sqlite here)
+              --chain CHAIN_SLUG                Chain slug (e.g. burger-king, popeyes, usta-donerci)
+              --force-crawl                     Run Step 1: re-crawl the chain's website
+              --geocode                         Run Step 3: geocode and match what is unmatched
+              --geocode-rematch                 Run Step 3: reset every match first, then rematch
+              --export                          Export all snapshots to Excel, after any step
+              --export-since RUN_ID             Export the snapshots from RUN_ID onwards, after any step
               --delete-scrape-run RUN_ID        Delete exactly this run and its snapshots, then exit
               --delete-scrape-runs-before-id N  Delete all runs with ID < N, then exit
               --list-scrape-runs                Print all scrape runs and exit
 
-            Available chain slugs: burger-king, popeyes, usta-donerci, arbys, sbarro, usta-pideci, subway
+            Available chain slugs: {string.Join(", ", ChainRegistry.AllPlatformSlugs())}
             """);
 
         // ── Parse ─────────────────────────────────────────────────────────────────────
