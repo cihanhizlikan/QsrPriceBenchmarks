@@ -22,7 +22,8 @@ public static class PipelineRunner
         IProgress<string>? progress = null,
         CancellationToken ct = default,
         IProgress<StepProgress>? progressCount = null,
-        IProgress<int>? onLocationsChanged = null)
+        IProgress<int>? onLocationsChanged = null,
+        IProgress<long>? onRunChanged = null)
     {
         using SqliteConnection conn = Db.Database.Open(dbPath);
         Models.ChainConfig chain = opts.Chain;
@@ -76,7 +77,7 @@ public static class PipelineRunner
             ct.ThrowIfCancellationRequested();
 
             Log($"[Step 2] Starting new price round for {chain.Name}");
-            await TgScraper.ScrapeAsync(chain, conn, progress, ct, opts.Tabs);
+            await TgScraper.ScrapeAsync(chain, conn, progress, ct, opts.Tabs, onRunChanged: onRunChanged);
 
             ct.ThrowIfCancellationRequested();
 
@@ -98,13 +99,14 @@ public static class PipelineRunner
         string dbPath, Models.ChainConfig chain, long runId,
         IProgress<string>? progress = null, CancellationToken ct = default,
         IReadOnlyCollection<string>? tabs = null,
-        IProgress<StepProgress>? progressCount = null)
+        IProgress<StepProgress>? progressCount = null,
+        IProgress<long>? onRunChanged = null)
     {
         using SqliteConnection conn = Db.Database.Open(dbPath);
         long qsrId = Repository.QsrId(conn, chain.Name);
 
         progress?.Report($"[Resume] Continuing run {runId} for {chain.Name}");
-        await TgScraper.ScrapeAsync(chain, conn, progress, ct, tabs, resumeRunId: runId);
+        await TgScraper.ScrapeAsync(chain, conn, progress, ct, tabs, resumeRunId: runId, onRunChanged: onRunChanged);
 
         ct.ThrowIfCancellationRequested();
 

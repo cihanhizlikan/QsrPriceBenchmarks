@@ -533,6 +533,9 @@ public sealed class MainViewModel : ViewModelBase
         // Fires (on the UI thread) as Step 1 commits location batches, so the
         // Locations tab can refresh live while a crawl is in progress.
         Progress<int> onLocationsChanged = new(_ => NotifyLocationsChanged());
+        // Fires (on the UI thread) as Step 2 starts its run and records each page, so the Scrape Runs tab
+        // shows the run and its growing snapshot count while the scrape is in progress.
+        Progress<long> onRunChanged = new(_ => NotifyRunsChanged());
 
         long? exportSinceId = null;
         if (!string.IsNullOrWhiteSpace(ExportSince) && long.TryParse(ExportSince, out long sid))
@@ -561,7 +564,7 @@ public sealed class MainViewModel : ViewModelBase
         try
         {
             string? outPath = await Task.Run(() =>
-                PipelineRunner.RunAsync(DbPath, opts, progress, token, progressCount, onLocationsChanged),
+                PipelineRunner.RunAsync(DbPath, opts, progress, token, progressCount, onLocationsChanged, onRunChanged),
                 token);
             LastOutputPath = outPath;
         }
@@ -809,6 +812,25 @@ public sealed class MainViewModel : ViewModelBase
     }
 
     // ── Scrape-runs management ────────────────────────────────────────────────
+
+    /// <summary>
+    /// True while the Scrape Runs tab is the active one (set by the view on tab change). Gates the live reload so
+    /// a scrape only re-reads the runs when the user is looking at them; opening the tab reloads them anyway.
+    /// </summary>
+    public bool ScrapeRunsTabActive { get; set; }
+
+    /// <summary>
+    /// Called (on the UI thread) as Step 2 starts its run, records a page, and finishes. Not throttled: a page
+    /// takes seconds to scrape, so this fires at most every few seconds, and the run's end reloads regardless.
+    /// </summary>
+    internal void NotifyRunsChanged()
+    {
+        if (ScrapeRunsTabActive)
+        {
+            _ = ReloadRunsAsync();
+        }
+    }
+
     private Task ReloadRunsAsync()
     {
         return Task.Run(() =>
@@ -837,12 +859,16 @@ public sealed class MainViewModel : ViewModelBase
 
             Application.Current.Dispatcher.Invoke(() =>
             {
+                // The grid reloads every few seconds during a scrape, so keep the user's selected row across the
+                // rebuild — otherwise Export / Delete lose their target under the user's cursor.
+                long? selectedId = SelectedRun?.Id;
                 Runs.Clear();
                 foreach (ScrapeRunRow r in runs)
                 {
                     string name = qsrNames.TryGetValue(r.QsrId, out string? n) ? n : $"QSR #{r.QsrId}";
                     Runs.Add(new ScrapeRunViewModel(r, name, counts[r.Id]));
                 }
+                SelectedRun = Runs.FirstOrDefault(r => r.Id == selectedId);
             });
         }
         catch (Exception ex)
@@ -1157,12 +1183,13 @@ public sealed class MainViewModel : ViewModelBase
         _cts = new CancellationTokenSource();
         Progress<string> progress = new(msg => LogLines.Add(msg));
         CancellationToken token = _cts.Token;
+        Progress<long> onRunChanged = new(_ => NotifyRunsChanged());
 
         try
         {
             LogLines.Add($"▶ Resuming run {vm.Id} ({vm.QsrName})");
             await Task.Run(() =>
-                PipelineRunner.ResumeRunAsync(DbPath, chain.Chain, vm.Id, progress, token),
+                PipelineRunner.ResumeRunAsync(DbPath, chain.Chain, vm.Id, progress, token, onRunChanged: onRunChanged),
                 token);
             LogLines.Add("  ✓ Resume complete.");
         }

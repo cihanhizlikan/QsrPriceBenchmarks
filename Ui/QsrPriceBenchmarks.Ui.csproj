@@ -19,4 +19,8 @@
          Windows. No native binary shipped, OS-maintained, no 3rd-party CVE. -->
     <PackageReference Include="SQLitePCLRaw.bundle_winsqlite3" Version="2.1.*" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- The live Scrape Runs reload is driven by a signal only a real scrape sends; UiTests fires it directly. -->
+    <InternalsVisibleTo Include="QsrPriceBenchmarks.UiTests" />
+  </ItemGroup>
 </Project>
