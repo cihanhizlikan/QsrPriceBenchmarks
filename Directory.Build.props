@@ -9,7 +9,7 @@
     builds must never ship with the same version.
   -->
   <PropertyGroup>
-    <Version>2.1.0</Version>
+    <Version>3.0.0</Version>
   </PropertyGroup>
 
   <!--

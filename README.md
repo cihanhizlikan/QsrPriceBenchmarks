@@ -98,9 +98,3 @@ Both CLI and UI construct a `Progress<string>` tailored to their output:
 `CancellationToken` added to all async Core methods — UI Cancel button
 uses a `CancellationTokenSource`; CLI wires `Console.CancelKeyPress`.
 
-## Logos
-
-Chain logos are stored as `LOGO_BLOB` (nullable) in the `QSR` table.
-When null, the UI shows a coloured initials badge (e.g. "BK", "PY").
-The app currently has no control for storing a logo, so the badge is
-what every chain shows.

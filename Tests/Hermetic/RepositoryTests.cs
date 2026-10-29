@@ -240,18 +240,6 @@ public sealed class RepositoryTests
         return run.RunId;
     }
 
-    [Fact(DisplayName = "Logo blob round-trips; null before set")]
-    public void LogoBlob_RoundTrip()
-    {
-        using TempDb db = new();
-        (long qsr, long _) = Ids(db);
-
-        Assert.Null(Repository.GetLogoBlob(db.Conn, qsr));
-        byte[] bytes = [1, 2, 3, 4, 5];
-        Repository.SetLogoBlob(db.Conn, qsr, bytes);
-        Assert.Equal(bytes, Repository.GetLogoBlob(db.Conn, qsr));
-    }
-
     [Fact(DisplayName = "DeactivateStaleLocations soft-closes unseen rows; Upsert reactivates them")]
     public void SoftDelete_StaleClosedThenReactivated()
     {
