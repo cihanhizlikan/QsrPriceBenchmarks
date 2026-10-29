@@ -115,8 +115,8 @@ in `settled-decisions.md`.
 | Bump | When | For example |
 |---|---|---|
 | **patch** `1.6.0 → 1.6.1` | shipped files change, but nothing a user does or relies on behaves differently | a bug fix with no other effect, a refactor, a dependency patch update, the publish no longer shipping XML docs |
-| **minor** `1.6.0 → 1.7.0` | a new capability, or behaviour a user would notice, still compatible with what they own | a new CLI option or UI feature; the CLI refusing input it used to mishandle; a scrape producing different data; an additive schema migration the previous version still opens |
-| **major** `1.6.0 → 2.0.0` | breaks something a user owns or relies on | a schema change that discards existing databases (delete and rescan), or a migration after which the previous version can no longer open the database; removing or renaming a CLI option, or changing what an exit code means; removing a feature; new install requirements |
+| **minor** `1.6.0 → 1.7.0` | a new capability, or behaviour a user would notice, still compatible with what they own | a new CLI option or UI feature; the CLI refusing input it used to mishandle; a scrape producing different data |
+| **major** `1.6.0 → 2.0.0` | breaks something a user owns or relies on | any change to the tables — it bumps `Database.SchemaVersion`, so existing databases are refused and must be set aside; removing or renaming a CLI option, or changing what an exit code means; removing a feature; new install requirements |
 
 - **The commit body says which, on one line**: `Version: 1.6.0 → 1.6.1 (patch): <why this size>`, or `No version
   bump: nothing that ships changed.`

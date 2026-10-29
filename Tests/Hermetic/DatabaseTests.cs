@@ -44,22 +44,6 @@ public sealed class DatabaseTests
         }
     }
 
-    [Fact(DisplayName = "Migration adds the QSR.LOGO_BLOB column")]
-    public void Migration_AddsLogoBlobColumn()
-    {
-        using TempDb db = new();
-        using SqliteCommand cmd = db.Conn.CreateCommand();
-        cmd.CommandText = "PRAGMA table_info(QSR);";
-        List<string> columns = [];
-        using SqliteDataReader reader = cmd.ExecuteReader();
-        while (reader.Read())
-        {
-            columns.Add(reader.GetString(1));
-        }
-
-        Assert.Contains("LOGO_BLOB", columns);
-    }
-
     [Theory(DisplayName = "Reporting views exist and are queryable when empty")]
     [InlineData("V_LATEST_PRICES")]
     [InlineData("V_PRICE_BENCHMARKS")]

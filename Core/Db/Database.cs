@@ -19,17 +19,27 @@ namespace QsrPriceBenchmarks.Core.Db;
 ///     (PLATFORM_ID, SLUG) — two different chains' restaurants can share the
 ///     same TG slug (e.g. same shopping mall).
 ///   - Views are DROP + CREATE on every open, not CREATE IF NOT EXISTS —
-///     so that schema/view bugfixes always reach existing databases without
+///     so that view bugfixes always reach existing databases without
 ///     requiring the user to manually drop them.
+///
+/// Tables are never migrated (maintainer, 2026-10-29: the database is disposable). A new file is stamped with
+/// <see cref="SchemaVersion"/>; a file of any other version is refused before anything is written to it, and an
+/// older one can be set aside (<see cref="SetAside"/>) so a fresh database takes its place.
 /// </summary>
 public static class Database
 {
     /// <summary>File name used when the user picks a folder rather than a file.</summary>
     public const string DefaultFileName = "QsrPriceBenchmarks.sqlite";
 
-    // Tables that identify a database as ours: QSR is in every schema version,
-    // CITIES only in pre-v1.1 legacy files (see MigrateLegacySchema).
-    private static readonly string[] RecognisedTables = ["QSR", "CITIES"];
+    /// <summary>
+    /// The shape <see cref="ApplySchema"/> creates, stamped into every new file as <c>PRAGMA user_version</c>. Bump it
+    /// with every change to the tables: files of another version are refused, never migrated. Every file made before
+    /// the stamp existed reads 0.
+    /// </summary>
+    public const int SchemaVersion = 1;
+
+    // The table that identifies a database as this app's, in every version.
+    private const string MarkerTable = "QSR";
 
     public static SqliteConnection Open(string path)
     {
@@ -59,14 +69,18 @@ public static class Database
             // of the app is mid-write in the same database.
             Execute(conn, "PRAGMA busy_timeout = 10000;");
 
-            // Refuse to touch a foreign SQLite database — checked before the
-            // remaining pragmas, because journal_mode=WAL below persistently
-            // rewrites the file header and ApplySchema would CREATE our tables
-            // inside somebody else's file the moment its path lands in the DB box.
-            string? schemaError = ClassifySchema(conn);
-            if (schemaError is not null)
+            // Refuse a foreign SQLite database, or one of ours from another schema version — checked before the
+            // remaining pragmas, because journal_mode=WAL below persistently rewrites the file header and
+            // ApplySchema would CREATE our tables inside somebody else's file the moment its path lands in the DB
+            // box. A refused file is left byte for byte as it was.
+            DatabaseProblem? problem = Classify(conn, path, out bool isNew);
+            if (problem is { OlderVersion: int older })
             {
-                throw new InvalidOperationException(schemaError);
+                throw new OutdatedDatabaseException(problem.Message, Path.GetFullPath(path), older);
+            }
+            if (problem is not null)
+            {
+                throw new InvalidOperationException(problem.Message);
             }
 
             // foreign_keys: enforce REFERENCES at write time.
@@ -77,13 +91,10 @@ public static class Database
             Execute(conn, "PRAGMA foreign_keys = ON;");
             Execute(conn, "PRAGMA journal_mode = WAL;");
 
-            // MUST run before ApplySchema: it renames the pre-1.1 geography
-            // tables into the current names, and ApplySchema would otherwise
-            // create new empty tables under those names first.
-            MigrateLegacySchema(conn);
-
-            ApplySchema(conn);
-            MigrateSchema(conn);
+            if (isNew)
+            {
+                ApplySchema(conn);
+            }
             SeedReferenceData(conn);
             CreateViews(conn);
 
@@ -99,19 +110,17 @@ public static class Database
     }
 
     /// <summary>
-    /// Pre-flight check for a user-chosen database path, without initialising
-    /// or modifying anything. Returns null when the path is usable: the file
-    /// doesn't exist yet (it will be created), is empty, is an empty SQLite
-    /// database, or already carries this app's schema (current or legacy).
-    /// Returns a human-readable error for anything else — a non-SQLite file,
-    /// or some other application's SQLite database.
+    /// Pre-flight check for a user-chosen database path, without initialising or modifying anything. Returns null
+    /// when the path is usable: the file doesn't exist yet (it will be created), is empty, is an empty SQLite
+    /// database, or is this app's database of the current <see cref="SchemaVersion"/>. Returns the problem for
+    /// anything else — a non-SQLite file, some other application's SQLite database, or one of ours from another
+    /// version (<see cref="DatabaseProblem.OlderVersion"/> set when it is older and may be set aside).
     ///
-    /// Never throws. A database that's merely busy (open in another instance —
-    /// legal under WAL) must validate fine, so the header is read with
-    /// ReadWrite sharing and the probe connection gets a busy timeout; any
-    /// genuinely unreadable file comes back as an error string, not a crash.
+    /// Never throws. A database that's merely busy (open in another instance — legal under WAL) must validate
+    /// fine, so the header is read with ReadWrite sharing and the probe connection gets a busy timeout; any
+    /// genuinely unreadable file comes back as a problem, not a crash.
     /// </summary>
-    public static string? ValidateFile(string path)
+    public static DatabaseProblem? ValidateFile(string path)
     {
         try
         {
@@ -140,35 +149,34 @@ public static class Database
                 int read = stream.Read(header, 0, header.Length);
                 if (read < header.Length)
                 {
-                    return "The file is not an SQLite database.";
+                    return new DatabaseProblem("The file is not an SQLite database.", null);
                 }
             }
             if (!System.Text.Encoding.ASCII.GetString(header, 0, 15).Equals("SQLite format 3", StringComparison.Ordinal))
             {
-                return "The file is not an SQLite database.";
+                return new DatabaseProblem("The file is not an SQLite database.", null);
             }
 
-            // Mode=ReadWrite (no Create) — we only SELECT from sqlite_master,
-            // nothing is initialised or written by this probe. DefaultTimeout
-            // maps to SQLite's busy handler, so a moment of write contention
-            // from the other instance waits instead of failing.
+            // Mode=ReadWrite (no Create) — we only SELECT from sqlite_master and read user_version; nothing is
+            // initialised or written by this probe. DefaultTimeout maps to SQLite's busy handler, so a moment of
+            // write contention from the other instance waits instead of failing.
             using SqliteConnection conn = new($"Data Source={path};Mode=ReadWrite");
             conn.DefaultTimeout = 5;
             conn.Open();
-            return ClassifySchema(conn);
+            return Classify(conn, path, out _);
         }
         catch (Exception ex)
         {
-            return $"The file could not be read ({ex.Message}).";
+            return new DatabaseProblem($"The file could not be read ({ex.Message}).", null);
         }
     }
 
     /// <summary>
-    /// Null when the open database is usable by this app (empty, or contains a
-    /// recognised schema — current or legacy); otherwise a description of why
-    /// not, listing the foreign tables found.
+    /// Null when the open database is usable by this app as it is — empty (<paramref name="isNew"/>), or ours at
+    /// <see cref="SchemaVersion"/>; otherwise why not: a foreign database (listing its tables) or ours from another
+    /// version.
     /// </summary>
-    private static string? ClassifySchema(SqliteConnection conn)
+    private static DatabaseProblem? Classify(SqliteConnection conn, string path, out bool isNew)
     {
         List<string> tables = [];
         using (SqliteCommand cmd = conn.CreateCommand())
@@ -182,27 +190,80 @@ public static class Database
             }
         }
 
-        if (tables.Count == 0)
+        isNew = tables.Count == 0;
+        if (isNew)
         {
             return null; // brand-new/empty database — ours to initialise
         }
-        foreach (string marker in RecognisedTables)
+
+        if (!tables.Contains(MarkerTable, StringComparer.OrdinalIgnoreCase))
         {
-            if (tables.Contains(marker, StringComparer.OrdinalIgnoreCase))
+            string sample = string.Join(", ", tables.Take(5));
+            if (tables.Count > 5)
             {
-                return null; // current or legacy QSR Price Benchmarks schema
+                sample += ", …";
             }
+            return new DatabaseProblem(
+                $"The file is an SQLite database, but not a QSR Price Benchmarks one (tables found: {sample}).", null);
         }
 
-        string sample = string.Join(", ", tables.Take(5));
-        if (tables.Count > 5)
+        int fileVersion;
+        using (SqliteCommand cmd = conn.CreateCommand())
         {
-            sample += ", …";
+            cmd.CommandText = "PRAGMA user_version;";
+            fileVersion = Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
         }
-        return $"The file is an SQLite database, but not a QSR Price Benchmarks one (tables found: {sample}).";
+
+        if (fileVersion == SchemaVersion)
+        {
+            return null;
+        }
+        string file = Path.GetFullPath(path);
+        return fileVersion < SchemaVersion
+            ? new DatabaseProblem(
+                $"'{file}' was made by an older version of QSR Price Benchmarks (database version {fileVersion}; " +
+                $"this version uses {SchemaVersion}) and cannot be opened by this one. Its runs can only be read by " +
+                "the version that made it.", fileVersion)
+            : new DatabaseProblem(
+                $"'{file}' was made by a newer version of QSR Price Benchmarks (database version {fileVersion}; " +
+                $"this version uses {SchemaVersion}). Install the newer version to open it.", null);
     }
 
-    [SuppressMessage("Security", "CA2100", Justification = "Runs schema and migration SQL; every caller passes a compile-time constant.")]
+    /// <summary>
+    /// Moves an older database out of the way, keeping it: renames <paramref name="path"/> to
+    /// <c>&lt;name&gt;.v&lt;version&gt;-&lt;yyyyMMdd-HHmmss&gt;&lt;extension&gt;</c> beside it, so the next
+    /// <see cref="Open"/> of <paramref name="path"/> starts a fresh database. Only ever called on the user's say-so —
+    /// the app never discards a database on its own. Returns the new path.
+    /// </summary>
+    public static string SetAside(string path, int fileVersion)
+    {
+        string file = Path.GetFullPath(path);
+
+        // The -wal beside the file is part of the database: fold it in first, or the renamed file would lose
+        // whatever it still held. Pooled connections keep the file open, so they are let go before and after.
+        SqliteConnection.ClearAllPools();
+        using (SqliteConnection raw = new($"Data Source={file};Mode=ReadWrite;Pooling=False"))
+        {
+            raw.Open();
+            Execute(raw, "PRAGMA wal_checkpoint(TRUNCATE);");
+        }
+        SqliteConnection.ClearAllPools();
+
+        string aside = Path.Combine(Path.GetDirectoryName(file)!,
+            $"{Path.GetFileNameWithoutExtension(file)}.v{fileVersion}-" +
+            $"{DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture)}{Path.GetExtension(file)}");
+        File.Move(file, aside);
+        foreach (string companion in (string[])[file + "-wal", file + "-shm"])
+        {
+            if (File.Exists(companion))
+            {
+                File.Delete(companion); // empty after the checkpoint; it belonged to the file just moved
+            }
+        }
+        return aside;
+    }
+
+    [SuppressMessage("Security", "CA2100", Justification = "Runs schema SQL; every caller passes a compile-time constant or a constant-built string.")]
     private static void Execute(SqliteConnection conn, string sql)
     {
         using SqliteCommand cmd = conn.CreateCommand();
@@ -210,13 +271,19 @@ public static class Database
         cmd.ExecuteNonQuery();
     }
 
+    /// <summary>
+    /// Creates every table of <see cref="SchemaVersion"/> in a new file and stamps the version, in one transaction:
+    /// a file can never hold the tables without the stamp. IF NOT EXISTS because two windows may open the same new
+    /// file at once; BEGIN IMMEDIATE makes the second wait, and its pass is then a no-op.
+    /// </summary>
     private static void ApplySchema(SqliteConnection conn)
     {
         const string ddl = """
             CREATE TABLE IF NOT EXISTS QSR (
-                ID       INTEGER PRIMARY KEY AUTOINCREMENT,
-                NAME     TEXT    NOT NULL UNIQUE,
-                BASE_URL TEXT    NOT NULL
+                ID        INTEGER PRIMARY KEY AUTOINCREMENT,
+                NAME      TEXT    NOT NULL UNIQUE,
+                BASE_URL  TEXT    NOT NULL,
+                LOGO_BLOB BLOB
             );
 
             CREATE TABLE IF NOT EXISTS PLATFORMS (
@@ -314,190 +381,13 @@ public static class Database
             CREATE INDEX IF NOT EXISTS IX_SCRAPE_RUNS_QSR          ON SCRAPE_RUNS(QSR_ID);
             """;
 
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = ddl;
-        cmd.ExecuteNonQuery();
-    }
-
-    /// <summary>
-    /// One-time structural migration for databases created before v1.1, when
-    /// Turkish İl was mis-modelled as CITIES and İlçe as PROVINCES. Renames
-    /// them to the current PROVINCES (İl) / DISTRICTS (İlçe) — data, IDs, and
-    /// foreign keys all survive (SQLite rewrites REFERENCES on RENAME).
-    ///
-    /// Without this, an old file opened fine (CREATE IF NOT EXISTS is
-    /// satisfied by the same-named old tables) but every query touching
-    /// DISTRICT_ID failed at execution — the exact "count works, map stays
-    /// empty" symptom, because views are validated on use, not creation.
-    ///
-    /// Runs BEFORE ApplySchema. Detection keys on the legacy CITIES table;
-    /// each step is additionally guarded so a half-migrated or previously
-    /// half-opened file (which may have gained an empty new-schema DISTRICTS
-    /// table) converges to the current schema instead of colliding.
-    /// </summary>
-    private static void MigrateLegacySchema(SqliteConnection conn)
-    {
-        if (!TableExists(conn, "CITIES"))
-        {
-            return; // current schema (or brand-new file) — nothing to do.
-        }
-
         using SqliteTransaction tx = conn.BeginTransaction();
-
-        // Old views reference the old table names and would block the renames;
-        // CreateViews recreates all of them at the end of every Open anyway.
-        ExecuteInTx(conn, tx, "DROP VIEW IF EXISTS V_LATEST_PRICES;");
-        ExecuteInTx(conn, tx, "DROP VIEW IF EXISTS V_PRICE_BENCHMARKS;");
-        ExecuteInTx(conn, tx, "DROP VIEW IF EXISTS V_MARKETING_REPORT;");
-
-        // A previous open with post-rename code ran ApplySchema against this
-        // file and left behind an empty new-schema DISTRICTS table. Drop it so
-        // the rename below can take its name. (Only ever dropped when empty —
-        // a populated DISTRICTS means the file is already current and CITIES
-        // is an unexpected leftover, which we then leave strictly alone.)
-        if (TableExists(conn, tx, "DISTRICTS") && TableIsEmpty(conn, tx, "DISTRICTS"))
-        {
-            ExecuteInTx(conn, tx, "DROP TABLE DISTRICTS;");
-        }
-
-        // Old PROVINCES is the İlçe table, recognisable by its CITY_ID column.
-        if (!TableExists(conn, tx, "DISTRICTS") && ColumnExists(conn, tx, "PROVINCES", "CITY_ID"))
-        {
-            ExecuteInTx(conn, tx, "ALTER TABLE PROVINCES RENAME TO DISTRICTS;");
-            ExecuteInTx(conn, tx, "ALTER TABLE DISTRICTS RENAME COLUMN CITY_ID TO PROVINCE_ID;");
-        }
-
-        // With the İlçe table renamed away, CITIES (İl) can take PROVINCES.
-        if (!TableExists(conn, tx, "PROVINCES"))
-        {
-            ExecuteInTx(conn, tx, "ALTER TABLE CITIES RENAME TO PROVINCES;");
-        }
-
-        if (ColumnExists(conn, tx, "LOCATIONS", "PROVINCE_ID")
-            && !ColumnExists(conn, tx, "LOCATIONS", "DISTRICT_ID"))
-        {
-            ExecuteInTx(conn, tx, "ALTER TABLE LOCATIONS RENAME COLUMN PROVINCE_ID TO DISTRICT_ID;");
-        }
-
+        ExecuteInTx(conn, tx, ddl);
+        ExecuteInTx(conn, tx, $"PRAGMA user_version = {SchemaVersion.ToString(CultureInfo.InvariantCulture)};");
         tx.Commit();
     }
 
-    /// <summary>
-    /// Additive schema migrations applied on every open so existing databases
-    /// pick up new columns without requiring a manual ALTER TABLE.
-    /// Uses PRAGMA table_info rather than try/catch to stay idiomatic.
-    /// </summary>
-    private static void MigrateSchema(SqliteConnection conn)
-    {
-        // LOGO_BLOB: nullable PNG/SVG bytes for each chain (UI chain-selector logos).
-        if (!ColumnExists(conn, "QSR", "LOGO_BLOB"))
-        {
-            Execute(conn, "ALTER TABLE QSR ADD COLUMN LOGO_BLOB BLOB;");
-        }
-
-        // Rename the chain formerly seeded as "Usta Döner" to its correct name
-        // "Usta Dönerci", preserving its QSR row and every FK-linked location,
-        // platform location, and scrape run. Idempotent (matches nothing once
-        // renamed) and must run before SeedReferenceData, whose GetOrCreate keys
-        // QSR on NAME and would otherwise create a second, empty row.
-        Execute(conn, "UPDATE QSR SET NAME = 'Usta Dönerci' WHERE NAME = 'Usta Döner';");
-
-        // Soft-delete support for Step 1: ACTIVE flags whether a location is still
-        // listed on the chain's site; LAST_SEEN_AT records the last crawl that saw
-        // it. Existing rows default to ACTIVE = 1 (treated as open until the next
-        // crawl reconciles them). LOCATIONS are never hard-deleted, so price
-        // history and PLATFORM_LOCATIONS matches survive a closure-and-reopen.
-        if (!ColumnExists(conn, "LOCATIONS", "ACTIVE"))
-        {
-            Execute(conn, "ALTER TABLE LOCATIONS ADD COLUMN ACTIVE INTEGER NOT NULL DEFAULT 1;");
-        }
-        if (!ColumnExists(conn, "LOCATIONS", "LAST_SEEN_AT"))
-        {
-            Execute(conn, "ALTER TABLE LOCATIONS ADD COLUMN LAST_SEEN_AT TEXT;");
-        }
-
-        // Soft-delete + discovery support for Step 2's tab list, mirroring the
-        // LOCATIONS pattern: ACTIVE flags whether the tab is still shown on the
-        // platform's pages; LAST_SEEN_AT records the last run that saw it. Tabs
-        // are never hard-deleted, so a tab TG removes and later restores keeps
-        // its identity (and a run's tab provenance stays auditable).
-        if (!ColumnExists(conn, "SCRAPE_TABS", "ACTIVE"))
-        {
-            Execute(conn, "ALTER TABLE SCRAPE_TABS ADD COLUMN ACTIVE INTEGER NOT NULL DEFAULT 1;");
-        }
-        if (!ColumnExists(conn, "SCRAPE_TABS", "LAST_SEEN_AT"))
-        {
-            Execute(conn, "ALTER TABLE SCRAPE_TABS ADD COLUMN LAST_SEEN_AT TEXT;");
-        }
-
-        // Same lifecycle for the platform's restaurant pages: the TG sitemap is
-        // a full census fetched at every Step 2 run, so a slug absent from it is
-        // the platform's own statement that the restaurant was delisted. ACTIVE
-        // keeps closed pages out of scrape queues, matching, and benchmarks;
-        // LAST_SEEN_AT records the last census that contained the slug.
-        if (!ColumnExists(conn, "PLATFORM_LOCATIONS", "ACTIVE"))
-        {
-            Execute(conn, "ALTER TABLE PLATFORM_LOCATIONS ADD COLUMN ACTIVE INTEGER NOT NULL DEFAULT 1;");
-        }
-        if (!ColumnExists(conn, "PLATFORM_LOCATIONS", "LAST_SEEN_AT"))
-        {
-            Execute(conn, "ALTER TABLE PLATFORM_LOCATIONS ADD COLUMN LAST_SEEN_AT TEXT;");
-        }
-    }
-
-    /// <summary>True when a table named <paramref name="table"/> exists.</summary>
-    private static bool TableExists(SqliteConnection conn, string table)
-    {
-        return TableExists(conn, null, table);
-    }
-
-    private static bool TableExists(SqliteConnection conn, SqliteTransaction? tx, string table)
-    {
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.Transaction = tx;
-        cmd.CommandText = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = $name;";
-        cmd.Parameters.AddWithValue("$name", table);
-        return cmd.ExecuteScalar() is not null;
-    }
-
-    /// <summary>True when <paramref name="table"/> has zero rows.</summary>
-    [SuppressMessage("Security", "CA2100", Justification = "A table name cannot be bound as a parameter; every caller passes a constant name, never user input.")]
-    private static bool TableIsEmpty(SqliteConnection conn, SqliteTransaction tx, string table)
-    {
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.Transaction = tx;
-        // Identifier, not a bindable parameter; table names here are
-        // compile-time constants, never user input.
-        cmd.CommandText = $"SELECT COUNT(*) FROM {table};";
-        return Convert.ToInt64(cmd.ExecuteScalar(), CultureInfo.InvariantCulture) == 0;
-    }
-
-    /// <summary>True when <paramref name="table"/> has a column named <paramref name="column"/>.</summary>
-    private static bool ColumnExists(SqliteConnection conn, string table, string column)
-    {
-        return ColumnExists(conn, null, table, column);
-    }
-
-    [SuppressMessage("Security", "CA2100", Justification = "A table name cannot be bound as a parameter; every caller passes a constant name, never user input.")]
-    private static bool ColumnExists(SqliteConnection conn, SqliteTransaction? tx, string table, string column)
-    {
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.Transaction = tx;
-        // table_info() takes an identifier, not a bindable parameter; table names
-        // here are compile-time constants, never user input.
-        cmd.CommandText = $"PRAGMA table_info({table});";
-        using SqliteDataReader reader = cmd.ExecuteReader();
-        while (reader.Read())
-        {
-            if (string.Equals(reader.GetString(1), column, StringComparison.Ordinal))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    [SuppressMessage("Security", "CA2100", Justification = "Runs schema and migration SQL; every caller passes a compile-time constant.")]
+    [SuppressMessage("Security", "CA2100", Justification = "Runs schema SQL; every caller passes a compile-time constant or a constant-built string.")]
     private static void ExecuteInTx(SqliteConnection conn, SqliteTransaction tx, string sql)
     {
         using SqliteCommand cmd = conn.CreateCommand();
@@ -558,7 +448,7 @@ public static class Database
     /// columns; if absent, inserts using <paramref name="insertValues"/>.
     /// Returns the row's ID either way.
     /// </summary>
-    [SuppressMessage("Security", "CA2100", Justification = "Interpolates table and column names from the migration's own constants; values are bound as parameters.")]
+    [SuppressMessage("Security", "CA2100", Justification = "Interpolates table and column names from the seed's own constants; values are bound as parameters.")]
     private static long GetOrCreate(
         SqliteConnection conn, SqliteTransaction tx, string table,
         Dictionary<string, object> lookup, Dictionary<string, object> insertValues)
