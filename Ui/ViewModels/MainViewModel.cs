@@ -66,6 +66,10 @@ public sealed class MainViewModel : ViewModelBase
     // ── Observable collections ────────────────────────────────────────────────
     public ObservableCollection<ChainViewModel> Chains { get; } = [];
     public ObservableCollection<ScrapeRunViewModel> Runs { get; } = [];
+
+    /// <summary>The Scrape Runs grid's filter switches and order, over <see cref="Runs"/>.</summary>
+    public RunsFilterViewModel RunsFilter { get; }
+
     public ObservableCollection<MapCellViewModel> MapCells { get; } = [];
 
     // Total LOCATIONS for the selected chain, shown atop the Locations tab.
@@ -223,7 +227,7 @@ public sealed class MainViewModel : ViewModelBase
             return _selected;
         }
 
-        set { Set(ref _selected, value); Notify(nameof(SelectedSession)); _ = RebuildScrapeTabsAsync(SelectedSession); RelayCommand.RaiseRequery(); _ = RebuildMapAsync(); }
+        set { Set(ref _selected, value); Notify(nameof(SelectedSession)); _ = RebuildScrapeTabsAsync(SelectedSession); RelayCommand.RaiseRequery(); _ = RebuildMapAsync(); RunsFilter.OnSelectedChainChanged(); }
     }
 
     private bool _isExporting;
@@ -388,6 +392,8 @@ public sealed class MainViewModel : ViewModelBase
             allowsOverlap: true);
         DeleteBeforeIdCommand = new AsyncRelayCommand(_ => DeleteBeforeIdAsync(), _ => !IsAnyRunning && !IsExporting);
         OpenFolderCommand = new RelayCommand(_ => OpenFolder());
+
+        RunsFilter = new RunsFilterViewModel(Runs, () => SelectedChain?.Name);
 
         // Seed the chain list from the registry, sorted alphabetically by name, each with its own session.
         foreach (ChainConfig chain in ChainRegistry.All.OrderBy(c => c.Name, StringComparer.CurrentCulture))
