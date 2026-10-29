@@ -43,7 +43,7 @@ public static class PipelineRunner
                 else
                 {
                     Log($"[Step 1] FORCE — re-crawling {chain.RootUrl}");
-                    await ChainCrawler.CrawlAsync(chain, conn, progress, ct, onLocationsChanged);
+                    await ChainCrawler.CrawlAsync(chain, conn, progress, ct, onLocationsChanged, progressCount);
                 }
             }
 
@@ -71,7 +71,7 @@ public static class PipelineRunner
             else
             {
                 Log($"[Step 1] Crawling {chain.RootUrl}");
-                await ChainCrawler.CrawlAsync(chain, conn, progress, ct, onLocationsChanged);
+                await ChainCrawler.CrawlAsync(chain, conn, progress, ct, onLocationsChanged, progressCount);
             }
 
             ct.ThrowIfCancellationRequested();
