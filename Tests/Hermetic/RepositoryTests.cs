@@ -197,6 +197,29 @@ public sealed class RepositoryTests
             "SELECT COUNT(*) FROM MENU_SNAPSHOTS WHERE SCRAPE_RUN_ID=$r;", ("$r", run))));
     }
 
+    [Fact(DisplayName = "Snapshots are counted per run; a run with none is absent")]
+    public void CountSnapshotsByRun_CountsEachRunApart()
+    {
+        using TempDb db = new();
+        (long qsr, long plat) = Ids(db);
+        long pl = TestData.InsertPlatformLocation(db.Conn, qsr, plat, "pl1");
+        long whopper = Repository.GetOrCreateMenuItem(db.Conn, qsr, "Whopper");
+        long fries = Repository.GetOrCreateMenuItem(db.Conn, qsr, "Patates");
+
+        long withTwo = CrashedRun(db, qsr);
+        Repository.InsertSnapshot(db.Conn, withTwo, pl, whopper, 100m);
+        Repository.InsertSnapshot(db.Conn, withTwo, pl, fries, 40m);
+        long withOne = CrashedRun(db, qsr);
+        Repository.InsertSnapshot(db.Conn, withOne, pl, whopper, 110m);
+        long withNone = CrashedRun(db, qsr);
+
+        Dictionary<long, int> counts = Repository.CountSnapshotsByRun(db.Conn);
+
+        Assert.Equal(2, counts[withTwo]);
+        Assert.Equal(1, counts[withOne]);
+        Assert.False(counts.ContainsKey(withNone));
+    }
+
     [Fact(DisplayName = "DeleteScrapeRunsBefore removes only earlier runs")]
     public void DeleteScrapeRunsBefore()
     {

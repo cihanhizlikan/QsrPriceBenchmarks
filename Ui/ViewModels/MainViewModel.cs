@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -772,14 +771,7 @@ public sealed class MainViewModel : ViewModelBase
                 c => Repository.QsrId(conn, c.Name),
                 c => c.Name);
 
-            // Snapshot counts
-            Dictionary<long, int> counts = runs.ToDictionary(r => r.Id, r =>
-            {
-                using SqliteCommand cmd = conn.CreateCommand();
-                cmd.CommandText = "SELECT COUNT(*) FROM MENU_SNAPSHOTS WHERE SCRAPE_RUN_ID = $id;";
-                cmd.Parameters.AddWithValue("$id", r.Id);
-                return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
-            });
+            Dictionary<long, int> counts = Repository.CountSnapshotsByRun(conn);
 
             // An unfinished run is either being scraped (its lock is held, here or in another window) or crashed.
             HashSet<long> claimed = [.. runs.Where(r => r.FinishedAt is null && RunLock.IsHeld(conn, r.Id))
@@ -794,7 +786,7 @@ public sealed class MainViewModel : ViewModelBase
                 foreach (ScrapeRunRow r in runs)
                 {
                     string name = qsrNames.TryGetValue(r.QsrId, out string? n) ? n : $"QSR #{r.QsrId}";
-                    Runs.Add(new ScrapeRunViewModel(r, name, counts[r.Id], claimed.Contains(r.Id)));
+                    Runs.Add(new ScrapeRunViewModel(r, name, counts.GetValueOrDefault(r.Id), claimed.Contains(r.Id)));
                 }
                 SelectedRun = Runs.FirstOrDefault(r => r.Id == selectedId);
             });
