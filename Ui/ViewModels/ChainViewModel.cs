@@ -1,15 +1,13 @@
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using QsrPriceBenchmarks.Core.Models;
 
 namespace QsrPriceBenchmarks.Ui.ViewModels;
 
 /// <summary>
-/// View-model for one chain in the sidebar selector. Holds the chain config
-/// and a lazily-generated placeholder logo (colored square with initials)
-/// shown when no LOGO_BLOB is stored in the database.
+/// View-model for one chain in the sidebar selector: the chain config, its
+/// coloured initials badge, and its session (whose status the card shows).
 /// </summary>
-public sealed class ChainViewModel(ChainConfig chain, byte[]? logoBytes, ChainSessionViewModel session) : ViewModelBase
+public sealed class ChainViewModel(ChainConfig chain, ChainSessionViewModel session) : ViewModelBase
 {
     public ChainConfig Chain { get; } = chain;
 
@@ -50,12 +48,6 @@ public sealed class ChainViewModel(ChainConfig chain, byte[]? logoBytes, ChainSe
             return new(BadgeColor);
         }
     }
-
-    /// <summary>
-    /// Decoded logo image, or null if no logo is stored (placeholder shown
-    /// instead via the DataTrigger in the XAML template).
-    /// </summary>
-    public BitmapSource? LogoImage { get; } = DecodeLogo(logoBytes);
 
     private static string BuildInitials(string name)
     {
@@ -117,22 +109,5 @@ public sealed class ChainViewModel(ChainConfig chain, byte[]? logoBytes, ChainSe
         SolidColorBrush b = new(c);
         b.Freeze();
         return b;
-    }
-
-    private static BitmapSource? DecodeLogo(byte[]? bytes)
-    {
-        if (bytes is null || bytes.Length == 0)
-        {
-            return null;
-        }
-
-        using System.IO.MemoryStream ms = new(bytes);
-        BitmapImage bmp = new();
-        bmp.BeginInit();
-        bmp.StreamSource = ms;
-        bmp.CacheOption = BitmapCacheOption.OnLoad;
-        bmp.EndInit();
-        bmp.Freeze();
-        return (BitmapSource)bmp;   // BitmapImage : BitmapSource in WPF
     }
 }

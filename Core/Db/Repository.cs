@@ -825,20 +825,4 @@ public static class Repository
         tx.Commit();
         return doomed.Count;
     }
-
-    // ── Logo blobs ───────────────────────────────────────────────────────────
-
-    /// <summary>Return the stored PNG/SVG logo bytes for a QSR row, or null if none set.</summary>
-    public static byte[]? GetLogoBlob(SqliteConnection conn, long qsrId)
-    {
-        object? result = Scalar(conn, "SELECT LOGO_BLOB FROM QSR WHERE ID = $id;", ("$id", qsrId));
-        return result is DBNull or null ? null : (byte[])result;
-    }
-
-    public static void SetLogoBlob(SqliteConnection conn, long qsrId, byte[] logoBytes)
-    {
-        NonQuery(conn,
-            "UPDATE QSR SET LOGO_BLOB = $blob WHERE ID = $id;",
-            ("$blob", logoBytes), ("$id", qsrId));
-    }
 }

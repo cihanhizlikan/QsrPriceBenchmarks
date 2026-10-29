@@ -104,7 +104,7 @@ public sealed class MainViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// A message about the app rather than one run (the database, the logos, the runs list), written to the log of
+    /// A message about the app rather than one run (the database, the runs list), written to the log of
     /// the chain on screen — the log the user is looking at.
     /// </summary>
     private void Log(string line)
@@ -390,7 +390,7 @@ public sealed class MainViewModel : ViewModelBase
                 }
             };
             _sessions[chain.Name] = session;
-            Chains.Add(new ChainViewModel(chain, null, session)); // logo bytes loaded from DB on demand
+            Chains.Add(new ChainViewModel(chain, session));
         }
     }
 
@@ -403,12 +403,9 @@ public sealed class MainViewModel : ViewModelBase
             OfferFreshDatabase(Path.GetFullPath(DbPath), older, problem.Message);
         }
 
-        await LoadChainLogosAsync();
         // Start with the sidebar's first chain selected: with none, Run is
         // disabled, the tab list and the map are empty, and nothing on screen
-        // says why. Only after the logos load, because that replaces the
-        // ChainViewModel instances the sidebar holds; ??= keeps a selection
-        // already made.
+        // says why. ??= keeps a selection already made.
         SelectedChain ??= Chains.FirstOrDefault();
         await ReloadRunsAsync();
         await RebuildMapAsync();
@@ -943,48 +940,6 @@ public sealed class MainViewModel : ViewModelBase
         });
         DeleteBeforeId = "";
         await ReloadRunsAsync();
-    }
-
-    // ── Logo management ───────────────────────────────────────────────────────
-    private async Task LoadChainLogosAsync()
-    {
-        await Task.Run(() =>
-    {
-        if (!File.Exists(DbPath))
-        {
-            return;
-        }
-
-        try
-        {
-            using SqliteConnection conn = Database.Open(DbPath);
-            // Iterate a snapshot: the loop replaces items in Chains, and replacing
-            // an item mid-enumeration throws "Collection was modified" — which
-            // the catch below would swallow after the first logo.
-            ChainViewModel[] snapshot = [.. Chains];
-            foreach (ChainViewModel vm in snapshot)
-            {
-                long qsrId = Repository.QsrId(conn, vm.Name);
-                byte[]? bytes = Repository.GetLogoBlob(conn, qsrId);
-                if (bytes is not null)
-                {
-                    // Replace the ChainViewModel with a new one carrying the logo.
-                    // WPF will re-render via INPC.
-                    int idx = Chains.IndexOf(vm);
-                    ChainViewModel updated = new(vm.Chain, bytes, vm.Session);
-                    Application.Current.Dispatcher.Invoke(() => Chains[idx] = updated);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            // Best effort — a chain without its logo still shows its initials —
-            // but never silent: an empty catch here once hid every logo after the
-            // first one.
-            Application.Current.Dispatcher.Invoke(() =>
-                Log($"  ⚠ Chain logos could not be read from '{DbPath}': {ex.Message}"));
-        }
-    });
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

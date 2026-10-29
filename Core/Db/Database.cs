@@ -36,7 +36,7 @@ public static class Database
     /// with every change to the tables: files of another version are refused, never migrated. Every file made before
     /// the stamp existed reads 0.
     /// </summary>
-    public const int SchemaVersion = 1;
+    public const int SchemaVersion = 2; // 2: QSR.LOGO_BLOB dropped with the logo feature (WP-D1)
 
     // The table that identifies a database as this app's, in every version.
     private const string MarkerTable = "QSR";
@@ -311,10 +311,9 @@ public static class Database
     {
         const string ddl = """
             CREATE TABLE IF NOT EXISTS QSR (
-                ID        INTEGER PRIMARY KEY AUTOINCREMENT,
-                NAME      TEXT    NOT NULL UNIQUE,
-                BASE_URL  TEXT    NOT NULL,
-                LOGO_BLOB BLOB
+                ID       INTEGER PRIMARY KEY AUTOINCREMENT,
+                NAME     TEXT    NOT NULL UNIQUE,
+                BASE_URL TEXT    NOT NULL
             );
 
             CREATE TABLE IF NOT EXISTS PLATFORMS (

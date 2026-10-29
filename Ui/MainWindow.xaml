@@ -12,7 +12,6 @@
     <cv:BoolToVisibilityConverter x:Key="InvVis"  WhenTrue="Collapsed" WhenFalse="Visible"/>
     <cv:InverseBoolConverter      x:Key="InvBool"/>
     <cv:NullToVisibilityConverter x:Key="NullVis"/>
-    <cv:NullToVisibilityConverter x:Key="InvNullVis" WhenNull="Visible" WhenNotNull="Collapsed"/>
 
     <!-- App logo: three ascending "benchmark" bars in light + dim cyan -->
     <DrawingImage x:Key="AppLogo">
@@ -168,17 +167,9 @@
                 <StackPanel Orientation="Horizontal">
                   <Border Width="34" Height="34" CornerRadius="5"
                           Background="{Binding BadgeBrush}" Margin="0 0 10 0">
-                    <!-- Real logo when stored -->
-                    <Grid>
-                      <Image Source="{Binding LogoImage}"
-                             Visibility="{Binding LogoImage, Converter={StaticResource NullVis}}"
-                             Stretch="UniformToFill"
-                             RenderOptions.BitmapScalingMode="HighQuality"/>
-                      <TextBlock Text="{Binding Initials}"
-                                 Visibility="{Binding LogoImage, Converter={StaticResource InvNullVis}}"
-                                 HorizontalAlignment="Center" VerticalAlignment="Center"
-                                 FontWeight="Bold" FontSize="12" Foreground="{Binding BadgeForeground}"/>
-                    </Grid>
+                    <TextBlock Text="{Binding Initials}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               FontWeight="Bold" FontSize="12" Foreground="{Binding BadgeForeground}"/>
                   </Border>
                   <!-- Name, then what this chain's run is doing (or how its last run ended): every chain's
                        state is visible without switching to it. -->
