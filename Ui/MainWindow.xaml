@@ -21,6 +21,7 @@
     <DataTemplate x:Key="ColumnFilterHeader">
       <StackPanel Orientation="Horizontal">
         <TextBlock Text="{Binding Title}" VerticalAlignment="Center"/>
+        <Path Style="{StaticResource SortArrow}"/>
         <ToggleButton x:Name="Funnel" Style="{StaticResource FilterToggle}" Margin="6 0 0 0"
                       ToolTip="Filter this column"
                       IsChecked="{Binding IsOpen, ElementName=Popup, Mode=TwoWay}"
@@ -533,7 +534,8 @@
                       SelectedItem="{Binding SelectedRun, Mode=TwoWay}"
                       ScrollViewer.HorizontalScrollBarVisibility="Disabled">
               <DataGrid.Columns>
-                <DataGridTextColumn Header="ID"
+                <!-- Descending: the grid opens newest first (RunsFilterViewModel), and the arrow says so -->
+                <DataGridTextColumn Header="ID" SortDirection="Descending"
                                     Binding="{Binding Id}" Width="60"
                                     ElementStyle="{StaticResource GridCellText}"/>
                 <DataGridTextColumn Binding="{Binding QsrName}" Width="170"
