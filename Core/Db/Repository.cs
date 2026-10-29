@@ -761,6 +761,24 @@ public static class Repository
         return result;
     }
 
+    /// <summary>
+    /// Snapshot count per run, in one grouped query; a run with none is absent. The Scrape Runs tab reloads after
+    /// every page a scrape records, and one COUNT per run made each reload cost a query per run ever kept.
+    /// </summary>
+    public static Dictionary<long, int> CountSnapshotsByRun(SqliteConnection conn)
+    {
+        using SqliteCommand cmd = Command(conn,
+            "SELECT SCRAPE_RUN_ID, COUNT(*) FROM MENU_SNAPSHOTS GROUP BY SCRAPE_RUN_ID;");
+
+        Dictionary<long, int> result = [];
+        using SqliteDataReader reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            result[reader.GetInt64(0)] = reader.GetInt32(1);
+        }
+        return result;
+    }
+
     public static (bool Found, long QsrId, string StartedAt, int SnapshotCount) GetScrapeRunForDeletion(
         SqliteConnection conn, long runId)
     {
