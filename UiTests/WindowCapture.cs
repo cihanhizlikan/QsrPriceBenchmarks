@@ -7,6 +7,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Microsoft.Data.Sqlite;
 using QsrPriceBenchmarks.Core.Db;
+using QsrPriceBenchmarks.Core.Scraping;
 using QsrPriceBenchmarks.Core.Services;
 using QsrPriceBenchmarks.Core.Util;
 using QsrPriceBenchmarks.Ui;
@@ -100,7 +101,7 @@ public sealed class WindowCapture(ITestOutputHelper output)
         // running card beside an idle one, and the selected chain's progress bar is on screen.
         model.RunPipeline = async call =>
         {
-            call.Progress.Report(new StepProgress("Scraping prices", 43, 177));
+            call.Progress.Report(new StepProgress(call.Options.Chain.Name == "Popeyes" ? ChainCrawler.CrawlPhase : "Scraping prices", 12, call.Options.Chain.Name == "Popeyes" ? 79 : 177));
             await Task.Delay(Timeout.Infinite, call.Token);
         };
         ChainViewModel selected = model.SelectedChain!;

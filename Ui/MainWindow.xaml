@@ -178,10 +178,6 @@
                     <TextBlock Text="{Binding Session.StatusText}" FontSize="10" Margin="0 2 0 0"
                                Foreground="{StaticResource BrushDimCyan}" TextTrimming="CharacterEllipsis"
                                Visibility="{Binding Session.StatusText, Converter={StaticResource NullVis}}"/>
-                    <ProgressBar Height="3" Margin="0 3 0 0" Minimum="0"
-                                 Maximum="{Binding Session.ProgressTotal, Mode=OneWay}"
-                                 Value="{Binding Session.ProgressDone, Mode=OneWay}"
-                                 Visibility="{Binding Session.ProgressVisible, Converter={StaticResource BoolVis}}"/>
                   </StackPanel>
                 </StackPanel>
               </DataTemplate>

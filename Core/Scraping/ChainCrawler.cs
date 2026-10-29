@@ -3,6 +3,7 @@ using Microsoft.Playwright;
 using AngleSharp.Dom;
 using QsrPriceBenchmarks.Core.Db;
 using QsrPriceBenchmarks.Core.Models;
+using QsrPriceBenchmarks.Core.Services;
 using QsrPriceBenchmarks.Core.Util;
 
 namespace QsrPriceBenchmarks.Core.Scraping;
@@ -23,10 +24,14 @@ namespace QsrPriceBenchmarks.Core.Scraping;
 /// </summary>
 public static class ChainCrawler
 {
+    /// <summary>Step 1's phase name in progress reports (the sidebar reads "Crawling provinces 12 / 79").</summary>
+    public const string CrawlPhase = "Crawling provinces";
+
     public static async Task CrawlAsync(
         ChainConfig chain, SqliteConnection conn,
         IProgress<string>? progress = null, CancellationToken ct = default,
-        IProgress<int>? onLocationsChanged = null)
+        IProgress<int>? onLocationsChanged = null,
+        IProgress<StepProgress>? progressCount = null)
     {
         if (chain.RootUrl is null)
         {
@@ -91,6 +96,9 @@ public static class ChainCrawler
             string provinceUrl = provinceLinks[i];
             string provinceSlug = ChainSiteUrls.SplitPath(new Uri(provinceUrl).AbsolutePath).LastOrDefault() ?? provinceUrl;
             progress?.Report($"  [{i + 1}/{provinceLinks.Count}] Province: {LogMarkup.Value(provinceSlug)}");
+            // Provinces are the unit: their count is known before the first is visited, where districts appear
+            // only as each province is read.
+            progressCount?.Report(new StepProgress(CrawlPhase, i, provinceLinks.Count));
 
             IDocument? provinceDoc = await TryFetchDocumentAsync(page, provinceUrl, ct, ex =>
             {
@@ -145,6 +153,7 @@ public static class ChainCrawler
             }
         }
 
+        progressCount?.Report(new StepProgress(CrawlPhase, provinceLinks.Count, provinceLinks.Count));
         progress?.Report(
             $"  ✓ {total} distinct location(s) across {districts.Count} district(s) recorded");
 
