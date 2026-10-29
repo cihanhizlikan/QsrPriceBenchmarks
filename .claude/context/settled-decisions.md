@@ -106,3 +106,14 @@ compare against. What stays:
 - Whether the existing migration code (`MigrateLegacySchema`, `MigrateSchema`, `DatabaseMigrationTests`) now goes
   is a package, not part of this decision.
 **Re-opened by** a user other than the maintainer losing price history they relied on.
+
+## A run is claimed by an open file handle, not by anything in the database (2026-10-29, WP-C1)
+
+**Decision.** While a scrape works on a run it holds `<database>.run-<id>.lock` open with no sharing
+(`Core/Db/RunLock.cs`); the run row is committed only once claimed and finished before release. Windows closes the
+handle however the process ends, so a crash never leaves a run claimed. **Refused**: a flag or PID in the database
+(a crash leaves it set; a lease stays stuck until expiry; PIDs are reused) and SQLite `locking_mode=EXCLUSIVE`
+(blocks the app's own short connections and every reader). Per RUN, not per database, so two windows may still
+scrape different chains. **Measured**: a `cmd` process holding the lock file, killed, left the file on disk and the
+run claimable; with the claim made the file's existence instead, that test went red.
+**Re-opened by** a database on a network share, where handle semantics differ — WAL already rules that out.

@@ -28,13 +28,17 @@ internal static class ReportSeed
 
         long item = Repository.GetOrCreateMenuItem(conn, qsr, "Whopper");
 
-        long run1 = Repository.StartScrapeRun(conn, qsr);
-        Repository.InsertSnapshot(conn, run1, plId, item, first);
-        Repository.FinishScrapeRun(conn, run1);
+        using (RunLock run1 = Repository.StartScrapeRun(conn, qsr))
+        {
+            Repository.InsertSnapshot(conn, run1.RunId, plId, item, first);
+            Repository.FinishScrapeRun(conn, run1.RunId);
+        }
 
-        long run2 = Repository.StartScrapeRun(conn, qsr);
-        Repository.InsertSnapshot(conn, run2, plId, item, second);
-        Repository.FinishScrapeRun(conn, run2);
+        using (RunLock run2 = Repository.StartScrapeRun(conn, qsr))
+        {
+            Repository.InsertSnapshot(conn, run2.RunId, plId, item, second);
+            Repository.FinishScrapeRun(conn, run2.RunId);
+        }
 
         return "Whopper";
     }

@@ -857,6 +857,10 @@ public sealed class MainViewModel : ViewModelBase
                 return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
             });
 
+            // An unfinished run is either being scraped (its lock is held, here or in another window) or crashed.
+            HashSet<long> claimed = [.. runs.Where(r => r.FinishedAt is null && RunLock.IsHeld(conn, r.Id))
+                .Select(r => r.Id)];
+
             Application.Current.Dispatcher.Invoke(() =>
             {
                 // The grid reloads every few seconds during a scrape, so keep the user's selected row across the
@@ -866,7 +870,7 @@ public sealed class MainViewModel : ViewModelBase
                 foreach (ScrapeRunRow r in runs)
                 {
                     string name = qsrNames.TryGetValue(r.QsrId, out string? n) ? n : $"QSR #{r.QsrId}";
-                    Runs.Add(new ScrapeRunViewModel(r, name, counts[r.Id]));
+                    Runs.Add(new ScrapeRunViewModel(r, name, counts[r.Id], claimed.Contains(r.Id)));
                 }
                 SelectedRun = Runs.FirstOrDefault(r => r.Id == selectedId);
             });

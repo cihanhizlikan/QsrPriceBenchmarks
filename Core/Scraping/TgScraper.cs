@@ -45,6 +45,13 @@ public static class TgScraper
         long platformId = Repository.PlatformId(conn, platformName);
         string platformSlug = chain.PlatformSlugs[platformName];
 
+        // A resumed run is claimed before anything else, so one still alive in another window is refused at once
+        // instead of being scraped twice into the same run.
+        using RunLock? resumeLock = resumeRunId is null
+            ? null
+            : RunLock.TryAcquire(conn, resumeRunId.Value) ?? throw new InvalidOperationException(
+                $"Scrape run {resumeRunId} is being scraped in another window right now — it cannot be resumed here.");
+
         await HarvestSitemapSlugsAsync(chain, conn, qsrId, platformId, platformSlug, progress);
 
         (HashSet<string> excludedTabs, HashSet<string> knownTabs) =
@@ -55,7 +62,10 @@ public static class TgScraper
         HashSet<string> observedTabs = new(StringComparer.Ordinal);
         int unreadPages = 0;
 
-        long runId = resumeRunId ?? Repository.StartScrapeRun(conn, qsrId);
+        // Held until this method returns — after the finally below has finished the run, so another window never
+        // sees this run unfinished and unclaimed while it is alive.
+        using RunLock? newRunLock = resumeLock is null ? Repository.StartScrapeRun(conn, qsrId) : null;
+        long runId = (resumeLock ?? newRunLock)!.RunId;
         progress?.Report(resumeRunId is null
             ? $"  Scrape run {runId} started"
             : $"  Resuming scrape run {runId}");

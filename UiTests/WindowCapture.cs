@@ -74,8 +74,8 @@ public sealed class WindowCapture(ITestOutputHelper output)
         Repository.UpsertLocation(conn, "istanbul-avrupa", "besiktas", "bk-besiktas", qsrId);
         Repository.UpsertLocation(conn, "ankara", "cankaya", "bk-cankaya", qsrId);
         Repository.UpsertLocation(conn, "izmir", "konak", "bk-konak", qsrId);
-        long runId = Repository.StartScrapeRun(conn, qsrId);
-        Repository.FinishScrapeRun(conn, runId);
+        using RunLock run = Repository.StartScrapeRun(conn, qsrId);
+        Repository.FinishScrapeRun(conn, run.RunId);
     }
 
     private static void Shoot(string into, string throwaway, List<string> written)

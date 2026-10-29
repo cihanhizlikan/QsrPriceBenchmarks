@@ -176,9 +176,13 @@ public sealed class RepositoryTests
         long plId = TestData.InsertPlatformLocation(db.Conn, qsr, plat, "pl1");
         long item = Repository.GetOrCreateMenuItem(db.Conn, qsr, "Whopper");
 
-        long run = Repository.StartScrapeRun(db.Conn, qsr);
-        Repository.InsertSnapshot(db.Conn, run, plId, item, 100m);
-        Repository.FinishScrapeRun(db.Conn, run);
+        long run;
+        using (RunLock claim = Repository.StartScrapeRun(db.Conn, qsr))
+        {
+            run = claim.RunId;
+            Repository.InsertSnapshot(db.Conn, run, plId, item, 100m);
+            Repository.FinishScrapeRun(db.Conn, run);
+        }
 
         Assert.Contains(Repository.ListScrapeRuns(db.Conn), x => x.Id == run && x.FinishedAt is not null);
 
@@ -198,9 +202,9 @@ public sealed class RepositoryTests
     {
         using TempDb db = new();
         (long qsr, long _) = Ids(db);
-        long r1 = Repository.StartScrapeRun(db.Conn, qsr);
-        long r2 = Repository.StartScrapeRun(db.Conn, qsr);
-        long r3 = Repository.StartScrapeRun(db.Conn, qsr);
+        long r1 = CrashedRun(db, qsr);
+        long r2 = CrashedRun(db, qsr);
+        long r3 = CrashedRun(db, qsr);
 
         int affected = Repository.DeleteScrapeRunsBefore(db.Conn, r3);
 
@@ -209,6 +213,31 @@ public sealed class RepositoryTests
         Assert.DoesNotContain(r1, remaining);
         Assert.DoesNotContain(r2, remaining);
         Assert.Contains(r3, remaining);
+    }
+
+    [Fact(DisplayName = "A run being scraped is never deleted, singly or by DeleteScrapeRunsBefore")]
+    public void RunBeingScraped_IsNotDeleted()
+    {
+        using TempDb db = new();
+        (long qsr, long _) = Ids(db);
+        long crashed = CrashedRun(db, qsr);
+        using RunLock live = Repository.StartScrapeRun(db.Conn, qsr);
+        long later = CrashedRun(db, qsr);
+
+        Assert.Throws<InvalidOperationException>(() => Repository.DeleteScrapeRun(db.Conn, live.RunId));
+        int affected = Repository.DeleteScrapeRunsBefore(db.Conn, later);
+
+        Assert.Equal(1, affected);
+        List<long> remaining = [.. Repository.ListScrapeRuns(db.Conn).Select(x => x.Id)];
+        Assert.DoesNotContain(crashed, remaining);
+        Assert.Contains(live.RunId, remaining);
+    }
+
+    /// <summary>A run left unfinished and unclaimed — what a scrape killed mid-run leaves behind.</summary>
+    private static long CrashedRun(TempDb db, long qsr)
+    {
+        using RunLock run = Repository.StartScrapeRun(db.Conn, qsr);
+        return run.RunId;
     }
 
     [Fact(DisplayName = "Logo blob round-trips; null before set")]
