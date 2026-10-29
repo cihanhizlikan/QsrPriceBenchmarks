@@ -44,7 +44,7 @@ public static class GeocodeAndMatchStep
             int geoTotal = nullLocs.Count + nullPls.Count;
             int geoDone = 0;
 
-            await using BrowserSession session = await BrowserSession.LaunchAsync();
+            await using BrowserSession session = await BrowserSession.LaunchAsync(ct: ct);
 
             // One page per concurrency slot — geocoding drives a browser, so each
             // parallel slot needs its own page. SQLite writes are NOT parallel:
