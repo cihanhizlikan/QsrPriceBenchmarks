@@ -25,7 +25,8 @@ public sealed class DatabaseTests
                 Assert.Equal(ChainRegistry.All.Count, (int)firstCount);
             }
 
-            // Re-opening the same file must not duplicate seed rows.
+            // Re-opening the same file, as the app does after a restart, must not duplicate seed rows.
+            path = TestData.MovedAsIfRestarted(path);
             using (SqliteConnection conn = Database.Open(path))
             {
                 using SqliteCommand cmd = conn.CreateCommand();
@@ -68,8 +69,8 @@ public sealed class DatabaseTests
         Assert.Empty(Repository.LoadScrapeTabs(db.Conn, qsrId, platformId));
     }
 
-    [Fact(DisplayName = "Re-opening preserves unknown tabs; a clean run soft-deletes them")]
-    public void Seed_PreservesUnknownTabs_RunReconciliationSoftDeletes()
+    [Fact(DisplayName = "Re-opening preserves discovered tabs; a run that never saw one disables it")]
+    public void Seed_PreservesDiscoveredTabs_ReconciliationDisablesUnseen()
     {
         string path = System.IO.Path.Combine(
             System.IO.Path.GetTempPath(), $"qsr_tabs_{Guid.NewGuid():N}.sqlite");
@@ -85,7 +86,7 @@ public sealed class DatabaseTests
                 Repository.UpsertDiscoveredScrapeTab(conn, qsrId, platformId, "Popüler Ürünler");
                 Repository.UpsertDiscoveredScrapeTab(conn, qsrId, platformId, "Ekonomikings");
             }
-            SqliteConnection.ClearAllPools();
+            path = TestData.MovedAsIfRestarted(path);
 
             using (SqliteConnection conn = Database.Open(path))
             {
@@ -94,8 +95,8 @@ public sealed class DatabaseTests
                 List<string> tabs = Repository.LoadScrapeTabs(conn, qsrId, platformId);
                 Assert.Contains("Ekonomikings", tabs);
 
-                // A cleanly completed run that saw every tab EXCEPT the
-                // discovered one is what removes it — as a soft delete.
+                // A finished run that saw every tab EXCEPT the discovered one is
+                // what removes it — as a soft delete.
                 List<string> observed = [.. tabs.Where(t => t != "Ekonomikings")];
                 List<string> deactivated =
                     Repository.ReconcileScrapeTabs(conn, qsrId, platformId, observed);
