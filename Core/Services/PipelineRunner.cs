@@ -11,12 +11,12 @@ namespace QsrPriceBenchmarks.Core.Services;
 ///   CLI  — coloured Console.WriteLine via a Progress&lt;string&gt; wrapper
 ///   WPF  — appended to an ObservableCollection via the captured UI
 ///          SynchronizationContext (Progress&lt;T&gt; handles the dispatch)
-/// Returns the path of the exported Excel file when an export step ran,
-/// otherwise null.
+/// Export is not a pipeline step: the UI's Scrape Runs tab and the CLI's --export
+/// call <see cref="Export.ExcelExporter"/> themselves.
 /// </summary>
 public static class PipelineRunner
 {
-    public static async Task<string?> RunAsync(
+    public static async Task RunAsync(
         string dbPath,
         PipelineOptions opts,
         IProgress<string>? progress = null,
@@ -29,7 +29,6 @@ public static class PipelineRunner
         using SqliteConnection conn = Db.Database.Open(dbPath);
         Models.ChainConfig chain = opts.Chain;
         long qsrId = Repository.QsrId(conn, chain.Name);
-        string? outputPath = null;
 
         void Log(string msg) => progress?.Report(msg);
 
@@ -85,11 +84,7 @@ public static class PipelineRunner
 
             Log($"[Step 3] Geocoding gaps and matching for {chain.Name}");
             await GeocodeAndMatchStep.RunAsync(conn, qsrId, rematch: false, progress, ct, progressCount, gate);
-            // Export is no longer part of the pipeline — use the "Export" button
-            // on the Scrape Runs tab to produce the Excel benchmark on demand.
         }
-
-        return outputPath;
     }
 
     /// <summary>
