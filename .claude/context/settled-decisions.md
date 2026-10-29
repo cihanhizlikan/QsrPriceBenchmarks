@@ -21,13 +21,13 @@ SQLite that ships with Windows: no native binary shipped, no third-party CVE sur
 `bundle_e_sqlite3` so the hermetic DB tests run on any platform. The reasoning is in the csproj comments.
 **Re-opened by** a SQLite feature the hosts need that Windows' build lacks.
 
-## The database is the user's data
+## ~~The database is the user's data~~ — superseded 2026-10-29 by *The program's shape outranks the database*
 
-**Decision.** Schema changes ship a data-preserving migration; `Database` refuses a foreign SQLite file before
+~~**Decision.** Schema changes ship a data-preserving migration; `Database` refuses a foreign SQLite file before
 writing anything to it; views are dropped and recreated on every open so view fixes reach existing files. The
 schema notes on `Database` record which unique keys look wrong and are not.
 **Re-opened by** the database becoming a cache that can be rebuilt from a re-scrape — it is not today, because a
-scrape run is a price observation at a moment in time.
+scrape run is a price observation at a moment in time.~~
 
 ## Analyzers are opted in one rule at a time; AnalysisMode=All and CA2000 are declined (2026-10-24)
 
@@ -89,3 +89,20 @@ pages one timeout is routine, so a vanished tab practically stayed forever. A ta
 nothing lasting: it is re-enabled on sight, and a disabled tab is never in the exclusion set, so it is scraped
 the moment it reappears.
 **Re-opened by** a tab that exists only on a few locations being disabled and re-enabled run after run.
+
+## The program's shape outranks the database (2026-10-29)
+
+**Decision** (maintainer). A schema change may discard existing databases instead of migrating them: "ideal
+program shape at all costs; deleting the whole db and rescanning is acceptable". It replaces *The database is the
+user's data*, re-opened by the maintainer accepting the cost that entry named: a scrape run is a price observation
+at a moment in time, so a rescan restores today's prices but never the history `PREV_PRICE` / `PRICE_CHANGE`
+compare against. What stays:
+- **The app never deletes a database file on its own.** A file the current schema cannot use is refused with a
+  plain message naming it; starting fresh is the user's act. (The assistant's addition, not the maintainer's
+  words: a silent delete would take history the user may still want to export first.)
+- **A session never deletes or alters the maintainer's own database file** unless told to; tests keep using
+  throwaway databases.
+- `Database` still refuses a FOREIGN SQLite file before writing to it — that guard protects other programs' data.
+- Whether the existing migration code (`MigrateLegacySchema`, `MigrateSchema`, `DatabaseMigrationTests`) now goes
+  is a package, not part of this decision.
+**Re-opened by** a user other than the maintainer losing price history they relied on.

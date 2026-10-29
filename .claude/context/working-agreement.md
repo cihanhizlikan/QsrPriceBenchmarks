@@ -9,7 +9,9 @@ every time — a new rule arrives with at most one sentence of example, and its 
 
 ## Where this repository differs from Yalbuz
 
-- **The database is the user's data** (see `CLAUDE.md`). Schema changes migrate; nothing drops their tables.
+- **The database is disposable** (see `CLAUDE.md`), as Yalbuz's is — since 2026-10-29. A schema change may discard
+  it rather than migrate; the app still never deletes the file itself, and a session never touches the
+  maintainer's own file unasked.
 - **There is no web app, no sink and no secrets file.** No gitignored settings file has to be copied into a
   worktree, and nothing a test or a run does publishes anywhere.
 - **The suite scrapes live sites.** A red in `Tests/ChainWebsiteTests.cs` or `Tests/TgMenuTests.cs` is first
@@ -24,9 +26,9 @@ every time — a new rule arrives with at most one sentence of example, and its 
 
 ## The maintainer's working style
 
-- **Quality outranks compatibility.** No legacy fallbacks, no deprecation shims, and never keep a wrong name or a
-  wrong shape because correcting it is a large diff — *except* where it would lose the user's data, which is the
-  one compatibility this product owes.
+- **Quality outranks compatibility — at all costs.** No legacy fallbacks, no deprecation shims, and never keep a
+  wrong name or a wrong shape because correcting it is a large diff — not even to keep existing databases usable:
+  deleting the database and rescanning is an accepted price (maintainer, 2026-10-29).
 - **Verification is the assistant's job.** Verify what is reachable from this machine without being asked.
 - **Evidence, not reasoning — for claims and for decisions.** A fix is not finished because the code looks right.
   - **Prefer a real detector over an inferred zero.** A grep that finds nothing has measured the grep.
@@ -114,7 +116,7 @@ in `settled-decisions.md`.
 |---|---|---|
 | **patch** `1.6.0 → 1.6.1` | shipped files change, but nothing a user does or relies on behaves differently | a bug fix with no other effect, a refactor, a dependency patch update, the publish no longer shipping XML docs |
 | **minor** `1.6.0 → 1.7.0` | a new capability, or behaviour a user would notice, still compatible with what they own | a new CLI option or UI feature; the CLI refusing input it used to mishandle; a scrape producing different data; an additive schema migration the previous version still opens |
-| **major** `1.6.0 → 2.0.0` | breaks something a user owns or relies on | a migration after which the previous version can no longer open the database; removing or renaming a CLI option, or changing what an exit code means; removing a feature; new install requirements |
+| **major** `1.6.0 → 2.0.0` | breaks something a user owns or relies on | a schema change that discards existing databases (delete and rescan), or a migration after which the previous version can no longer open the database; removing or renaming a CLI option, or changing what an exit code means; removing a feature; new install requirements |
 
 - **The commit body says which, on one line**: `Version: 1.6.0 → 1.6.1 (patch): <why this size>`, or `No version
   bump: nothing that ships changed.`
