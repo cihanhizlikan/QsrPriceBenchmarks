@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
+using System.Windows;
 using System.Windows.Threading;
 using Microsoft.Data.Sqlite;
 using QsrPriceBenchmarks.Core.Db;
@@ -62,6 +63,126 @@ public sealed class OlderDatabaseTests
         }
     }
 
+    /// <summary>
+    /// After a No, the window went on opening the refused file from every reader — each chain's tab list, the map,
+    /// the runs list — on every refresh, each refusal caught again (maintainer, 2026-10-29: the debugger stopped on
+    /// every one). A refused file must not be opened at all until the user changes something.
+    /// </summary>
+    [Fact]
+    public void After_No_Nothing_Opens_The_Refused_File_Again()
+    {
+        string path = OlderDatabase();
+        List<string> thrown = [];
+        int runsShown = -1;
+        try
+        {
+            WpfThread.Run(() =>
+            {
+                MainWindow window = new();
+                MainViewModel model = (MainViewModel)window.DataContext;
+                model.ShowMessage = (_, _, _, _) => MessageBoxResult.No;
+                EventHandler<System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs> onThrow = (_, e) =>
+                {
+                    if (e.Exception is SqliteException or OutdatedDatabaseException)
+                    {
+                        lock (thrown)
+                        {
+                            thrown.Add(e.Exception.Message);
+                        }
+                    }
+                };
+                AppDomain.CurrentDomain.FirstChanceException += onThrow;
+                try
+                {
+                    model.DbPath = path;
+                    Task startup = model.InitialiseAsync();
+                    Pump(() => startup.IsCompleted);
+                    foreach (ChainViewModel chain in model.Chains)
+                    {
+                        model.SelectedChain = chain; // each chain's tab list and the map re-read
+                    }
+                    model.ReloadRunsCommand.Execute(null);
+                    Pump(() => false, TimeSpan.FromSeconds(1));
+                    runsShown = model.Runs.Count;
+                }
+                finally
+                {
+                    AppDomain.CurrentDomain.FirstChanceException -= onThrow;
+                    window.Close();
+                }
+            });
+
+            Assert.True(thrown.Count == 0, $"{thrown.Count} database exception(s): {string.Join(" | ", thrown.Distinct())}");
+            Assert.Equal(0, runsShown);
+        }
+        finally
+        {
+            DeleteAll(path);
+        }
+    }
+
+    /// <summary>
+    /// "Delete all before" had no catch: on a refused or locked database its failure reached the app's last-resort
+    /// handler. It now reports the failure like the single delete does.
+    /// </summary>
+    [Fact]
+    public void Delete_All_Before_On_A_Refused_Database_Reports_The_Failure()
+    {
+        string path = OlderDatabase();
+        List<string> shown = [];
+        try
+        {
+            WpfThread.Run(() =>
+            {
+                MainWindow window = new();
+                MainViewModel model = (MainViewModel)window.DataContext;
+                model.ShowMessage = (text, caption, _, _) =>
+                {
+                    shown.Add($"{caption}: {text}");
+                    return caption == "Older database" ? MessageBoxResult.No : MessageBoxResult.Yes;
+                };
+                model.DbPath = path;
+                Task startup = model.InitialiseAsync();
+                Pump(() => startup.IsCompleted);
+
+                model.DeleteBeforeId = "5";
+                model.DeleteBeforeIdCommand.Execute(null);
+                Pump(() => shown.Any(s => s.StartsWith("Delete:", StringComparison.Ordinal)));
+                window.Close();
+            });
+
+            Assert.Contains(shown, s => s.StartsWith("Delete: Delete failed", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteAll(path);
+        }
+    }
+
+    /// <summary>Runs the dispatcher until <paramref name="done"/> holds, or for <paramref name="limit"/> at most.</summary>
+    private static void Pump(Func<bool> done, TimeSpan? limit = null)
+    {
+        TimeSpan bound = limit ?? TimeSpan.FromSeconds(20);
+        long started = Stopwatch.GetTimestamp();
+        while (!done())
+        {
+            if (Stopwatch.GetElapsedTime(started) > bound)
+            {
+                if (limit is not null)
+                {
+                    return; // a fixed settling time, not a wait for something
+                }
+                throw new TimeoutException("The window did not reach the expected state within 20 s.");
+            }
+            DispatcherFrame frame = new();
+            DispatcherTimer tick = new(TimeSpan.FromMilliseconds(25), DispatcherPriority.Background,
+                (_, _) => { frame.Continue = false; }, Dispatcher.CurrentDispatcher);
+            tick.Start();
+            Dispatcher.PushFrame(frame);
+            tick.Stop();
+        }
+    }
+
     private static void StartWindow(string path, Func<string, bool> answer, List<string> log)
     {
         UserDatabaseFile userDatabaseBefore = UserDatabaseFile.State();
@@ -69,7 +190,7 @@ public sealed class OlderDatabaseTests
         {
             MainWindow window = new();
             MainViewModel model = (MainViewModel)window.DataContext;
-            model.ConfirmSetAside = answer;
+            model.ShowMessage = (question, _, _, _) => answer(question) ? MessageBoxResult.Yes : MessageBoxResult.No;
             model.DbPath = path;
             Task startup = model.InitialiseAsync();
             long started = Stopwatch.GetTimestamp();
