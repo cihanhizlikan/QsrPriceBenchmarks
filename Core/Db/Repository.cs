@@ -589,13 +589,36 @@ public static class Repository
 
     // ── SCRAPE_RUNS / MENU_SNAPSHOTS ─────────────────────────────────────────
 
-    public static long StartScrapeRun(SqliteConnection conn, long qsrId)
+    /// <summary>
+    /// Inserts a run and returns the claim on it (<see cref="RunLock"/>), the run's ID inside. The row is
+    /// committed only once the claim is held, so no other window ever sees the run unclaimed while it is alive —
+    /// unclaimed and unfinished is what a crashed run looks like.
+    /// </summary>
+    public static RunLock StartScrapeRun(SqliteConnection conn, long qsrId)
     {
-        return Convert.ToInt64(Scalar(conn, """
+        using SqliteTransaction tx = conn.BeginTransaction();
+        long runId;
+        using (SqliteCommand insert = Command(conn, tx, """
             INSERT INTO SCRAPE_RUNS (QSR_ID, STARTED_AT) VALUES ($qsr, $started);
             SELECT last_insert_rowid();
             """,
-            ("$qsr", qsrId), ("$started", UtcStamp())), CultureInfo.InvariantCulture);
+            ("$qsr", qsrId), ("$started", UtcStamp())))
+        {
+            runId = Convert.ToInt64(insert.ExecuteScalar(), CultureInfo.InvariantCulture);
+        }
+
+        RunLock runLock = RunLock.TryAcquire(conn, runId)
+            ?? throw new InvalidOperationException($"A new scrape run's lock file is held by another process: run {runId}.");
+        try
+        {
+            tx.Commit();
+        }
+        catch
+        {
+            runLock.Dispose();
+            throw;
+        }
+        return runLock;
     }
 
     public static void FinishScrapeRun(SqliteConnection conn, long runId)
@@ -761,8 +784,14 @@ public static class Repository
         return (true, qsrId, startedAt, count);
     }
 
+    /// <summary>Deletes a run and its snapshots; refuses a run being scraped right now, here or in another window.</summary>
     public static void DeleteScrapeRun(SqliteConnection conn, long runId)
     {
+        if (RunLock.IsHeld(conn, runId))
+        {
+            throw new InvalidOperationException($"Scrape run {runId} is being scraped right now and cannot be deleted.");
+        }
+
         using SqliteTransaction tx = conn.BeginTransaction();
         using (SqliteCommand deleteSnapshots = Command(conn, tx,
             "DELETE FROM MENU_SNAPSHOTS WHERE SCRAPE_RUN_ID = $id;", ("$id", runId)))
@@ -777,25 +806,24 @@ public static class Repository
         tx.Commit();
     }
 
+    /// <summary>
+    /// Deletes every run with an ID below <paramref name="runId"/> and its snapshots, skipping any run being scraped
+    /// right now. Returns how many runs were deleted.
+    /// </summary>
     public static int DeleteScrapeRunsBefore(SqliteConnection conn, long runId)
     {
-        using SqliteTransaction tx = conn.BeginTransaction();
+        List<long> doomed = [.. ListScrapeRuns(conn)
+            .Where(r => r.Id < runId && (r.FinishedAt is not null || !RunLock.IsHeld(conn, r.Id)))
+            .Select(r => r.Id)];
 
-        int affected;
-        using (SqliteCommand deleteSnapshots = Command(conn, tx, """
-            DELETE FROM MENU_SNAPSHOTS
-            WHERE SCRAPE_RUN_ID IN (SELECT ID FROM SCRAPE_RUNS WHERE ID < $id);
-            """, ("$id", runId)))
+        using SqliteTransaction tx = conn.BeginTransaction();
+        foreach (long id in doomed)
         {
-            deleteSnapshots.ExecuteNonQuery();
-        }
-        using (SqliteCommand deleteRuns = Command(conn, tx,
-            "DELETE FROM SCRAPE_RUNS WHERE ID < $id;", ("$id", runId)))
-        {
-            affected = deleteRuns.ExecuteNonQuery();
+            NonQuery(conn, tx, "DELETE FROM MENU_SNAPSHOTS WHERE SCRAPE_RUN_ID = $id;", ("$id", id));
+            NonQuery(conn, tx, "DELETE FROM SCRAPE_RUNS WHERE ID = $id;", ("$id", id));
         }
         tx.Commit();
-        return affected;
+        return doomed.Count;
     }
 
     // ── Logo blobs ───────────────────────────────────────────────────────────

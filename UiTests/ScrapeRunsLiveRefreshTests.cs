@@ -28,10 +28,12 @@ public sealed class ScrapeRunsLiveRefreshTests
         bool tabFlagSet = false;
         long? selectedAfter = null;
         int? liveSnapshots = null;
+        bool? liveErrored = null;
 
         using (ThrowawayDatabase throwaway = new(conn =>
         {
-            earlierRun = Repository.StartScrapeRun(conn, Ids(conn).QsrId);
+            using RunLock earlier = Repository.StartScrapeRun(conn, Ids(conn).QsrId);
+            earlierRun = earlier.RunId;
             Repository.FinishScrapeRun(conn, earlierRun);
         }))
         {
@@ -49,11 +51,13 @@ public sealed class ScrapeRunsLiveRefreshTests
                 model.SelectedRun = model.Runs[0];
 
                 // What Step 2 does as a run starts and records a page, then the signal it sends.
+                RunLock live;
                 long liveRun;
                 using (SqliteConnection conn = Database.Open(throwaway.Path))
                 {
                     (long qsrId, long platformId) = Ids(conn);
-                    liveRun = Repository.StartScrapeRun(conn, qsrId);
+                    live = Repository.StartScrapeRun(conn, qsrId);
+                    liveRun = live.RunId;
                     long location = PlatformLocation(conn, qsrId, platformId);
                     Repository.InsertSnapshot(conn, liveRun, location,
                         Repository.GetOrCreateMenuItem(conn, qsrId, "Whopper®"), 340m);
@@ -62,6 +66,8 @@ public sealed class ScrapeRunsLiveRefreshTests
 
                 PumpUntil(() => model.Runs.Count == 2);
                 liveSnapshots = model.Runs.FirstOrDefault(r => r.Id == liveRun)?.SnapshotCount;
+                liveErrored = model.Runs.FirstOrDefault(r => r.Id == liveRun)?.IsErrored;
+                live.Dispose();
                 selectedAfter = model.SelectedRun?.Id;
                 window.Close();
             });
@@ -69,6 +75,7 @@ public sealed class ScrapeRunsLiveRefreshTests
 
         Assert.True(tabFlagSet, "opening the Scrape Runs tab must mark it active, or no live reload ever runs");
         Assert.Equal(1, liveSnapshots);
+        Assert.False(liveErrored, "a run being scraped must not offer Resume as if it had crashed");
         Assert.Equal(earlierRun, selectedAfter);
         Assert.Equal(userDatabaseBefore, UserDatabaseFile.State());
     }

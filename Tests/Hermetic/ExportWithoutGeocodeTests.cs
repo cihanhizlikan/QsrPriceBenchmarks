@@ -30,9 +30,9 @@ public sealed class ExportWithoutGeocodeTests
         // Deliberately NO SetPlatformLocationMatch → LOCATION_ID stays NULL.
 
         long item = Repository.GetOrCreateMenuItem(conn, qsr, "Whopper");
-        long run = Repository.StartScrapeRun(conn, qsr);
-        Repository.InsertSnapshot(conn, run, plId, item, 100m);
-        Repository.FinishScrapeRun(conn, run);
+        using RunLock run = Repository.StartScrapeRun(conn, qsr);
+        Repository.InsertSnapshot(conn, run.RunId, plId, item, 100m);
+        Repository.FinishScrapeRun(conn, run.RunId);
     }
 
     [Fact(DisplayName = "V_MARKETING_REPORT has a non-NULL QSR even when unmatched")]

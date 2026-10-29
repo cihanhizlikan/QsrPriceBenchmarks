@@ -104,7 +104,15 @@ if (opts.DeleteScrapeRun is not null)
         $"and {snapCount} snapshot(s).");
     Console.Write("  Confirm? [y/N] ");
     if (Console.ReadLine()?.Trim().ToLowerInvariant() != "y") { Log("  Aborted."); return 0; }
-    Repository.DeleteScrapeRun(conn, opts.DeleteScrapeRun.Value);
+    try
+    {
+        Repository.DeleteScrapeRun(conn, opts.DeleteScrapeRun.Value);
+    }
+    catch (InvalidOperationException refused)
+    {
+        Log($"  ✗ {refused.Message}"); // the run is being scraped right now, here or in the app
+        return 1;
+    }
     Log($"  ✓ Deleted run {opts.DeleteScrapeRun} and {snapCount} snapshot(s).");
     return 0;
 }
