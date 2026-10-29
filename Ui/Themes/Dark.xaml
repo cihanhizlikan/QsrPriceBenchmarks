@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
 
     <!-- ── Colour palette matching cmd.exe (legacy conhost) default scheme ────
          The CLI prints ANSI codes; cmd.exe renders them with these exact RGB
@@ -229,7 +230,54 @@
         <Setter Property="HeadersVisibility"   Value="Column"/>
     </Style>
 
+    <!-- Sort arrow beside a column's title: ▲ ascending, ▼ descending, nothing while another column sorts. It
+         reads the header it sits in, so it serves both a plain title and a filter header (ColumnFilterHeader). -->
+    <Style x:Key="SortArrow" TargetType="Path">
+        <Setter Property="Fill"              Value="{StaticResource BrushLightCyan}"/>
+        <Setter Property="Margin"            Value="6 0 0 0"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Visibility"        Value="Collapsed"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding SortDirection, RelativeSource={RelativeSource AncestorType=DataGridColumnHeader}}"
+                         Value="Ascending">
+                <Setter Property="Data"       Value="M0,5 L4,0 L8,5 Z"/>
+                <Setter Property="Visibility" Value="Visible"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding SortDirection, RelativeSource={RelativeSource AncestorType=DataGridColumnHeader}}"
+                         Value="Descending">
+                <Setter Property="Data"       Value="M0,0 L8,0 L4,5 Z"/>
+                <Setter Property="Visibility" Value="Visible"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- The resize grip on each side of a header: invisible, a resize cursor -->
+    <Style x:Key="HeaderGripper" TargetType="Thumb">
+        <Setter Property="Width"      Value="8"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Cursor"     Value="SizeWE"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border Background="{TemplateBinding Background}"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- A header of its own, not WPF's: the stock one draws its sort arrow as a grey sliver along the top edge,
+         invisible on this background. A plain title gets the arrow from the string template below — implicit, not
+         ContentTemplate, which a header whose content is an element (the filter headers, which carry the arrow
+         themselves) would also take, showing the element's type name. -->
     <Style TargetType="DataGridColumnHeader">
+        <Style.Resources>
+            <DataTemplate DataType="{x:Type sys:String}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
+                    <Path Style="{StaticResource SortArrow}"/>
+                </StackPanel>
+            </DataTemplate>
+        </Style.Resources>
         <Setter Property="Background"  Value="{StaticResource BrushBg3}"/>
         <Setter Property="Foreground"  Value="{StaticResource BrushLightCyan}"/>
         <Setter Property="BorderBrush" Value="{StaticResource BrushBorder}"/>
@@ -237,6 +285,22 @@
         <Setter Property="Padding"     Value="10 6"/>
         <Setter Property="FontWeight"  Value="SemiBold"/>
         <Setter Property="FontFamily"  Value="Segoe UI"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DataGridColumnHeader">
+                    <Grid>
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                        </Border>
+                        <Thumb x:Name="PART_LeftHeaderGripper"  HorizontalAlignment="Left"  Style="{StaticResource HeaderGripper}"/>
+                        <Thumb x:Name="PART_RightHeaderGripper" HorizontalAlignment="Right" Style="{StaticResource HeaderGripper}"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <Style TargetType="DataGridCell">

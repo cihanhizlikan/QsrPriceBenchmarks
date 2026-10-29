@@ -146,14 +146,18 @@ public sealed class WindowCapture(ITestOutputHelper output)
     }
 
     /// <summary>
-    /// The Finished header's filter open with Finished unticked: the funnel lit, and its list. The list is a popup —
-    /// a window of its own that the main window's picture does not hold — so it is saved apart.
+    /// The Finished header sorting, its filter open with Finished unticked: the arrow beside the lit funnel, and the
+    /// list. The list is a popup — a window of its own that the main window's picture does not hold — so it is
+    /// saved apart.
     /// </summary>
     private static IEnumerable<string> SaveFilter(Window window, ColumnFilterViewModel filter, string into)
     {
         filter.Options.Single(o => o.Value == nameof(RunState.Finished)).IsSelected = false;
         DataGridColumnHeader header = VisualTree.Descendants<DataGridColumnHeader>(window)
             .First(h => h.Column?.SortMemberPath == nameof(ScrapeRunViewModel.FinishedAt));
+        // A header click as a user makes it: OnClick, which the header's automation peer does not offer.
+        typeof(ButtonBase).GetMethod("OnClick", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .Invoke(header, null);
         ToggleButton funnel = VisualTree.Descendants<ToggleButton>(header).Single();
         funnel.IsChecked = true;
         Settle(window, () => true);

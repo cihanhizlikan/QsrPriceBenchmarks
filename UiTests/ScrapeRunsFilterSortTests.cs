@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
@@ -11,6 +12,7 @@ using QsrPriceBenchmarks.Core.Models;
 using QsrPriceBenchmarks.Ui;
 using QsrPriceBenchmarks.Ui.ViewModels;
 using Xunit;
+using Path = System.Windows.Shapes.Path;
 using static QsrPriceBenchmarks.UiTests.VisualTree;
 
 namespace QsrPriceBenchmarks.UiTests;
@@ -26,20 +28,30 @@ public sealed class ScrapeRunsFilterSortTests
     [Fact]
     public void Runs_Are_Sorted_And_The_Sort_Survives_A_Reload()
     {
-        List<long> byDefault = [], snapshotsAfterReload = [], byFinished = [];
+        List<long> byDefault = [], snapshotsAfterReload = [], byFinished = [], byFinishedDown = [], byIdUp = [];
+        List<List<string>> arrows = [];
 
         (long crashed, long running) = ShowRuns((window, model) =>
         {
             byDefault.AddRange(Shown(model));
+            arrows.Add(Arrows(window));
 
             // A header click, as a user makes it, then the reload a scraped page triggers.
             Click(window, nameof(ScrapeRunViewModel.SnapshotCount));
             model.NotifyRunsChanged();
             Pump(() => false, TimeSpan.FromSeconds(1));
             snapshotsAfterReload.AddRange(Shown(model));
+            arrows.Add(Arrows(window));
 
-            Click(window, nameof(ScrapeRunViewModel.FinishedAt));
+            Click(window, nameof(ScrapeRunViewModel.FinishedAt));               // a filter header
             byFinished.AddRange(Shown(model));
+            arrows.Add(Arrows(window));
+            Click(window, nameof(ScrapeRunViewModel.FinishedAt));               // two states: flips, never clears
+            byFinishedDown.AddRange(Shown(model));
+            arrows.Add(Arrows(window));
+
+            Click(window, nameof(ScrapeRunViewModel.Id));                       // from newest first, to oldest
+            byIdUp.AddRange(Shown(model));
         });
 
         Assert.Equal([running, crashed, 3L, 2L, 1L], byDefault);                     // newest first
@@ -47,6 +59,13 @@ public sealed class ScrapeRunsFilterSortTests
         Assert.Equal([crashed, running], snapshotsAfterReload.Take(2).Order());
         Assert.Equal([2L, 3L, 1L], snapshotsAfterReload.Skip(2));
         Assert.Equal([running, crashed, 1L, 2L, 3L], byFinished);                     // running, unfinished, by time
+        Assert.Equal([3L, 2L, 1L, crashed, running], byFinishedDown);
+        Assert.Equal([1L, 2L, 3L, crashed, running], byIdUp);
+        // One arrow at a time, on the column that sorts: ID for the default order, then each column clicked.
+        Assert.Equal<IEnumerable<List<string>>>(
+            [[nameof(ScrapeRunViewModel.Id)], [nameof(ScrapeRunViewModel.SnapshotCount)],
+             [nameof(ScrapeRunViewModel.FinishedAt)], [nameof(ScrapeRunViewModel.FinishedAt)]],
+            arrows);
     }
 
     [Fact]
@@ -156,12 +175,26 @@ public sealed class ScrapeRunsFilterSortTests
     /// <summary>
     /// Clicks the header of the column bound to <paramref name="property"/>: a header is a button, and a mouse
     /// click reaches the sort through its OnClick, which is called here (its automation peer offers no Invoke).
+    /// Waits until the column's direction changes — a fixed settling time once read the rows before a click had
+    /// sorted them (1 run in 7, under the full suite) — and fails loudly if it never does.
     /// </summary>
     private static void Click(Window window, string property)
     {
+        DataGridColumnHeader header = Header(window, property);
+        ListSortDirection? before = header.Column.SortDirection;
         typeof(ButtonBase).GetMethod("OnClick", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
-            .Invoke(Header(window, property), null);
-        Pump(() => false, TimeSpan.FromMilliseconds(300));
+            .Invoke(header, null);
+        Pump(() => header.Column.SortDirection != before);
+        Pump(() => false, TimeSpan.FromMilliseconds(200)); // the arrows' bindings
+    }
+
+    /// <summary>The columns whose header shows a sort arrow, by the property each is bound to.</summary>
+    private static List<string> Arrows(Window window)
+    {
+        object arrow = window.FindResource("SortArrow");
+        return [.. Descendants<DataGridColumnHeader>(window)
+            .Where(h => h.Column is not null && Descendants<Path>(h).Any(p => p.Style == arrow && p.IsVisible))
+            .Select(h => h.Column.SortMemberPath)];
     }
 
     private static DataGridColumnHeader Header(Window window, string property)
