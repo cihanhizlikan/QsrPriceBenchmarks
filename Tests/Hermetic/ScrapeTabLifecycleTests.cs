@@ -108,9 +108,9 @@ public sealed class ScrapeTabLifecycleTests
                     "SELECT COUNT(*) FROM SCRAPE_TABS WHERE QSR_ID = $q AND PLATFORM_ID = $p;",
                     qsrId, platformId));
             }
-            SqliteConnection.ClearAllPools();
+            path = TestData.MovedAsIfRestarted(path);
 
-            // Second open re-runs the ChainConfig seed. The discovered tab must
+            // Second open, as after a restart, re-runs the ChainConfig seed. The discovered tab must
             // survive it and the soft-deleted tab must stay soft-deleted.
             using (SqliteConnection conn = Database.Open(path))
             {

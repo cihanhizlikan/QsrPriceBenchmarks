@@ -77,6 +77,20 @@ internal sealed class TempDb : IDisposable
 internal static class TestData
 {
     /// <summary>
+    /// Moves the closed database at <paramref name="path"/> to a new path and returns it: the file as a restarted
+    /// app first opens it. <see cref="Database.Open"/> seeds and rebuilds the views only on a file's first open in
+    /// a process, so a test meaning "re-open" that reuses the path skips exactly what it means to exercise
+    /// (measured 2026-10-29: such tests stayed green with a seed that re-enabled disabled tabs).
+    /// </summary>
+    public static string MovedAsIfRestarted(string path)
+    {
+        SqliteConnection.ClearAllPools(); // the last connection closing folds the WAL into the file
+        string moved = Path.Combine(Path.GetDirectoryName(path)!, $"qsr_restarted_{Guid.NewGuid():N}.sqlite");
+        File.Move(path, moved);
+        return moved;
+    }
+
+    /// <summary>
     /// Inserts one active PLATFORM_LOCATIONS row and returns its ID. The name
     /// is title-cased the way the production census writes names.
     /// </summary>
