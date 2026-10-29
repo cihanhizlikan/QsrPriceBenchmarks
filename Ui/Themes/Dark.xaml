@@ -232,20 +232,24 @@
 
     <!-- Sort arrow beside a column's title: ▲ ascending, ▼ descending, nothing while another column sorts. It
          reads the header it sits in, so it serves both a plain title and a filter header (ColumnFilterHeader). -->
+    <!-- Docked at the header's right edge, outermost (maintainer, 2026-10-30). Hidden, not collapsed, while another
+         column sorts: it keeps its place, so a filter funnel beside it never shifts as the sort moves. -->
     <Style x:Key="SortArrow" TargetType="Path">
         <Setter Property="Fill"              Value="{StaticResource BrushLightCyan}"/>
         <Setter Property="Margin"            Value="6 0 0 0"/>
+        <Setter Property="Width"             Value="10"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
-        <Setter Property="Visibility"        Value="Collapsed"/>
+        <Setter Property="DockPanel.Dock"    Value="Right"/>
+        <Setter Property="Visibility"        Value="Hidden"/>
         <Style.Triggers>
             <DataTrigger Binding="{Binding SortDirection, RelativeSource={RelativeSource AncestorType=DataGridColumnHeader}}"
                          Value="Ascending">
-                <Setter Property="Data"       Value="M0,5 L4,0 L8,5 Z"/>
+                <Setter Property="Data"       Value="M0,6 L5,0 L10,6 Z"/>
                 <Setter Property="Visibility" Value="Visible"/>
             </DataTrigger>
             <DataTrigger Binding="{Binding SortDirection, RelativeSource={RelativeSource AncestorType=DataGridColumnHeader}}"
                          Value="Descending">
-                <Setter Property="Data"       Value="M0,0 L8,0 L4,5 Z"/>
+                <Setter Property="Data"       Value="M0,0 L10,0 L5,6 Z"/>
                 <Setter Property="Visibility" Value="Visible"/>
             </DataTrigger>
         </Style.Triggers>
@@ -272,10 +276,10 @@
     <Style TargetType="DataGridColumnHeader">
         <Style.Resources>
             <DataTemplate DataType="{x:Type sys:String}">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
+                <DockPanel>
                     <Path Style="{StaticResource SortArrow}"/>
-                </StackPanel>
+                    <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
+                </DockPanel>
             </DataTemplate>
         </Style.Resources>
         <Setter Property="Background"  Value="{StaticResource BrushBg3}"/>
@@ -285,7 +289,7 @@
         <Setter Property="Padding"     Value="10 6"/>
         <Setter Property="FontWeight"  Value="SemiBold"/>
         <Setter Property="FontFamily"  Value="Segoe UI"/>
-        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/> <!-- the title left, its icons at the edge -->
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="DataGridColumnHeader">
@@ -340,7 +344,7 @@
                      glyph's text in Segoe UI, which has no funnel -->
                 <ControlTemplate TargetType="ToggleButton">
                     <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="4 3">
-                        <Path Data="M0,0 L10,0 L6,5 L6,10 L4,9 L4,5 Z" Fill="{TemplateBinding Foreground}"
+                        <Path Data="M0,0 L12,0 L7.2,6 L7.2,12 L4.8,10.8 L4.8,6 Z" Fill="{TemplateBinding Foreground}"
                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>

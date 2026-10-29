@@ -17,16 +17,16 @@
     <!-- An Excel-style column filter in a grid header: the title (a click on it still sorts), a funnel that opens
          a checkbox per value with "(Select all)", highlighted while the filter hides rows. Content: a
          ColumnFilterViewModel. The funnel ignores clicks while its list is open, or a click to close it would
-         close and at once reopen it. -->
+         close and at once reopen it. At the header's right edge: the funnel, then the sort arrow (maintainer,
+         2026-10-30); docked right in that order, so the arrow is outermost and the title fills what is left. -->
     <DataTemplate x:Key="ColumnFilterHeader">
-      <StackPanel Orientation="Horizontal">
-        <TextBlock Text="{Binding Title}" VerticalAlignment="Center"/>
+      <DockPanel>
         <Path Style="{StaticResource SortArrow}"/>
-        <ToggleButton x:Name="Funnel" Style="{StaticResource FilterToggle}" Margin="6 0 0 0"
+        <ToggleButton x:Name="Funnel" DockPanel.Dock="Right" Style="{StaticResource FilterToggle}" Margin="6 0 0 0"
                       ToolTip="Filter this column"
                       IsChecked="{Binding IsOpen, ElementName=Popup, Mode=TwoWay}"
                       IsHitTestVisible="{Binding IsOpen, ElementName=Popup, Converter={StaticResource InvBool}}"/>
-        <Popup x:Name="Popup" PlacementTarget="{Binding ElementName=Funnel}" Placement="Bottom"
+        <Popup x:Name="Popup" DockPanel.Dock="Right" PlacementTarget="{Binding ElementName=Funnel}" Placement="Bottom"
                StaysOpen="False" AllowsTransparency="True">
           <Border Background="{StaticResource BrushBg2}" BorderBrush="{StaticResource BrushBorder}"
                   BorderThickness="1" CornerRadius="6" Padding="12 10">
@@ -43,7 +43,8 @@
             </StackPanel>
           </Border>
         </Popup>
-      </StackPanel>
+        <TextBlock Text="{Binding Title}" VerticalAlignment="Center"/>
+      </DockPanel>
       <DataTemplate.Triggers>
         <DataTrigger Binding="{Binding IsActive}" Value="True">
           <Setter TargetName="Funnel" Property="Foreground" Value="{StaticResource BrushLightCyan}"/>
@@ -541,7 +542,7 @@
                 <DataGridTextColumn Binding="{Binding QsrName}" Width="170"
                                     ElementStyle="{StaticResource GridCellText}">
                   <DataGridTextColumn.Header>
-                    <ContentControl ContentTemplate="{StaticResource ColumnFilterHeader}"
+                    <ContentControl ContentTemplate="{StaticResource ColumnFilterHeader}" HorizontalContentAlignment="Stretch"
                                     Content="{Binding Data.RunsFilter.Chain, Source={StaticResource Window}}"/>
                   </DataGridTextColumn.Header>
                 </DataGridTextColumn>
@@ -551,7 +552,7 @@
                 <DataGridTextColumn Binding="{Binding FinishedAt}" Width="*"
                                     ElementStyle="{StaticResource GridCellText}">
                   <DataGridTextColumn.Header>
-                    <ContentControl ContentTemplate="{StaticResource ColumnFilterHeader}"
+                    <ContentControl ContentTemplate="{StaticResource ColumnFilterHeader}" HorizontalContentAlignment="Stretch"
                                     Content="{Binding Data.RunsFilter.State, Source={StaticResource Window}}"/>
                   </DataGridTextColumn.Header>
                 </DataGridTextColumn>
