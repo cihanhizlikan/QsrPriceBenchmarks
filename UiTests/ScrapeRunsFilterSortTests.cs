@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Microsoft.Data.Sqlite;
@@ -10,24 +11,103 @@ using QsrPriceBenchmarks.Core.Models;
 using QsrPriceBenchmarks.Ui;
 using QsrPriceBenchmarks.Ui.ViewModels;
 using Xunit;
+using static QsrPriceBenchmarks.UiTests.VisualTree;
 
 namespace QsrPriceBenchmarks.UiTests;
 
 /// <summary>
 /// The Scrape Runs grid's filtering and ordering (maintainer, 2026-10-29): newest first; a header click re-sorts
-/// and the sort outlives the live reload after every scraped page; Finished sorts by meaning; the state switches
-/// and "only the selected chain" filter the rows. The window is shown, so a header is clicked the way a user does.
+/// and the sort outlives the live reload after every scraped page; Finished sorts by meaning; the Chain and
+/// Finished headers carry Excel-style filters, a funnel opening a checkbox per value. The window is shown, so a
+/// header is clicked the way a user does.
 /// </summary>
 public sealed class ScrapeRunsFilterSortTests
 {
     [Fact]
-    public void Runs_Are_Filtered_And_Sorted_And_The_Sort_Survives_A_Reload()
+    public void Runs_Are_Sorted_And_The_Sort_Survives_A_Reload()
+    {
+        List<long> byDefault = [], snapshotsAfterReload = [], byFinished = [];
+
+        (long crashed, long running) = ShowRuns((window, model) =>
+        {
+            byDefault.AddRange(Shown(model));
+
+            // A header click, as a user makes it, then the reload a scraped page triggers.
+            Click(window, nameof(ScrapeRunViewModel.SnapshotCount));
+            model.NotifyRunsChanged();
+            Pump(() => false, TimeSpan.FromSeconds(1));
+            snapshotsAfterReload.AddRange(Shown(model));
+
+            Click(window, nameof(ScrapeRunViewModel.FinishedAt));
+            byFinished.AddRange(Shown(model));
+        });
+
+        Assert.Equal([running, crashed, 3L, 2L, 1L], byDefault);                     // newest first
+        // Ascending by snapshot count after the reload: the two 0-snapshot runs tie, then 1, 2 and 3 snapshots.
+        Assert.Equal([crashed, running], snapshotsAfterReload.Take(2).Order());
+        Assert.Equal([2L, 3L, 1L], snapshotsAfterReload.Skip(2));
+        Assert.Equal([running, crashed, 1L, 2L, 3L], byFinished);                     // running, unfinished, by time
+    }
+
+    [Fact]
+    public void Runs_Are_Filtered_From_The_Header_Funnels()
+    {
+        List<long> withoutFinished = [], noneTicked = [], arbysOnly = [];
+        List<string> chainChoices = [];
+        bool funnelPressHandled = false, stateFunnelLit = false;
+        bool? allNow = true;
+
+        ShowRuns((window, model) =>
+        {
+            // The Chain header's funnel: pressing it is the funnel's, never the header's (no re-sort), and it
+            // opens a checkbox per chain under "(Select all)".
+            ToggleButton chainFunnel = Funnel(window, nameof(ScrapeRunViewModel.QsrName));
+            string sortBefore = SortOf(model);
+            MouseButtonEventArgs press = new(Mouse.PrimaryDevice, 0, MouseButton.Left)
+            {
+                RoutedEvent = UIElement.MouseLeftButtonDownEvent,
+            };
+            chainFunnel.RaiseEvent(press);
+            funnelPressHandled = press.Handled && SortOf(model) == sortBefore;
+            chainFunnel.IsChecked = true;
+            Pump(() => false, TimeSpan.FromMilliseconds(300));
+            chainChoices.AddRange(PopupChoices(chainFunnel));
+            chainFunnel.IsChecked = false;
+
+            // The Finished header's filter: untick Finished.
+            Option(model.RunsFilter.State, nameof(RunState.Finished)).IsSelected = false;
+            withoutFinished.AddRange(Shown(model));
+            stateFunnelLit = model.RunsFilter.State.IsActive;
+            model.RunsFilter.State.AllSelected = true;
+
+            // The Chain header's filter: "(Select all)" off, then one chain ticked.
+            model.RunsFilter.Chain.AllSelected = false;
+            noneTicked.AddRange(Shown(model));
+            Option(model.RunsFilter.Chain, "Arby's").IsSelected = true;
+            arbysOnly.AddRange(Shown(model));
+            allNow = model.RunsFilter.Chain.AllSelected;
+        });
+
+        Assert.DoesNotContain(1L, withoutFinished);
+        Assert.Equal(2, withoutFinished.Count);
+        Assert.True(stateFunnelLit, "the Finished funnel must show while it hides rows");
+        Assert.Empty(noneTicked);
+        Assert.Equal([1L, 2L], arbysOnly.Order());
+        Assert.Null(allNow); // "(Select all)" is mixed with one chain of seven ticked
+        Assert.True(funnelPressHandled, "a press on the funnel must be the funnel's, not a header click that sorts");
+        Assert.Equal(["(Select all)", .. ChainRegistry.All.Select(c => c.Name).Order(StringComparer.CurrentCulture)],
+            chainChoices);
+    }
+
+    /// <summary>
+    /// Seeds a throwaway database with three finished runs (ids 1–3: Arby's ×2, Burger King), a crashed one and a
+    /// running one, shows the window on its Scrape Runs tab, and runs <paramref name="act"/> on the WPF thread.
+    /// </summary>
+    private static (long Crashed, long Running) ShowRuns(Action<MainWindow, MainViewModel> act)
     {
         UserDatabaseFile userDatabaseBefore = UserDatabaseFile.State();
         long crashed = 0, running = 0;
         RunLock? live = null;
-        List<long> byDefault = [], snapshotsAfterReload = [], byFinished = [], withoutFinished = [], arbysOnly = [];
-        List<long> burgerKingOnly = [];
 
         using (ThrowawayDatabase throwaway = new(conn =>
         {
@@ -57,44 +137,15 @@ public sealed class ScrapeRunsFilterSortTests
                 window.Show();
                 Pump(() => model.Runs.Count == 5);
                 ((TabItem)window.FindName("ScrapeRunsTab")).IsSelected = true;
-                Pump(() => Descendants<DataGridColumnHeader>(window).Any(h => Equals(h.Content, "Snapshots")));
-
-                byDefault.AddRange(Shown(model));
-
-                // A header click, as a user makes it, then the reload a scraped page triggers.
-                Click(window, "Snapshots");
-                model.NotifyRunsChanged();
-                Pump(() => false, TimeSpan.FromSeconds(1));
-                snapshotsAfterReload.AddRange(Shown(model));
-
-                Click(window, "Finished");
-                byFinished.AddRange(Shown(model));
-
-                model.RunsFilter.ShowFinished = false;
-                withoutFinished.AddRange(Shown(model));
-                model.RunsFilter.ShowFinished = true;
-
-                model.RunsFilter.OnlySelectedChain = true;
-                model.SelectedChain = model.Chains.First(c => c.Name == "Arby's");
-                arbysOnly.AddRange(Shown(model));
-                model.SelectedChain = model.Chains.First(c => c.Name == "Burger King");
-                burgerKingOnly.AddRange(Shown(model));
-
+                Pump(() => Descendants<DataGridColumnHeader>(window).Any(h => h.Column?.SortMemberPath == nameof(ScrapeRunViewModel.SnapshotCount)));
+                act(window, model);
                 window.Close();
             });
             live?.Dispose();
         }
 
-        Assert.Equal([running, crashed, 3L, 2L, 1L], byDefault);                     // newest first
-        // Ascending by snapshot count after the reload: the two 0-snapshot runs tie, then 1, 2 and 3 snapshots.
-        Assert.Equal([crashed, running], snapshotsAfterReload.Take(2).Order());
-        Assert.Equal([2L, 3L, 1L], snapshotsAfterReload.Skip(2));
-        Assert.Equal([running, crashed, 1L, 2L, 3L], byFinished);                     // running, unfinished, by time
-        Assert.DoesNotContain(1L, withoutFinished);
-        Assert.Equal(2, withoutFinished.Count);
-        Assert.Equal([1L, 2L], arbysOnly.Order());
-        Assert.Equal([3L], burgerKingOnly);                                           // follows the sidebar
         Assert.Equal(userDatabaseBefore, UserDatabaseFile.State());
+        return (crashed, running);
     }
 
     private static List<long> Shown(MainViewModel model)
@@ -103,31 +154,43 @@ public sealed class ScrapeRunsFilterSortTests
     }
 
     /// <summary>
-    /// Clicks a column header: a header is a button, and a mouse click reaches the sort through its OnClick, which
-    /// is called here (its automation peer offers no Invoke).
+    /// Clicks the header of the column bound to <paramref name="property"/>: a header is a button, and a mouse
+    /// click reaches the sort through its OnClick, which is called here (its automation peer offers no Invoke).
     /// </summary>
-    private static void Click(Window window, string header)
+    private static void Click(Window window, string property)
     {
-        DataGridColumnHeader target = Descendants<DataGridColumnHeader>(window).First(h => Equals(h.Content, header));
         typeof(ButtonBase).GetMethod("OnClick", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
-            .Invoke(target, null);
+            .Invoke(Header(window, property), null);
         Pump(() => false, TimeSpan.FromMilliseconds(300));
     }
 
-    private static IEnumerable<T> Descendants<T>(DependencyObject root) where T : DependencyObject
+    private static DataGridColumnHeader Header(Window window, string property)
     {
-        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
-        {
-            DependencyObject child = VisualTreeHelper.GetChild(root, i);
-            if (child is T match)
-            {
-                yield return match;
-            }
-            foreach (T deeper in Descendants<T>(child))
-            {
-                yield return deeper;
-            }
-        }
+        return Descendants<DataGridColumnHeader>(window).First(h => h.Column?.SortMemberPath == property);
+    }
+
+    /// <summary>The filter funnel in the header of the column bound to <paramref name="property"/>.</summary>
+    private static ToggleButton Funnel(Window window, string property)
+    {
+        return Descendants<ToggleButton>(Header(window, property)).Single();
+    }
+
+    /// <summary>The checkbox labels the funnel's open popup shows, in order.</summary>
+    private static List<string> PopupChoices(ToggleButton funnel)
+    {
+        Popup popup = Descendants<Popup>(VisualTreeHelper.GetParent(funnel)).Single();
+        return [.. Descendants<CheckBox>(popup.Child).Select(c => c.Content?.ToString() ?? "")];
+    }
+
+    private static FilterOptionViewModel Option(ColumnFilterViewModel filter, string value)
+    {
+        return filter.Options.Single(o => o.Value == value);
+    }
+
+    /// <summary>The view's current sort, as text, to tell whether something re-sorted it.</summary>
+    private static string SortOf(MainViewModel model)
+    {
+        return string.Join(",", model.RunsFilter.View.SortDescriptions.Select(s => $"{s.PropertyName} {s.Direction}"));
     }
 
     /// <summary>A finished run of <paramref name="chain"/> with <paramref name="snapshots"/> prices recorded.</summary>

@@ -265,6 +265,33 @@
         <Setter Property="Width" Value="8"/>
     </Style>
 
+    <!-- Column filter funnel (Scrape Runs headers): dim until hovered, highlighted while its filter hides rows -->
+    <Style x:Key="FilterToggle" TargetType="ToggleButton">
+        <Setter Property="Foreground" Value="{StaticResource BrushTextDim}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Cursor"     Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <!-- A drawn funnel, not an icon-font glyph: the implicit TextBlock style above would set the
+                     glyph's text in Segoe UI, which has no funnel -->
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="4 3">
+                        <Path Data="M0,0 L10,0 L6,5 L6,10 L4,9 L4,5 Z" Fill="{TemplateBinding Foreground}"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource BrushLightCyan}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource BrushLightCyan}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- CheckBox -->
     <Style TargetType="CheckBox">
         <Setter Property="Foreground"  Value="{StaticResource BrushText}"/>
