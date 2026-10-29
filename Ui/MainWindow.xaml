@@ -475,19 +475,34 @@
               <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Toolbar -->
-            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0 0 0 12">
-              <Button Content="📁  Open Folder" Padding="14 8"
-                      Command="{Binding OpenFolderCommand}" Margin="0 0 12 0"/>
-              <Border Width="1" Height="22" Background="{StaticResource BrushBorder}" Margin="0 0 12 0"/>
-              <TextBlock Text="Delete all before run ID:" VerticalAlignment="Center"
-                         Foreground="{StaticResource BrushTextDim}" Margin="0 0 6 0"/>
-              <TextBox Width="70"
-                       Text="{Binding DeleteBeforeId, UpdateSourceTrigger=PropertyChanged}"
-                       IsEnabled="{Binding IsAnyRunning, Converter={StaticResource InvBool}}"/>
-              <Button Content="Delete Before" Style="{StaticResource ButtonDanger}"
-                      Command="{Binding DeleteBeforeIdCommand}"
-                      Margin="6 0 0 0" Padding="14 8"/>
+            <!-- Toolbar: actions, then the filters on a row of their own -->
+            <StackPanel Grid.Row="0" Margin="0 0 0 12">
+              <StackPanel Orientation="Horizontal">
+                <Button Content="📁  Open Folder" Padding="14 8"
+                        Command="{Binding OpenFolderCommand}" Margin="0 0 12 0"/>
+                <Border Width="1" Height="22" Background="{StaticResource BrushBorder}" Margin="0 0 12 0"/>
+                <TextBlock Text="Delete all before run ID:" VerticalAlignment="Center"
+                           Foreground="{StaticResource BrushTextDim}" Margin="0 0 6 0"/>
+                <TextBox Width="70"
+                         Text="{Binding DeleteBeforeId, UpdateSourceTrigger=PropertyChanged}"
+                         IsEnabled="{Binding IsAnyRunning, Converter={StaticResource InvBool}}"/>
+                <Button Content="Delete Before" Style="{StaticResource ButtonDanger}"
+                        Command="{Binding DeleteBeforeIdCommand}"
+                        Margin="6 0 0 0" Padding="14 8"/>
+              </StackPanel>
+              <!-- Filters: the sidebar's chain, and which states to show. Newest first; a header click re-sorts. -->
+              <StackPanel Orientation="Horizontal" Margin="0 10 0 0">
+                <CheckBox Content="Only the selected chain" VerticalAlignment="Center" Margin="0 0 20 0"
+                          IsChecked="{Binding RunsFilter.OnlySelectedChain}"/>
+                <TextBlock Text="Show:" VerticalAlignment="Center"
+                           Foreground="{StaticResource BrushTextDim}" Margin="0 0 8 0"/>
+                <CheckBox Content="Running" VerticalAlignment="Center" Margin="0 0 12 0"
+                          IsChecked="{Binding RunsFilter.ShowRunning}"/>
+                <CheckBox Content="Unfinished" VerticalAlignment="Center" Margin="0 0 12 0"
+                          IsChecked="{Binding RunsFilter.ShowUnfinished}"/>
+                <CheckBox Content="Finished" VerticalAlignment="Center"
+                          IsChecked="{Binding RunsFilter.ShowFinished}"/>
+              </StackPanel>
             </StackPanel>
 
             <!-- Runs grid -->
