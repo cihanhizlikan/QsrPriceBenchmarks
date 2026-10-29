@@ -12,6 +12,44 @@
     <cv:BoolToVisibilityConverter x:Key="InvVis"  WhenTrue="Collapsed" WhenFalse="Visible"/>
     <cv:InverseBoolConverter      x:Key="InvBool"/>
     <cv:NullToVisibilityConverter x:Key="NullVis"/>
+    <local:BindingProxy           x:Key="Window" Data="{Binding}"/>
+
+    <!-- An Excel-style column filter in a grid header: the title (a click on it still sorts), a funnel that opens
+         a checkbox per value with "(Select all)", highlighted while the filter hides rows. Content: a
+         ColumnFilterViewModel. The funnel ignores clicks while its list is open, or a click to close it would
+         close and at once reopen it. -->
+    <DataTemplate x:Key="ColumnFilterHeader">
+      <StackPanel Orientation="Horizontal">
+        <TextBlock Text="{Binding Title}" VerticalAlignment="Center"/>
+        <ToggleButton x:Name="Funnel" Style="{StaticResource FilterToggle}" Margin="6 0 0 0"
+                      ToolTip="Filter this column"
+                      IsChecked="{Binding IsOpen, ElementName=Popup, Mode=TwoWay}"
+                      IsHitTestVisible="{Binding IsOpen, ElementName=Popup, Converter={StaticResource InvBool}}"/>
+        <Popup x:Name="Popup" PlacementTarget="{Binding ElementName=Funnel}" Placement="Bottom"
+               StaysOpen="False" AllowsTransparency="True">
+          <Border Background="{StaticResource BrushBg2}" BorderBrush="{StaticResource BrushBorder}"
+                  BorderThickness="1" CornerRadius="6" Padding="12 10">
+            <StackPanel MinWidth="170">
+              <CheckBox Content="(Select all)" IsChecked="{Binding AllSelected}" Margin="0 0 0 6"/>
+              <Border Height="1" Background="{StaticResource BrushBorder}" Margin="0 2 0 4"/>
+              <ItemsControl ItemsSource="{Binding Options}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <CheckBox Content="{Binding Value}" IsChecked="{Binding IsSelected}" Margin="0 4 0 0"/>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+        </Popup>
+      </StackPanel>
+      <DataTemplate.Triggers>
+        <DataTrigger Binding="{Binding IsActive}" Value="True">
+          <Setter TargetName="Funnel" Property="Foreground" Value="{StaticResource BrushLightCyan}"/>
+          <Setter TargetName="Funnel" Property="Background" Value="{StaticResource BrushAccentBg}"/>
+        </DataTrigger>
+      </DataTemplate.Triggers>
+    </DataTemplate>
 
     <!-- App logo: three ascending "benchmark" bars in light + dim cyan -->
     <DrawingImage x:Key="AppLogo">
@@ -475,34 +513,19 @@
               <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Toolbar: actions, then the filters on a row of their own -->
-            <StackPanel Grid.Row="0" Margin="0 0 0 12">
-              <StackPanel Orientation="Horizontal">
-                <Button Content="📁  Open Folder" Padding="14 8"
-                        Command="{Binding OpenFolderCommand}" Margin="0 0 12 0"/>
-                <Border Width="1" Height="22" Background="{StaticResource BrushBorder}" Margin="0 0 12 0"/>
-                <TextBlock Text="Delete all before run ID:" VerticalAlignment="Center"
-                           Foreground="{StaticResource BrushTextDim}" Margin="0 0 6 0"/>
-                <TextBox Width="70"
-                         Text="{Binding DeleteBeforeId, UpdateSourceTrigger=PropertyChanged}"
-                         IsEnabled="{Binding IsAnyRunning, Converter={StaticResource InvBool}}"/>
-                <Button Content="Delete Before" Style="{StaticResource ButtonDanger}"
-                        Command="{Binding DeleteBeforeIdCommand}"
-                        Margin="6 0 0 0" Padding="14 8"/>
-              </StackPanel>
-              <!-- Filters: the sidebar's chain, and which states to show. Newest first; a header click re-sorts. -->
-              <StackPanel Orientation="Horizontal" Margin="0 10 0 0">
-                <CheckBox Content="Only the selected chain" VerticalAlignment="Center" Margin="0 0 20 0"
-                          IsChecked="{Binding RunsFilter.OnlySelectedChain}"/>
-                <TextBlock Text="Show:" VerticalAlignment="Center"
-                           Foreground="{StaticResource BrushTextDim}" Margin="0 0 8 0"/>
-                <CheckBox Content="Running" VerticalAlignment="Center" Margin="0 0 12 0"
-                          IsChecked="{Binding RunsFilter.ShowRunning}"/>
-                <CheckBox Content="Unfinished" VerticalAlignment="Center" Margin="0 0 12 0"
-                          IsChecked="{Binding RunsFilter.ShowUnfinished}"/>
-                <CheckBox Content="Finished" VerticalAlignment="Center"
-                          IsChecked="{Binding RunsFilter.ShowFinished}"/>
-              </StackPanel>
+            <!-- Toolbar. The filters live in the Chain and Finished headers. -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0 0 0 12">
+              <Button Content="📁  Open Folder" Padding="14 8"
+                      Command="{Binding OpenFolderCommand}" Margin="0 0 12 0"/>
+              <Border Width="1" Height="22" Background="{StaticResource BrushBorder}" Margin="0 0 12 0"/>
+              <TextBlock Text="Delete all before run ID:" VerticalAlignment="Center"
+                         Foreground="{StaticResource BrushTextDim}" Margin="0 0 6 0"/>
+              <TextBox Width="70"
+                       Text="{Binding DeleteBeforeId, UpdateSourceTrigger=PropertyChanged}"
+                       IsEnabled="{Binding IsAnyRunning, Converter={StaticResource InvBool}}"/>
+              <Button Content="Delete Before" Style="{StaticResource ButtonDanger}"
+                      Command="{Binding DeleteBeforeIdCommand}"
+                      Margin="6 0 0 0" Padding="14 8"/>
             </StackPanel>
 
             <!-- Runs grid -->
@@ -513,15 +536,23 @@
                 <DataGridTextColumn Header="ID"
                                     Binding="{Binding Id}" Width="60"
                                     ElementStyle="{StaticResource GridCellText}"/>
-                <DataGridTextColumn Header="Chain"
-                                    Binding="{Binding QsrName}" Width="150"
-                                    ElementStyle="{StaticResource GridCellText}"/>
+                <DataGridTextColumn Binding="{Binding QsrName}" Width="170"
+                                    ElementStyle="{StaticResource GridCellText}">
+                  <DataGridTextColumn.Header>
+                    <ContentControl ContentTemplate="{StaticResource ColumnFilterHeader}"
+                                    Content="{Binding Data.RunsFilter.Chain, Source={StaticResource Window}}"/>
+                  </DataGridTextColumn.Header>
+                </DataGridTextColumn>
                 <DataGridTextColumn Header="Started"
                                     Binding="{Binding StartedAt}" Width="*"
                                     ElementStyle="{StaticResource GridCellText}"/>
-                <DataGridTextColumn Header="Finished"
-                                    Binding="{Binding FinishedAt}" Width="*"
-                                    ElementStyle="{StaticResource GridCellText}"/>
+                <DataGridTextColumn Binding="{Binding FinishedAt}" Width="*"
+                                    ElementStyle="{StaticResource GridCellText}">
+                  <DataGridTextColumn.Header>
+                    <ContentControl ContentTemplate="{StaticResource ColumnFilterHeader}"
+                                    Content="{Binding Data.RunsFilter.State, Source={StaticResource Window}}"/>
+                  </DataGridTextColumn.Header>
+                </DataGridTextColumn>
                 <DataGridTextColumn Header="Snapshots"
                                     Binding="{Binding SnapshotCount, StringFormat=N0}" Width="100"
                                     ElementStyle="{StaticResource GridCellText}"/>

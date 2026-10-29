@@ -227,7 +227,7 @@ public sealed class MainViewModel : ViewModelBase
             return _selected;
         }
 
-        set { Set(ref _selected, value); Notify(nameof(SelectedSession)); _ = RebuildScrapeTabsAsync(SelectedSession); RelayCommand.RaiseRequery(); _ = RebuildMapAsync(); RunsFilter.OnSelectedChainChanged(); }
+        set { Set(ref _selected, value); Notify(nameof(SelectedSession)); _ = RebuildScrapeTabsAsync(SelectedSession); RelayCommand.RaiseRequery(); _ = RebuildMapAsync(); }
     }
 
     private bool _isExporting;
@@ -393,8 +393,6 @@ public sealed class MainViewModel : ViewModelBase
         DeleteBeforeIdCommand = new AsyncRelayCommand(_ => DeleteBeforeIdAsync(), _ => !IsAnyRunning && !IsExporting);
         OpenFolderCommand = new RelayCommand(_ => OpenFolder());
 
-        RunsFilter = new RunsFilterViewModel(Runs, () => SelectedChain?.Name);
-
         // Seed the chain list from the registry, sorted alphabetically by name, each with its own session.
         foreach (ChainConfig chain in ChainRegistry.All.OrderBy(c => c.Name, StringComparer.CurrentCulture))
         {
@@ -410,6 +408,9 @@ public sealed class MainViewModel : ViewModelBase
             _sessions[chain.Name] = session;
             Chains.Add(new ChainViewModel(chain, session));
         }
+
+        // After the chains: the Chain filter offers them in the sidebar's order.
+        RunsFilter = new RunsFilterViewModel(Runs, Chains.Select(c => c.Name));
     }
 
     // ── Initialisation (call after window loads — needs DB open) ──────────────

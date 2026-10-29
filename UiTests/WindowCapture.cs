@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -128,6 +129,7 @@ public sealed class WindowCapture(ITestOutputHelper output)
         Select(window, "ScrapeRunsTab");
         Settle(window, () => model.Runs.Count > 0);
         written.Add(Save(window, into, "scrape-runs.png"));
+        written.AddRange(SaveFilter(window, model.RunsFilter.State, into));
 
         // The app's message box, both kinds it shows: a delete confirmation and an
         // error, worded as MainViewModel words them.
@@ -141,6 +143,28 @@ public sealed class WindowCapture(ITestOutputHelper output)
         model.CancelAllRuns(); // closing with runs going would ask first
         Settle(window, () => !model.IsAnyRunning);
         window.Close();
+    }
+
+    /// <summary>
+    /// The Finished header's filter open with Finished unticked: the funnel lit, and its list. The list is a popup —
+    /// a window of its own that the main window's picture does not hold — so it is saved apart.
+    /// </summary>
+    private static IEnumerable<string> SaveFilter(Window window, ColumnFilterViewModel filter, string into)
+    {
+        filter.Options.Single(o => o.Value == nameof(RunState.Finished)).IsSelected = false;
+        DataGridColumnHeader header = VisualTree.Descendants<DataGridColumnHeader>(window)
+            .First(h => h.Column?.SortMemberPath == nameof(ScrapeRunViewModel.FinishedAt));
+        ToggleButton funnel = VisualTree.Descendants<ToggleButton>(header).Single();
+        funnel.IsChecked = true;
+        Settle(window, () => true);
+        string filtered = Save(window, into, "scrape-runs-filtered.png");
+        Popup popup = VisualTree.Descendants<Popup>(VisualTreeHelper.GetParent(funnel)).Single();
+        FrameworkElement list = popup.Child as FrameworkElement
+            ?? throw new InvalidOperationException("The filter popup's content is not a FrameworkElement.");
+        string listed = Save(list, window.Background, into, "scrape-runs-filter-list.png");
+        funnel.IsChecked = false;
+        filter.AllSelected = true;
+        return [filtered, listed];
     }
 
     private static string SaveDialog(Window owner, string into, string file, ThemedMessageBox dialog)
@@ -217,6 +241,11 @@ public sealed class WindowCapture(ITestOutputHelper output)
         // sizing from them left a blank band along the bottom of every image.
         FrameworkElement content = window.Content as FrameworkElement
             ?? throw new InvalidOperationException("MainWindow's content is not a FrameworkElement.");
+        return Save(content, window.Background, into, file);
+    }
+
+    private static string Save(FrameworkElement content, Brush? background, string into, string file)
+    {
         int width = (int)Math.Ceiling(content.ActualWidth);
         int height = (int)Math.Ceiling(content.ActualHeight);
         RenderTargetBitmap bitmap = new(width, height, 96, 96, PixelFormats.Pbgra32);
@@ -224,7 +253,7 @@ public sealed class WindowCapture(ITestOutputHelper output)
         DrawingVisual ground = new();
         using (DrawingContext context = ground.RenderOpen())
         {
-            context.DrawRectangle(window.Background ?? Brushes.Black, null, new Rect(0, 0, width, height));
+            context.DrawRectangle(background ?? Brushes.Black, null, new Rect(0, 0, width, height));
         }
         bitmap.Render(ground);
         bitmap.Render(content);
