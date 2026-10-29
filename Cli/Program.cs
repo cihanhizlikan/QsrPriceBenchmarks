@@ -8,7 +8,25 @@ namespace QsrPriceBenchmarks.Cli;
 
 internal static class Program
 {
+    /// <summary>
+    /// The one boundary for a failure nothing below expected — an export folder that cannot be created, a database
+    /// locked past the busy timeout during a maintenance command: a command line gets the reason and exit code 1,
+    /// never a stack trace. Measured 2026-10-29: `--export` with a file where the output folder goes crashed.
+    /// </summary>
     private static async Task<int> Main(string[] args)
+    {
+        try
+        {
+            return await RunAsync(args);
+        }
+        catch (Exception unexpected) when (unexpected is not OperationCanceledException)
+        {
+            Console.Error.WriteLine($"error: {unexpected.Message}");
+            return 1;
+        }
+    }
+
+    private static async Task<int> RunAsync(string[] args)
     {
         // Colour output matches the Python prototype exactly via ConsoleColouriser.
         // Disable colour when stdout is redirected (mirrors Python's os.isatty(1)).

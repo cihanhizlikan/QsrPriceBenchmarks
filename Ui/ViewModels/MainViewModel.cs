@@ -47,6 +47,11 @@ public sealed class MainViewModel : ViewModelBase
     private ChainViewModel? _selected;
     private string _deleteBeforeId = "";
 
+    // Why the current database cannot be used as it is (an older version's file the user kept, another program's
+    // file), or null. The readers — tab lists, map, runs list — check it instead of opening the file to be refused
+    // again: after a "No" to the set-aside question each of them did, on every refresh (maintainer, 2026-10-29).
+    private DatabaseProblem? _databaseProblem;
+
     // Export runs on its own cancellation source, independent of a pipeline run.
     private CancellationTokenSource? _exportCts;
     private int _exportDone;
@@ -113,7 +118,7 @@ public sealed class MainViewModel : ViewModelBase
             return _dbPath;
         }
 
-        set { Set(ref _dbPath, value); ReloadRunsCommand.Execute(null); _ = RebuildMapAsync(); foreach (ChainSessionViewModel s in _sessions.Values) { _ = RebuildScrapeTabsAsync(s); } }
+        set { Set(ref _dbPath, value); RecheckDatabase(); ReloadRunsCommand.Execute(null); _ = RebuildMapAsync(); foreach (ChainSessionViewModel s in _sessions.Values) { _ = RebuildScrapeTabsAsync(s); } }
     }
 
     /// <summary>
@@ -129,6 +134,12 @@ public sealed class MainViewModel : ViewModelBase
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "QsrPriceBenchmarks");
         return Path.Combine(dir, "QsrPriceBenchmarks.sqlite");
+    }
+
+    /// <summary>Re-reads whether the current database can be used as it is (never throws, writes nothing).</summary>
+    private void RecheckDatabase()
+    {
+        _databaseProblem = Database.ValidateFile(DbPath);
     }
 
     /// <summary>
@@ -164,12 +175,11 @@ public sealed class MainViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Asks whether an older version's database may be set aside. Replaceable so UI tests can answer it without
-    /// a modal dialog; the app always asks through the themed message box.
+    /// Every dialog this view model shows — questions and failures alike. Replaceable so UI tests can answer and
+    /// read them without a modal window; the app always shows the themed message box.
     /// </summary>
-    internal Func<string, bool> ConfirmSetAside { get; set; } = question =>
-        ThemedMessageBox.Show(question, "Older database", MessageBoxButton.YesNo, MessageBoxImage.Warning)
-            == MessageBoxResult.Yes;
+    internal Func<string, string, MessageBoxButton, MessageBoxImage, MessageBoxResult> ShowMessage { get; set; } =
+        ThemedMessageBox.Show;
 
     /// <summary>
     /// The one way an older version's database is replaced: the user is asked, and on Yes the file is renamed
@@ -181,7 +191,7 @@ public sealed class MainViewModel : ViewModelBase
         string question =
             $"{reason}\n\nStart a new, empty database here? The old file is kept beside it, renamed, and can " +
             "still be opened by the version that made it.";
-        if (!ConfirmSetAside(question))
+        if (ShowMessage(question, "Older database", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
         {
             Log($"  ⚠ {reason}");
             Log("    Choose another database with Browse, or restart to be asked again.");
@@ -191,6 +201,10 @@ public sealed class MainViewModel : ViewModelBase
         try
         {
             string aside = Database.SetAside(path, fileVersion);
+            if (string.Equals(Path.GetFullPath(DbPath), path, StringComparison.OrdinalIgnoreCase))
+            {
+                RecheckDatabase(); // the path now holds no file: usable again
+            }
             Log($"  ✓ The older database was kept as '{aside}'; a new one starts at '{path}'.");
             return true;
         }
@@ -310,6 +324,11 @@ public sealed class MainViewModel : ViewModelBase
         {
             return;
         }
+        if (_databaseProblem is not null)
+        {
+            session.SetTabs([]); // a refused file is never opened
+            return;
+        }
 
         ChainConfig chain = session.Chain;
         string dbPath = DbPath;
@@ -395,6 +414,7 @@ public sealed class MainViewModel : ViewModelBase
         {
             OfferFreshDatabase(Path.GetFullPath(DbPath), older, problem.Message);
         }
+        RecheckDatabase();
 
         // Start with the sidebar's first chain selected: with none, Run is
         // disabled, the tab list and the map are empty, and nothing on screen
@@ -621,6 +641,7 @@ public sealed class MainViewModel : ViewModelBase
         // blank until the user reselects the chain. The latest request wins
         // regardless of completion order.
         int generation = System.Threading.Interlocked.Increment(ref _mapRebuildGeneration);
+        bool usable = _databaseProblem is null; // a refused file is never opened
 
         return Task.Run(() =>
         {
@@ -628,7 +649,7 @@ public sealed class MainViewModel : ViewModelBase
             Dictionary<string, (int Total, List<string> Districts)> byProvince = [];
             int locationTotal = 0;
 
-            if (chainName is not null && (File.Exists(dbPath) || dbPath.StartsWith(':')))
+            if (chainName is not null && usable && (File.Exists(dbPath) || dbPath.StartsWith(':')))
             {
                 try
                 {
@@ -758,6 +779,12 @@ public sealed class MainViewModel : ViewModelBase
     {
         return Task.Run(() =>
     {
+        if (_databaseProblem is not null)
+        {
+            // A refused file is never opened; its runs, or another file's, must not stay on screen.
+            Application.Current.Dispatcher.Invoke(Runs.Clear);
+            return;
+        }
         if (!File.Exists(DbPath) && !DbPath.StartsWith(':'))
         {
             return;
@@ -848,7 +875,7 @@ public sealed class MainViewModel : ViewModelBase
         catch (Exception ex)
         {
             // Surface failures here (not in the Run Pipeline log, which belongs to runs).
-            ThemedMessageBox.Show($"Export failed:\n\n{ex.Message}",
+            ShowMessage($"Export failed:\n\n{ex.Message}",
                 "Export", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
@@ -878,7 +905,7 @@ public sealed class MainViewModel : ViewModelBase
         {
             return;
         }
-        MessageBoxResult result = ThemedMessageBox.Show(
+        MessageBoxResult result = ShowMessage(
             $"Delete run {vm.Id} ({vm.QsrName}, {vm.StartedAt}) and {vm.SnapshotCount:N0} snapshot(s)?",
             "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Warning);
         if (result != MessageBoxResult.Yes)
@@ -898,7 +925,7 @@ public sealed class MainViewModel : ViewModelBase
         {
             // Can happen if a concurrent scrape held the write lock past the
             // busy_timeout. Surface it rather than letting it crash the app.
-            ThemedMessageBox.Show($"Delete failed:\n\n{ex.Message}",
+            ShowMessage($"Delete failed:\n\n{ex.Message}",
                 "Delete", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         await ReloadRunsAsync();
@@ -910,7 +937,7 @@ public sealed class MainViewModel : ViewModelBase
         {
             return;
         }
-        MessageBoxResult result = ThemedMessageBox.Show(
+        MessageBoxResult result = ShowMessage(
             $"Delete all scrape runs with ID < {id} and their snapshots?",
             "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Warning);
         if (result != MessageBoxResult.Yes)
@@ -918,12 +945,21 @@ public sealed class MainViewModel : ViewModelBase
             return;
         }
 
-        await Task.Run(() =>
+        try
         {
-            using SqliteConnection conn = Database.Open(DbPath);
-            Repository.DeleteScrapeRunsBefore(conn, id);
-        });
-        DeleteBeforeId = "";
+            await Task.Run(() =>
+            {
+                using SqliteConnection conn = Database.Open(DbPath);
+                Repository.DeleteScrapeRunsBefore(conn, id);
+            });
+            DeleteBeforeId = "";
+        }
+        catch (Exception ex) when (ex is SqliteException or InvalidOperationException or IOException)
+        {
+            // A refused database (an older version's, another program's) or one locked past the busy timeout.
+            // This had no catch: the failure reached the app's last-resort handler as "an unexpected error".
+            ShowMessage($"Delete failed:\n\n{ex.Message}", "Delete", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
         await ReloadRunsAsync();
     }
 
@@ -988,7 +1024,7 @@ public sealed class MainViewModel : ViewModelBase
         }
         else if (problem is not null)
         {
-            ThemedMessageBox.Show(
+            ShowMessage(
                 $"Cannot use '{chosen}'.\n\n{problem.Message}",
                 "Database", MessageBoxButton.OK, MessageBoxImage.Error);
             return;
