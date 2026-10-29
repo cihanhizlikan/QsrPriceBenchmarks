@@ -4,6 +4,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.Playwright;
 using QsrPriceBenchmarks.Core.Db;
 using QsrPriceBenchmarks.Core.Models;
+using QsrPriceBenchmarks.Core.Services;
 
 namespace QsrPriceBenchmarks.Core.Scraping;
 
@@ -38,8 +39,12 @@ public static class TgScraper
         IProgress<string>? progress = null, CancellationToken ct = default,
         IReadOnlyCollection<string>? tabFilter = null,
         long? resumeRunId = null,
-        IProgress<long>? onRunChanged = null)
+        IProgress<long>? onRunChanged = null,
+        IProgress<StepProgress>? progressCount = null,
+        RequestGate? gate = null)
     {
+        // Every request to Tıkla Gelsin takes a turn: other chains scraping at the same time share the site.
+        gate ??= RequestGate.Unlimited;
         long qsrId = Repository.QsrId(conn, chain.Name);
         string platformName = chain.PrimaryPlatform; // single platform today: "Tıkla Gelsin"
         long platformId = Repository.PlatformId(conn, platformName);
@@ -52,7 +57,10 @@ public static class TgScraper
             : RunLock.TryAcquire(conn, resumeRunId.Value) ?? throw new InvalidOperationException(
                 $"Scrape run {resumeRunId} is being scraped in another window right now — it cannot be resumed here.");
 
-        await HarvestSitemapSlugsAsync(chain, conn, qsrId, platformId, platformSlug, progress);
+        using (await gate.TakeTurnAsync(RequestScheduler.TiklaGelsin, ct))
+        {
+            await HarvestSitemapSlugsAsync(chain, conn, qsrId, platformId, platformSlug, progress);
+        }
 
         (HashSet<string> excludedTabs, HashSet<string> knownTabs) =
             ResolveTabs(conn, qsrId, platformId, tabFilter, progress);
@@ -85,10 +93,14 @@ public static class TgScraper
             {
                 (long plId, string slug) = queue[i];
                 progress?.Report($"  [{i + 1}/{queue.Count}] {slug}");
+                progressCount?.Report(new StepProgress("Scraping prices", i, queue.Count));
 
                 ct.ThrowIfCancellationRequested();
-                TgPageData pageData = await ScrapeOnePageWithRetryAsync(
-                    page, platformSlug, slug, excludedTabs, progress, ct);
+                TgPageData pageData;
+                using (await gate.TakeTurnAsync(RequestScheduler.TiklaGelsin, ct))
+                {
+                    pageData = await ScrapeOnePageWithRetryAsync(page, platformSlug, slug, excludedTabs, progress, ct);
+                }
 
                 if (IsTechnicalFailure(pageData))
                 {
@@ -99,6 +111,8 @@ public static class TgScraper
                 RecordPage(conn, qsrId, runId, plId, pageData, progress);
                 onRunChanged?.Report(runId);
             }
+
+            progressCount?.Report(new StepProgress("Scraping prices", queue.Count, queue.Count));
 
             // Disable (never delete) every known tab no page READ in this run showed. This line is inside the
             // try, so a cancelled or failed run never reaches it. Pages that could not be read are not waited

@@ -53,13 +53,13 @@
                 UseLayoutRounding="True" SnapsToDevicePixels="True">
             <!-- Static logo when idle -->
             <Image Source="{StaticResource AppLogo}" Width="22" Height="22"
-                   Visibility="{Binding IsRunning, Converter={StaticResource InvVis}}"/>
+                   Visibility="{Binding IsAnyRunning, Converter={StaticResource InvVis}}"/>
             <!-- Animated cyan equalizer bars while a step is running. Shown by
                  toggling visibility against the logo (no opaque cover) so there's
                  no seam, and sized to the full 22×22 logo footprint. -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
                         VerticalAlignment="Bottom"
-                        Visibility="{Binding IsRunning, Converter={StaticResource BoolVis}}">
+                        Visibility="{Binding IsAnyRunning, Converter={StaticResource BoolVis}}">
               <StackPanel.Triggers>
                 <EventTrigger RoutedEvent="Loaded">
                   <BeginStoryboard>
@@ -106,7 +106,7 @@
           <TextBlock Text="DB:" Foreground="{StaticResource BrushTextDim}"
                      VerticalAlignment="Center" Margin="0 0 6 0"/>
           <TextBox Width="320" Text="{Binding DbPath, UpdateSourceTrigger=PropertyChanged}"
-                   IsEnabled="{Binding IsRunning, Converter={StaticResource InvBool}}"
+                   IsEnabled="{Binding IsAnyRunning, Converter={StaticResource InvBool}}"
                    VerticalAlignment="Center"/>
           <Button Content="Browse" Margin="6 0 0 0" Padding="10 4" VerticalAlignment="Center"
                   Command="{Binding BrowseDbCommand}"/>
@@ -130,8 +130,6 @@
                      FontSize="10" FontWeight="SemiBold" Margin="4 6 0 10"/>
           <ListBox ItemsSource="{Binding Chains}"
                    SelectedItem="{Binding SelectedChain, Mode=TwoWay}"
-                   IsHitTestVisible="{Binding IsRunning, Converter={StaticResource InvBool}}"
-                   Tag="{Binding IsRunning}"
                    Background="Transparent" BorderThickness="0"
                    ScrollViewer.HorizontalScrollBarVisibility="Disabled">
             <ListBox.ItemContainerStyle>
@@ -159,19 +157,6 @@
                           <Setter TargetName="Bd" Property="Background"  Value="{StaticResource BrushAccentBg}"/>
                           <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource BrushLightCyan}"/>
                         </Trigger>
-                        <!-- While a run is in progress, the selected chain takes
-                             the exact look of the disabled Run button — accent bg
-                             + cyan border at 0.4 opacity — to signify it's locked.
-                             Other cards are left untouched. -->
-                        <MultiDataTrigger>
-                          <MultiDataTrigger.Conditions>
-                            <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource TemplatedParent}}" Value="True"/>
-                            <Condition Binding="{Binding Tag, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="True"/>
-                          </MultiDataTrigger.Conditions>
-                          <Setter TargetName="Bd" Property="Background"  Value="{StaticResource BrushAccentBg}"/>
-                          <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource BrushLightCyan}"/>
-                          <Setter TargetName="Bd" Property="Opacity"     Value="0.4"/>
-                        </MultiDataTrigger>
                       </ControlTemplate.Triggers>
                     </ControlTemplate>
                   </Setter.Value>
@@ -195,8 +180,18 @@
                                  FontWeight="Bold" FontSize="12" Foreground="{Binding BadgeForeground}"/>
                     </Grid>
                   </Border>
-                  <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
-                             FontSize="12" TextWrapping="Wrap" MaxWidth="128"/>
+                  <!-- Name, then what this chain's run is doing (or how its last run ended): every chain's
+                       state is visible without switching to it. -->
+                  <StackPanel VerticalAlignment="Center" Width="128">
+                    <TextBlock Text="{Binding Name}" FontSize="12" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding Session.StatusText}" FontSize="10" Margin="0 2 0 0"
+                               Foreground="{StaticResource BrushDimCyan}" TextTrimming="CharacterEllipsis"
+                               Visibility="{Binding Session.StatusText, Converter={StaticResource NullVis}}"/>
+                    <ProgressBar Height="3" Margin="0 3 0 0" Minimum="0"
+                                 Maximum="{Binding Session.ProgressTotal, Mode=OneWay}"
+                                 Value="{Binding Session.ProgressDone, Mode=OneWay}"
+                                 Visibility="{Binding Session.ProgressVisible, Converter={StaticResource BoolVis}}"/>
+                  </StackPanel>
                 </StackPanel>
               </DataTemplate>
             </ListBox.ItemTemplate>
@@ -217,8 +212,8 @@
               <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Step options panel -->
-            <Border Grid.Row="0" Background="{StaticResource BrushBg2}"
+            <!-- Step options panel: the selected chain's own options and tab ticks -->
+            <Border Grid.Row="0" DataContext="{Binding SelectedSession}" Background="{StaticResource BrushBg2}"
                     BorderBrush="{StaticResource BrushBorder}" BorderThickness="1"
                     CornerRadius="6" Padding="16 12" Margin="0 0 0 12">
               <StackPanel>
@@ -276,11 +271,11 @@
                       Command="{Binding RunCommand}" Margin="0 0 8 0"/>
               <Button Content="■  Cancel" Padding="14 8"
                       Command="{Binding CancelCommand}" Margin="0 0 8 0"
-                      Visibility="{Binding IsRunning, Converter={StaticResource BoolVis}}"/>
+                      Visibility="{Binding SelectedSession.IsRunning, Converter={StaticResource BoolVis}}"/>
             </StackPanel>
 
-            <!-- Log output -->
-            <Border Grid.Row="2" Background="{StaticResource BrushBg2}"
+            <!-- Log output: the selected chain's own log and progress -->
+            <Border Grid.Row="2" DataContext="{Binding SelectedSession}" Background="{StaticResource BrushBg2}"
                     BorderBrush="{StaticResource BrushBorder}" BorderThickness="1" CornerRadius="6">
               <Grid>
                 <Grid.RowDefinitions>
@@ -319,7 +314,7 @@
             </Border>
 
             <!-- Footer -->
-            <TextBlock Grid.Row="3" Margin="0 8 0 0" FontSize="11"
+            <TextBlock Grid.Row="3" DataContext="{Binding SelectedSession}" Margin="0 8 0 0" FontSize="11"
                        Foreground="{StaticResource BrushTextDim}">
               <Run Foreground="{StaticResource BrushLightCyan}" Text="{Binding LogLines.Count, Mode=OneWay}"/>
               <Run Text=" log lines"/>
@@ -502,7 +497,7 @@
                          Foreground="{StaticResource BrushTextDim}" Margin="0 0 6 0"/>
               <TextBox Width="70"
                        Text="{Binding DeleteBeforeId, UpdateSourceTrigger=PropertyChanged}"
-                       IsEnabled="{Binding IsRunning, Converter={StaticResource InvBool}}"/>
+                       IsEnabled="{Binding IsAnyRunning, Converter={StaticResource InvBool}}"/>
               <Button Content="Delete Before" Style="{StaticResource ButtonDanger}"
                       Command="{Binding DeleteBeforeIdCommand}"
                       Margin="6 0 0 0" Padding="14 8"/>
@@ -547,10 +542,7 @@
                                 Visibility="{Binding IsErrored, Converter={StaticResource BoolVis}}"
                                 Command="{Binding DataContext.ResumeRunCommand,
                                   RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                CommandParameter="{Binding}"
-                                IsEnabled="{Binding DataContext.IsBusy,
-                                  RelativeSource={RelativeSource AncestorType=DataGrid},
-                                  Converter={StaticResource InvBool}}"/>
+                                CommandParameter="{Binding}"/>
                         <Button Content="Delete" Style="{StaticResource ButtonDanger}"
                                 Padding="10 4" Margin="0 2" MinWidth="74"
                                 Visibility="{Binding IsFinished, Converter={StaticResource BoolVis}}"

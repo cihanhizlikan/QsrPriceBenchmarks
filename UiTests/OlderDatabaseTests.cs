@@ -28,8 +28,10 @@ public sealed class OlderDatabaseTests
             StartWindow(path, question => { asked.Add(question); return true; }, log);
 
             Assert.Single(asked);
-            string aside = Assert.Single(Directory.GetFiles(Path.GetDirectoryName(path)!,
-                Path.GetFileNameWithoutExtension(path) + ".v0-*"));
+            string[] asideFiles = Directory.GetFiles(Path.GetDirectoryName(path)!,
+                Path.GetFileNameWithoutExtension(path) + ".v0-*");
+            Assert.True(asideFiles.Length == 1, "set aside: " + asideFiles.Length + "; log: " + string.Join(" | ", log));
+            string aside = asideFiles[0];
             Assert.Contains(log, l => l.Contains(aside, StringComparison.Ordinal));
             Assert.Null(Database.ValidateFile(path)); // a current database now, usable as it is
         }
@@ -84,7 +86,7 @@ public sealed class OlderDatabaseTests
                 Dispatcher.PushFrame(frame);
                 tick.Stop();
             }
-            log.AddRange(model.LogLines);
+            log.AddRange(model.SelectedSession!.LogLines);
             window.Close();
         });
         SqliteConnection.ClearAllPools();

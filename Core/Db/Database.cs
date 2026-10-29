@@ -41,6 +41,12 @@ public static class Database
     // The table that identifies a database as this app's, in every version.
     private const string MarkerTable = "QSR";
 
+    // Files this process has already seeded and given fresh views. Doing it on every open took the write lock
+    // each time, and several chains scraping at once open the database constantly; once per file per process
+    // still lets a view fix reach every existing file the first time a new version opens it.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> Prepared =
+        new(StringComparer.OrdinalIgnoreCase);
+
     public static SqliteConnection Open(string path)
     {
         // SQLite creates a missing database *file* but never a missing parent
@@ -95,8 +101,16 @@ public static class Database
             {
                 ApplySchema(conn);
             }
-            SeedReferenceData(conn);
-            CreateViews(conn);
+            string file = conn.DataSource;
+            if (isNew || string.IsNullOrEmpty(file) || !Prepared.ContainsKey(file))
+            {
+                SeedReferenceData(conn);
+                CreateViews(conn);
+                if (!string.IsNullOrEmpty(file))
+                {
+                    Prepared[file] = true;
+                }
+            }
 
             return conn;
         }
@@ -238,6 +252,7 @@ public static class Database
     public static string SetAside(string path, int fileVersion)
     {
         string file = Path.GetFullPath(path);
+        Prepared.TryRemove(file, out _); // the fresh file that takes its place must be seeded
 
         // The -wal beside the file is part of the database: fold it in first, or the renamed file would lose
         // whatever it still held. Pooled connections keep the file open, so they are let go before and after.
@@ -252,7 +267,23 @@ public static class Database
         string aside = Path.Combine(Path.GetDirectoryName(file)!,
             $"{Path.GetFileNameWithoutExtension(file)}.v{fileVersion}-" +
             $"{DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture)}{Path.GetExtension(file)}");
-        File.Move(file, aside);
+        // The window's background readers (runs list, map, each chain's tabs) open the file for an instant to be
+        // refused, and a rename landing in that instant fails — measured: about one try in three in the UI tests.
+        // So it is retried for a bounded two seconds; a file held open for longer (another window of the older
+        // version) still fails, with the reason.
+        for (int attempt = 1; ; attempt++)
+        {
+            try
+            {
+                File.Move(file, aside);
+                break;
+            }
+            catch (IOException) when (attempt < 20)
+            {
+                SqliteConnection.ClearAllPools();
+                Thread.Sleep(100);
+            }
+        }
         foreach (string companion in (string[])[file + "-wal", file + "-shm"])
         {
             if (File.Exists(companion))

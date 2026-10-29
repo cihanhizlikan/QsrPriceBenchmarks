@@ -46,8 +46,8 @@ public sealed class ScrapeTabListTests
 
                 ChainViewModel chain = model.Chains.First(c => c.Name == Chain);
                 model.SelectedChain = chain;
-                PumpUntil(() => model.ScrapeTabs.Count == 2);
-                afterDisable.AddRange(model.ScrapeTabs.Select(t => (t.Name, t.IsSelected)));
+                PumpUntil(() => model.SelectedSession!.ScrapeTabs.Count == 2);
+                afterDisable.AddRange(model.SelectedSession!.ScrapeTabs.Select(t => (t.Name, t.IsSelected)));
 
                 // A later run's page shows the tab again.
                 using (SqliteConnection conn = Database.Open(throwaway.Path))
@@ -57,8 +57,8 @@ public sealed class ScrapeTabListTests
                 }
                 model.SelectedChain = model.Chains.First(c => c.Name != Chain);
                 model.SelectedChain = chain;
-                PumpUntil(() => model.ScrapeTabs.Count == 3);
-                afterReenable.AddRange(model.ScrapeTabs.Select(t => (t.Name, t.IsSelected)));
+                PumpUntil(() => model.SelectedSession!.ScrapeTabs.Count == 3);
+                afterReenable.AddRange(model.SelectedSession!.ScrapeTabs.Select(t => (t.Name, t.IsSelected)));
                 window.Close();
             });
         }

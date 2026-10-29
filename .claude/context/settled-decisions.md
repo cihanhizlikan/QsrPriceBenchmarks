@@ -117,3 +117,15 @@ handle however the process ends, so a crash never leaves a run claimed. **Refuse
 scrape different chains. **Measured**: a `cmd` process holding the lock file, killed, left the file on disk and the
 run claimable; with the claim made the file's existence instead, that test went red.
 **Re-opened by** a database on a network share, where handle semantics differ — WAL already rules that out.
+
+## Chains scrape at once; a website's load is what one run used to put on it (2026-10-29, WP-C2)
+
+**Decision.** Each chain has its own session (log, progress, options, tab ticks, Cancel) and the chain list stays
+usable mid-scrape. Requests to a shared site go through one `Core/Services/RequestScheduler` per process, which
+takes waiting sessions in turn (round-robin; `SemaphoreSlim` promises no order). Its limits are what ONE run used
+before: one Tıkla Gelsin page at a time, up to four Google Maps searches (Step 3's AIMD already ramped to four) — so
+one chain runs exactly as fast as before, and chains together share that total instead of multiplying the load.
+**Measured**: the plan proposed Google at 1; Step 3 already ran up to 4 lookups per run, so 1 would have quartered a
+single chain's geocoding. Sessions share one browser (a context each). A chain's own website is not queued.
+**Re-opened by** a measurement that Tıkla Gelsin tolerates 2 concurrent pages without throttling — then raise its
+limit and chains overlap for real on Step 2; or by a site throttling at today's limits.

@@ -7,6 +7,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Microsoft.Data.Sqlite;
 using QsrPriceBenchmarks.Core.Db;
+using QsrPriceBenchmarks.Core.Services;
 using QsrPriceBenchmarks.Core.Util;
 using QsrPriceBenchmarks.Ui;
 using QsrPriceBenchmarks.Ui.Dialogs;
@@ -95,12 +96,26 @@ public sealed class WindowCapture(ITestOutputHelper output)
 
         window.Show();
         Settle(window, () => model.Runs.Count > 0 && model.MapCells.Count > 0);
+        // Two chains scraping at once, stood in by runs that only report progress: the sidebar then shows a
+        // running card beside an idle one, and the selected chain's progress bar is on screen.
+        model.RunPipeline = async call =>
+        {
+            call.Progress.Report(new StepProgress("Scraping prices", 43, 177));
+            await Task.Delay(Timeout.Infinite, call.Token);
+        };
+        ChainViewModel selected = model.SelectedChain!;
+        foreach (ChainViewModel running in (ChainViewModel[])[model.Chains.First(c => c.Name == "Popeyes"), selected])
+        {
+            model.SelectedChain = running;
+            model.RunCommand.Execute(null);
+        }
+        Settle(window, () => selected.Session.ProgressVisible);
         // One line of each kind LogLineColouriser tells apart, so the log's colours
         // are on screen: a step widget, a ratio widget with a marked value, a
         // district sub-line, a URL, numbers and symbols, SKIP, a warning, an error.
         foreach (string line in SampleLog())
         {
-            model.LogLines.Add(line);
+            model.SelectedSession!.LogLines.Add(line);
         }
         Settle(window, () => true);
         written.Add(Save(window, into, "run-pipeline.png"));
@@ -122,6 +137,8 @@ public sealed class WindowCapture(ITestOutputHelper output)
             "Export failed:\n\nThe process cannot access the file 'Burger King.xlsx' because it is being used by another process.",
             "Export", MessageBoxButton.OK, MessageBoxImage.Error)));
 
+        model.CancelAllRuns(); // closing with runs going would ask first
+        Settle(window, () => !model.IsAnyRunning);
         window.Close();
     }
 

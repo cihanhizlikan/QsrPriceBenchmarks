@@ -46,18 +46,7 @@ public sealed class MainViewModel : ViewModelBase
     // ── State ─────────────────────────────────────────────────────────────────
     private string _dbPath = DefaultDbPath();
     private ChainViewModel? _selected;
-    private bool _isRunning;
-    private bool _forceCrawl;
-    private bool _geocode;
-    private bool _geocodeRematch;
-    private bool _export;
-    private string _exportSince = "";
     private string _deleteBeforeId = "";
-    private string? _lastOutputPath;
-    private int _progressDone;
-    private int _progressTotal;
-    private string _progressText = "";
-    private CancellationTokenSource? _cts;
 
     // Export runs on its own cancellation source, independent of a pipeline run.
     private CancellationTokenSource? _exportCts;
@@ -65,9 +54,13 @@ public sealed class MainViewModel : ViewModelBase
     private int _exportTotal;
     private string _exportText = "";
 
+    // Each chain's run state, by chain name (plan WP-C2). Runs of different chains go on at once; the shared
+    // scheduler takes their requests to Tıkla Gelsin and Google in turn.
+    private readonly Dictionary<string, ChainSessionViewModel> _sessions = new(StringComparer.Ordinal);
+    private readonly RequestScheduler _scheduler = RequestScheduler.CreateDefault();
+
     // ── Observable collections ────────────────────────────────────────────────
     public ObservableCollection<ChainViewModel> Chains { get; } = [];
-    public ObservableCollection<string> LogLines { get; } = [];
     public ObservableCollection<ScrapeRunViewModel> Runs { get; } = [];
     public ObservableCollection<MapCellViewModel> MapCells { get; } = [];
 
@@ -82,7 +75,42 @@ public sealed class MainViewModel : ViewModelBase
 
         private set { Set(ref _locationTotal, value); }
     }
-    public ObservableCollection<TabOptionViewModel> ScrapeTabs { get; } = [];
+
+    /// <summary>The selected chain's run: what the Run Pipeline tab shows and acts on.</summary>
+    public ChainSessionViewModel? SelectedSession
+    {
+        get
+        {
+            return _selected is null ? null : _sessions[_selected.Name];
+        }
+    }
+
+    /// <summary>The session of the chain called <paramref name="chainName"/>.</summary>
+    internal ChainSessionViewModel SessionOf(string chainName)
+    {
+        return _sessions[chainName];
+    }
+
+    /// <summary>
+    /// True while any chain's run is in progress — what the database path, Browse and "delete all before" wait for,
+    /// and what the header's equalizer shows.
+    /// </summary>
+    public bool IsAnyRunning
+    {
+        get
+        {
+            return _sessions.Values.Any(s => s.IsRunning);
+        }
+    }
+
+    /// <summary>
+    /// A message about the app rather than one run (the database, the logos, the runs list), written to the log of
+    /// the chain on screen — the log the user is looking at.
+    /// </summary>
+    private void Log(string line)
+    {
+        (SelectedSession ?? _sessions[Chains[0].Name]).LogLines.Add(line);
+    }
 
     // ── Properties ────────────────────────────────────────────────────────────
     public string DbPath
@@ -92,7 +120,7 @@ public sealed class MainViewModel : ViewModelBase
             return _dbPath;
         }
 
-        set { Set(ref _dbPath, value); ReloadRunsCommand.Execute(null); _ = RebuildMapAsync(); _ = RebuildScrapeTabsAsync(); }
+        set { Set(ref _dbPath, value); ReloadRunsCommand.Execute(null); _ = RebuildMapAsync(); foreach (ChainSessionViewModel s in _sessions.Values) { _ = RebuildScrapeTabsAsync(s); } }
     }
 
     /// <summary>
@@ -132,10 +160,10 @@ public sealed class MainViewModel : ViewModelBase
         catch (Exception ex)
         {
             string fallback = DefaultDbPath();
-            LogLines.Add($"  ⚠ Could not open database '{DbPath}' ({ex.Message}).");
+            Log($"  ⚠ Could not open database '{DbPath}' ({ex.Message}).");
             if (!string.Equals(fallback, DbPath, StringComparison.OrdinalIgnoreCase))
             {
-                LogLines.Add($"  → Creating a new database at {fallback}");
+                Log($"  → Creating a new database at {fallback}");
                 DbPath = fallback; // writable; Database.Open creates the folder + file
             }
             return true;
@@ -162,21 +190,21 @@ public sealed class MainViewModel : ViewModelBase
             "still be opened by the version that made it.";
         if (!ConfirmSetAside(question))
         {
-            LogLines.Add($"  ⚠ {reason}");
-            LogLines.Add("    Choose another database with Browse, or restart to be asked again.");
+            Log($"  ⚠ {reason}");
+            Log("    Choose another database with Browse, or restart to be asked again.");
             return false;
         }
 
         try
         {
             string aside = Database.SetAside(path, fileVersion);
-            LogLines.Add($"  ✓ The older database was kept as '{aside}'; a new one starts at '{path}'.");
+            Log($"  ✓ The older database was kept as '{aside}'; a new one starts at '{path}'.");
             return true;
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or SqliteException)
         {
             // Typically the file is open in another window of the older version.
-            LogLines.Add($"  ✗ The older database could not be set aside: {error.Message}");
+            Log($"  ✗ The older database could not be set aside: {error.Message}");
             return false;
         }
     }
@@ -188,17 +216,7 @@ public sealed class MainViewModel : ViewModelBase
             return _selected;
         }
 
-        set { Set(ref _selected, value); _ = RebuildScrapeTabsAsync(); NotifyRunModeChanged(); RelayCommand.RaiseRequery(); _ = RebuildMapAsync(); }
-    }
-
-    public bool IsRunning
-    {
-        get
-        {
-            return _isRunning;
-        }
-
-        private set { Set(ref _isRunning, value); Notify(nameof(IsRematchEnabled)); Notify(nameof(ProgressVisible)); Notify(nameof(IsBusy)); RelayCommand.RaiseRequery(); }
+        set { Set(ref _selected, value); Notify(nameof(SelectedSession)); _ = RebuildScrapeTabsAsync(SelectedSession); RelayCommand.RaiseRequery(); _ = RebuildMapAsync(); }
     }
 
     private bool _isExporting;
@@ -210,45 +228,7 @@ public sealed class MainViewModel : ViewModelBase
             return _isExporting;
         }
 
-        private set { Set(ref _isExporting, value); Notify(nameof(IsBusy)); Notify(nameof(ExportProgressVisible)); RelayCommand.RaiseRequery(); }
-    }
-
-    /// <summary>
-    /// True when any long operation (a pipeline run, a resume, or an export) is
-    /// in progress. The Scrape Runs row actions (Export / Resume / Delete) bind
-    /// their enabled state to this so none can be triggered while busy.
-    /// </summary>
-    public bool IsBusy
-    {
-        get
-        {
-            return IsRunning || IsExporting;
-        }
-    }
-
-    // ── Step-3 geocoding progress bar ─────────────────────────────────────────
-    public int ProgressDone { get { return _progressDone; } private set { Set(ref _progressDone, value); Notify(nameof(ProgressVisible)); } }
-    public int ProgressTotal { get { return _progressTotal; } private set { Set(ref _progressTotal, value); Notify(nameof(ProgressVisible)); } }
-    public string ProgressText
-    {
-        get
-        {
-            return _progressText;
-        }
-
-        private set
-        {
-            Set(ref _progressText, value);
-        }
-    }
-
-    /// <summary>The bar shows only while a run is active and a phase has reported a total.</summary>
-    public bool ProgressVisible
-    {
-        get
-        {
-            return IsRunning && _progressTotal > 0;
-        }
+        private set { Set(ref _isExporting, value); Notify(nameof(ExportProgressVisible)); RelayCommand.RaiseRequery(); }
     }
 
     // ── Excel export progress bar (Scrape Runs tab) ───────────────────────────
@@ -298,72 +278,6 @@ public sealed class MainViewModel : ViewModelBase
         }
     }
 
-    // Step flags — mutually exclusive pairs enforced via property setters
-    public bool ForceCrawl
-    {
-        get
-        {
-            return _forceCrawl;
-        }
-        set { Set(ref _forceCrawl, value); NotifyRunModeChanged(); }
-    }
-    public bool Geocode
-    {
-        get
-        {
-            return _geocode;
-        }
-
-        set
-        {
-            Set(ref _geocode, value);
-            // Rematch is a modifier of Geocode — it's meaningless on its own,
-            // so clearing Geocode also clears Rematch and disables its checkbox.
-            if (!value)
-            {
-                Set(ref _geocodeRematch, false, nameof(GeocodeRematch));
-            }
-
-            Notify(nameof(IsRematchEnabled));
-            NotifyRunModeChanged();
-        }
-    }
-
-    /// <summary>Rematch checkbox is only enabled while Geocode is checked.</summary>
-    public bool IsRematchEnabled
-    {
-        get
-        {
-            return Geocode && !IsRunning;
-        }
-    }
-
-    public bool GeocodeRematch
-    {
-        get
-        {
-            return _geocodeRematch;
-        }
-        // Rematch can only be turned on when Geocode is already on.
-        set { Set(ref _geocodeRematch, value && Geocode); NotifyRunModeChanged(); }
-    }
-    public bool Export
-    {
-        get
-        {
-            return _export;
-        }
-
-        set { Set(ref _export, value); if (!value) { ExportSince = ""; } NotifyRunModeChanged(); }
-    }
-    public string ExportSince
-    {
-        get
-        {
-            return _exportSince;
-        }
-        set { Set(ref _exportSince, value); NotifyRunModeChanged(); }
-    }
     public string DeleteBeforeId
     {
         get
@@ -391,58 +305,20 @@ public sealed class MainViewModel : ViewModelBase
         }
     }
 
-    public string? LastOutputPath
-    {
-        get
-        {
-            return _lastOutputPath;
-        }
-
-        private set { Set(ref _lastOutputPath, value); RelayCommand.RaiseRequery(); }
-    }
-
-    // True when at least one step flag is set (selective run mode)
-    public bool IsSelective
-    {
-        get
-        {
-            return ForceCrawl || Geocode || GeocodeRematch || Export || !string.IsNullOrWhiteSpace(ExportSince);
-        }
-    }
-
     /// <summary>
-    /// Tab checkboxes are shown only for a full run (no individual step picked)
-    /// with a chain selected — that's the only mode that reaches Step 2.
+    /// Re-reads <paramref name="session"/>'s tab list from the database, keeping its ticks. The database is the
+    /// ONLY source of tabs — nothing is hardcoded: Step 2 discovers them live from the platform's pages and
+    /// disables the ones that vanish; an empty list just means no run has discovered this chain's tabs yet (the
+    /// hint on the Run Pipeline tab says so).
     /// </summary>
-    public bool ShowTabSelection
+    private async Task RebuildScrapeTabsAsync(ChainSessionViewModel? session)
     {
-        get
+        if (session is null)
         {
-            return !IsSelective && SelectedChain is not null;
-        }
-    }
-
-    private void NotifyRunModeChanged()
-    {
-        Notify(nameof(IsSelective));
-        Notify(nameof(ShowTabSelection));
-    }
-
-    private async Task RebuildScrapeTabsAsync()
-    {
-        ChainViewModel? selectedAtStart = SelectedChain;
-        if (selectedAtStart is null)
-        {
-            ScrapeTabs.Clear();
-            ShowNoTabsHint = false;
             return;
         }
 
-        // The database is the ONLY source of tabs — nothing is hardcoded.
-        // Step 2 discovers them live from the platform's pages and soft-deletes
-        // the ones that vanish; an empty list here just means no run has
-        // discovered this chain's tabs yet (the hint below tells the user so).
-        ChainConfig chain = selectedAtStart.Chain;
+        ChainConfig chain = session.Chain;
         string dbPath = DbPath;
         List<string> tabNames;
         try
@@ -459,41 +335,8 @@ public sealed class MainViewModel : ViewModelBase
         {
             tabNames = []; // unreadable database — same as "none yet"
         }
-
-        // The user may have switched chains while the database was being read —
-        // in that case a newer rebuild owns the list and this result is stale.
-        if (!ReferenceEquals(SelectedChain, selectedAtStart))
-        {
-            return;
-        }
-
-        ScrapeTabs.Clear();
-        foreach (string t in tabNames)
-        {
-            ScrapeTabs.Add(new TabOptionViewModel(t)); // ticked by default
-        }
-        ShowNoTabsHint = ScrapeTabs.Count == 0;
+        session.SetTabs(tabNames);
     }
-
-    /// <summary>
-    /// True while the selected chain has no discovered tabs in the current
-    /// database. The Run Pipeline tab shows an explanatory hint instead of an
-    /// empty list: the first Step 2 run discovers the tabs as it scrapes them
-    /// — every tab a page shows is scraped unless it is unticked here.
-    /// </summary>
-    public bool ShowNoTabsHint
-    {
-        get
-        {
-            return _showNoTabsHint;
-        }
-
-        private set
-        {
-            Set(ref _showNoTabsHint, value);
-        }
-    }
-    private bool _showNoTabsHint;
 
     // ── Commands ──────────────────────────────────────────────────────────────
     public AsyncRelayCommand RunCommand { get; }
@@ -506,16 +349,17 @@ public sealed class MainViewModel : ViewModelBase
     public RelayCommand CancelExportCommand { get; }
     public AsyncRelayCommand ResumeRunCommand { get; }
     public AsyncRelayCommand DeleteBeforeIdCommand { get; }
-    public RelayCommand OpenOutputCommand { get; }
     public RelayCommand OpenFolderCommand { get; }
 
     // ── Constructor ───────────────────────────────────────────────────────────
     public MainViewModel()
     {
-        RunCommand = new AsyncRelayCommand(_ => RunAsync(), _ => !IsRunning && SelectedChain is not null);
-        CancelCommand = new RelayCommand(_ => RequestCancel(),
-            _ => IsRunning && _cts is { IsCancellationRequested: false });
-        BrowseDbCommand = new RelayCommand(_ => BrowseDb(), _ => !IsRunning);
+        // Run and Cancel act on the chain on screen; other chains' runs carry on regardless.
+        RunCommand = new AsyncRelayCommand(_ => RunAsync(), _ => SelectedSession is { IsRunning: false }, allowsOverlap: true);
+        CancelCommand = new RelayCommand(_ => RequestCancel(SelectedSession),
+            _ => SelectedSession is { IsRunning: true, Cancellation.IsCancellationRequested: false });
+        // The database stays put while any chain is being scraped into it.
+        BrowseDbCommand = new RelayCommand(_ => BrowseDb(), _ => !IsAnyRunning);
         ReloadRunsCommand = new AsyncRelayCommand(_ => ReloadRunsAsync());
         OpenUrlCommand = new RelayCommand(p => OpenUrl(p as string), p => p is string s && s.Length > 0);
         // Export/Delete of a completed run are allowed while a scrape run is in
@@ -525,15 +369,28 @@ public sealed class MainViewModel : ViewModelBase
         ExportRunCommand = new AsyncRelayCommand(p => ExportRunAsync(p), _ => !IsExporting);
         CancelExportCommand = new RelayCommand(_ => CancelExport(),
             _ => IsExporting && _exportCts is { IsCancellationRequested: false });
-        ResumeRunCommand = new AsyncRelayCommand(p => ResumeRunAsync(p), _ => !IsBusy);
-        DeleteBeforeIdCommand = new AsyncRelayCommand(_ => DeleteBeforeIdAsync(), _ => !IsBusy);
-        OpenOutputCommand = new RelayCommand(_ => OpenOutput(), _ => !string.IsNullOrEmpty(LastOutputPath));
+        // A run resumes in its own chain's session, so only that chain must be idle.
+        ResumeRunCommand = new AsyncRelayCommand(p => ResumeRunAsync(p),
+            p => p is ScrapeRunViewModel run && _sessions.TryGetValue(run.QsrName, out ChainSessionViewModel? s)
+                && !s.IsRunning,
+            allowsOverlap: true);
+        DeleteBeforeIdCommand = new AsyncRelayCommand(_ => DeleteBeforeIdAsync(), _ => !IsAnyRunning && !IsExporting);
         OpenFolderCommand = new RelayCommand(_ => OpenFolder());
 
-        // Seed the chain list from the registry, sorted alphabetically by name.
+        // Seed the chain list from the registry, sorted alphabetically by name, each with its own session.
         foreach (ChainConfig chain in ChainRegistry.All.OrderBy(c => c.Name, StringComparer.CurrentCulture))
         {
-            Chains.Add(new ChainViewModel(chain, null)); // logo bytes loaded from DB on demand
+            ChainSessionViewModel session = new(chain);
+            session.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(ChainSessionViewModel.IsRunning))
+                {
+                    Notify(nameof(IsAnyRunning));
+                    RelayCommand.RaiseRequery();
+                }
+            };
+            _sessions[chain.Name] = session;
+            Chains.Add(new ChainViewModel(chain, null, session)); // logo bytes loaded from DB on demand
         }
     }
 
@@ -558,76 +415,87 @@ public sealed class MainViewModel : ViewModelBase
     }
 
     // ── Run pipeline ──────────────────────────────────────────────────────────
+
+    /// <summary>What one run hands the pipeline; <see cref="RunPipeline"/> takes it.</summary>
+    internal sealed record PipelineCall(
+        string DbPath, PipelineOptions Options, IProgress<string> Log, CancellationToken Token,
+        IProgress<StepProgress> Progress, IProgress<int> LocationsChanged, IProgress<long> RunChanged,
+        RequestGate Gate);
+
+    /// <summary>
+    /// Runs the pipeline for one session. Replaceable so UI tests can stand in a run that scrapes nothing; the
+    /// app always runs <see cref="PipelineRunner.RunAsync"/>.
+    /// </summary>
+    internal Func<PipelineCall, Task> RunPipeline { get; set; } = call => PipelineRunner.RunAsync(
+        call.DbPath, call.Options, call.Log, call.Token, call.Progress, call.LocationsChanged, call.RunChanged,
+        call.Gate);
+
     private async Task RunAsync()
     {
-        if (SelectedChain is null)
+        if (SelectedSession is not { IsRunning: false } session)
         {
             return;
         }
 
-        IsRunning = true;
-        LastOutputPath = null;
-        LogLines.Clear();
-        ProgressDone = 0; ProgressTotal = 0; ProgressText = "";
+        CancellationToken token = session.BeginRun();
 
         // If the configured database can't be opened, create a fresh one in a
         // writable location and switch to it before the run touches it — or,
         // for an older version's database, stop unless the user sets it aside.
         if (!EnsureDatabaseUsable())
         {
-            IsRunning = false;
+            session.EndRun("");
             return;
         }
 
-        _cts = new CancellationTokenSource();
-        Progress<string> progress = new(msg => LogLines.Add(msg));
-        Progress<StepProgress> progressCount = new(p =>
-        {
-            ProgressTotal = p.Total;
-            ProgressDone = p.Done;
-            ProgressText = p.Total > 0 ? $"{p.Phase}  {p.Done} / {p.Total}" : "";
-        });
-        // Fires (on the UI thread) as Step 1 commits location batches, so the
-        // Locations tab can refresh live while a crawl is in progress.
-        Progress<int> onLocationsChanged = new(_ => NotifyLocationsChanged());
-        // Fires (on the UI thread) as Step 2 starts its run and records each page, so the Scrape Runs tab
-        // shows the run and its growing snapshot count while the scrape is in progress.
-        Progress<long> onRunChanged = new(_ => NotifyRunsChanged());
-
-        long? exportSinceId = null;
-        if (!string.IsNullOrWhiteSpace(ExportSince) && long.TryParse(ExportSince, out long sid))
-        {
-            exportSinceId = sid;
-        }
-
-        // For a full run, scrape only the ticked tabs (all ticked by default).
-        // Selective runs never reach Step 2, so leave Tabs null there.
-        IReadOnlyCollection<string>? selectedTabs =
-            IsSelective ? null : ScrapeTabs.Where(t => t.IsSelected).Select(t => t.Name).ToList();
-
+        // A run takes its options now: changing them while it runs affects only the next one.
         PipelineOptions opts = new()
         {
-            Chain = SelectedChain.Chain,
-            ForceCrawl = ForceCrawl,
-            Geocode = Geocode,
-            GeocodeRematch = GeocodeRematch,
-            Export = Export,
-            ExportSince = exportSinceId,
-            Tabs = selectedTabs,
+            Chain = session.Chain,
+            ForceCrawl = session.ForceCrawl,
+            Geocode = session.Geocode,
+            GeocodeRematch = session.GeocodeRematch,
+            // For a full run, every tab is scraped but the unticked ones. Selective runs never reach Step 2.
+            Tabs = session.IsSelective ? null : [.. session.ScrapeTabs.Where(t => t.IsSelected).Select(t => t.Name)],
             OutputDir = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(DbPath))!, "output"),
         };
 
-        CancellationToken token = _cts.Token;
+        await RunInSessionAsync(session, token, (log, progress, locationsChanged, runChanged) =>
+            RunPipeline(new PipelineCall(DbPath, opts, log, token, progress, locationsChanged, runChanged,
+                _scheduler.For(session.Chain.Name))));
+    }
+
+    /// <summary>
+    /// The life of one run in <paramref name="session"/>, shared by Run and Resume: progress and log go to that
+    /// session (the Progress objects are made here, on the UI thread, so the pipeline's reports land on it), a
+    /// cancellation is reported as one, and afterwards the runs list, map and tab list are re-read.
+    /// </summary>
+    private async Task RunInSessionAsync(
+        ChainSessionViewModel session, CancellationToken token,
+        Func<IProgress<string>, IProgress<StepProgress>, IProgress<int>, IProgress<long>, Task> pipeline)
+    {
+        Progress<string> log = new(session.LogLines.Add);
+        Progress<StepProgress> progress = new(p => session.ReportProgress(p.Done, p.Total, p.Phase));
+        // Fires as Step 1 commits location batches: the Locations tab refreshes live if this chain is on screen.
+        Progress<int> locationsChanged = new(_ =>
+        {
+            if (ReferenceEquals(SelectedSession, session))
+            {
+                NotifyLocationsChanged();
+            }
+        });
+        // Fires as Step 2 starts its run and records each page, so the Scrape Runs tab shows it growing.
+        Progress<long> runChanged = new(_ => NotifyRunsChanged());
+
+        string outcome = "Done";
         try
         {
-            string? outPath = await Task.Run(() =>
-                PipelineRunner.RunAsync(DbPath, opts, progress, token, progressCount, onLocationsChanged, onRunChanged),
-                token);
-            LastOutputPath = outPath;
+            await Task.Run(() => pipeline(log, progress, locationsChanged, runChanged), token);
         }
         catch (OperationCanceledException)
         {
-            LogLines.Add("  ✗ Cancelled.");
+            outcome = "Cancelled";
+            session.LogLines.Add("  ✗ Cancelled.");
         }
         catch (Exception ex) when (token.IsCancellationRequested)
         {
@@ -635,42 +503,51 @@ public sealed class MainViewModel : ViewModelBase
             // surfaces as a Playwright exception rather than OperationCanceled.
             // Treat it as a clean cancellation, not an error.
             _ = ex;
-            LogLines.Add("  ✗ Cancelled.");
+            outcome = "Cancelled";
+            session.LogLines.Add("  ✗ Cancelled.");
         }
         catch (Exception ex)
         {
-            LogLines.Add($"  ✗ Error: {ex.Message}");
+            outcome = "Failed";
+            session.LogLines.Add($"  ✗ Error: {ex.Message}");
         }
         finally
         {
-            IsRunning = false;
-            ProgressTotal = 0; ProgressText = "";
-            _cts?.Dispose();
-            _cts = null;
+            session.EndRun(outcome);
             await ReloadRunsAsync();
-            await RebuildMapAsync();
-            // Tabs discovered (or soft-deleted) by the run just finished must
-            // show up on the Run Pipeline tab right away, not at next restart.
-            await RebuildScrapeTabsAsync();
+            if (ReferenceEquals(SelectedSession, session))
+            {
+                await RebuildMapAsync();
+            }
+            // Tabs discovered (or disabled) by the run just finished must show up right away, not at next restart.
+            await RebuildScrapeTabsAsync(session);
         }
     }
 
     /// <summary>
-    /// Signal cancellation and give immediate UI feedback. Repeated clicks are
-    /// ignored — the message is logged and the token cancelled only once. The
-    /// running pipeline observes the token at each step boundary; Playwright
-    /// pages are force-closed when the task unwinds.
+    /// Signal cancellation of <paramref name="session"/>'s run and give immediate feedback. Repeated clicks are
+    /// ignored — the message is logged and the token cancelled only once. The running pipeline observes the token
+    /// at each step boundary; Playwright pages are force-closed when the task unwinds.
     /// </summary>
-    private void RequestCancel()
+    private static void RequestCancel(ChainSessionViewModel? session)
     {
-        if (_cts is null || _cts.IsCancellationRequested)
+        if (session?.Cancellation is not { IsCancellationRequested: false } cancellation)
         {
             return;
         }
 
-        LogLines.Add("  ⚠ Cancelling … (finishing current operation)");
-        _cts.Cancel();
+        session.LogLines.Add("  ⚠ Cancelling … (finishing current operation)");
+        cancellation.Cancel();
         RelayCommand.RaiseRequery();   // disable the Cancel button immediately
+    }
+
+    /// <summary>Cancels every chain's run — what closing the window with runs in progress does, once confirmed.</summary>
+    public void CancelAllRuns()
+    {
+        foreach (ChainSessionViewModel session in _sessions.Values)
+        {
+            RequestCancel(session);
+        }
     }
 
     // ── Locations map ─────────────────────────────────────────────────────────
@@ -815,7 +692,7 @@ public sealed class MainViewModel : ViewModelBase
                     // a silently empty map hid the pre-v1.1 schema mismatch for
                     // days and looked exactly like "loading a DB doesn't refresh".
                     Application.Current.Dispatcher.Invoke(() =>
-                        LogLines.Add($"  ⚠ Locations map could not read '{dbPath}': {ex.Message}"));
+                        Log($"  ⚠ Locations map could not read '{dbPath}': {ex.Message}"));
                 }
             }
 
@@ -938,7 +815,7 @@ public sealed class MainViewModel : ViewModelBase
             // file exists but can't be read as our schema — say so instead of
             // leaving the runs grid silently stale.
             Application.Current.Dispatcher.Invoke(() =>
-                LogLines.Add($"  ⚠ Scrape runs could not be read from '{DbPath}': {ex.Message}"));
+                Log($"  ⚠ Scrape runs could not be read from '{DbPath}': {ex.Message}"));
         }
     });
     }
@@ -978,7 +855,6 @@ public sealed class MainViewModel : ViewModelBase
                 using SqliteConnection conn = Database.Open(dbPath);
                 return ExcelExporter.Export(chain, conn, outputDir, null, progress, token);
             }, token);
-            LastOutputPath = outPath;
             // Revealing the finished file in Explorer is the success signal now;
             // export status is no longer written to the Run Pipeline log.
             RevealInExplorer(outPath);
@@ -1095,7 +971,7 @@ public sealed class MainViewModel : ViewModelBase
                     // Replace the ChainViewModel with a new one carrying the logo.
                     // WPF will re-render via INPC.
                     int idx = Chains.IndexOf(vm);
-                    ChainViewModel updated = new(vm.Chain, bytes);
+                    ChainViewModel updated = new(vm.Chain, bytes, vm.Session);
                     Application.Current.Dispatcher.Invoke(() => Chains[idx] = updated);
                 }
             }
@@ -1106,7 +982,7 @@ public sealed class MainViewModel : ViewModelBase
             // but never silent: an empty catch here once hid every logo after the
             // first one.
             Application.Current.Dispatcher.Invoke(() =>
-                LogLines.Add($"  ⚠ Chain logos could not be read from '{DbPath}': {ex.Message}"));
+                Log($"  ⚠ Chain logos could not be read from '{DbPath}': {ex.Message}"));
         }
     });
     }
@@ -1181,20 +1057,6 @@ public sealed class MainViewModel : ViewModelBase
         DbPath = chosen;
     }
 
-    private void OpenOutput()
-    {
-        if (string.IsNullOrEmpty(LastOutputPath))
-        {
-            return;
-        }
-
-        string? dir = Path.GetDirectoryName(LastOutputPath);
-        if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
-        {
-            Process.Start(new ProcessStartInfo("explorer.exe", dir) { UseShellExecute = true });
-        }
-    }
-
     /// <summary>Open the output folder (creating it if needed) in File Explorer.</summary>
     private void OpenFolder()
     {
@@ -1209,7 +1071,7 @@ public sealed class MainViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            LogLines.Add($"  ✗ Could not open folder: {ex.Message}");
+            Log($"  ✗ Could not open folder: {ex.Message}");
         }
     }
 
@@ -1234,53 +1096,17 @@ public sealed class MainViewModel : ViewModelBase
     /// </summary>
     private async Task ResumeRunAsync(object? parameter)
     {
-        if (parameter is not ScrapeRunViewModel vm || IsRunning)
+        if (parameter is not ScrapeRunViewModel vm
+            || !_sessions.TryGetValue(vm.QsrName, out ChainSessionViewModel? session) || session.IsRunning)
         {
             return;
         }
 
-        ChainViewModel? chain = Chains.FirstOrDefault(c => c.Name == vm.QsrName);
-        if (chain is null)
-        {
-            LogLines.Add($"  ✗ Cannot resume — chain '{vm.QsrName}' not found.");
-            return;
-        }
-
-        IsRunning = true;
-        LogLines.Clear();
-        _cts = new CancellationTokenSource();
-        Progress<string> progress = new(msg => LogLines.Add(msg));
-        CancellationToken token = _cts.Token;
-        Progress<long> onRunChanged = new(_ => NotifyRunsChanged());
-
-        try
-        {
-            LogLines.Add($"▶ Resuming run {vm.Id} ({vm.QsrName})");
-            await Task.Run(() =>
-                PipelineRunner.ResumeRunAsync(DbPath, chain.Chain, vm.Id, progress, token, onRunChanged: onRunChanged),
-                token);
-            LogLines.Add("  ✓ Resume complete.");
-        }
-        catch (OperationCanceledException)
-        {
-            LogLines.Add("  ✗ Cancelled.");
-        }
-        catch (Exception ex) when (token.IsCancellationRequested)
-        {
-            _ = ex;
-            LogLines.Add("  ✗ Cancelled.");
-        }
-        catch (Exception ex)
-        {
-            LogLines.Add($"  ✗ Error: {ex.Message}");
-        }
-        finally
-        {
-            IsRunning = false;
-            _cts?.Dispose();
-            _cts = null;
-            await ReloadRunsAsync();
-            await RebuildMapAsync();
-        }
+        // The run resumes in its chain's own session, so its log and progress show on that chain.
+        CancellationToken token = session.BeginRun();
+        session.LogLines.Add($"▶ Resuming run {vm.Id} ({vm.QsrName})");
+        await RunInSessionAsync(session, token, (log, progress, _, runChanged) =>
+            PipelineRunner.ResumeRunAsync(DbPath, session.Chain, vm.Id, log, token, progressCount: progress,
+                onRunChanged: runChanged, gate: _scheduler.For(session.Chain.Name)));
     }
 }
