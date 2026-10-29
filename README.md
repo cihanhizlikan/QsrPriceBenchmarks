@@ -23,10 +23,11 @@ dotnet restore
 dotnet build
 ```
 
-Playwright browser (one-time, after first restore — the live tests install it
-themselves):
+The scrapers drive a Chromium build Playwright manages. Nothing needs installing by
+hand: run the live tests once and they install it into your per-user Playwright cache,
+which a development build of the app uses too:
 ```
-pwsh Core/bin/Debug/net10.0/playwright.ps1 install chromium
+dotnet test --filter Category=Integration
 ```
 
 ## Test
