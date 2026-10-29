@@ -115,13 +115,19 @@ public sealed class MainViewModel : ViewModelBase
     /// unwritable directory, etc.), fall back to a brand-new database in the
     /// default writable location and switch <see cref="DbPath"/> to it, logging
     /// the change. Leaves <see cref="DbPath"/> untouched when it opens fine.
+    /// An older version's database is never swapped out silently: the user is
+    /// asked to set it aside, and false (nothing may run) when they decline.
     /// </summary>
-    private void EnsureDatabaseUsable()
+    private bool EnsureDatabaseUsable()
     {
         try
         {
             using SqliteConnection probe = Database.Open(DbPath);
-            return;
+            return true;
+        }
+        catch (OutdatedDatabaseException outdated)
+        {
+            return OfferFreshDatabase(outdated.Path, outdated.FileVersion, outdated.Message);
         }
         catch (Exception ex)
         {
@@ -132,6 +138,46 @@ public sealed class MainViewModel : ViewModelBase
                 LogLines.Add($"  → Creating a new database at {fallback}");
                 DbPath = fallback; // writable; Database.Open creates the folder + file
             }
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Asks whether an older version's database may be set aside. Replaceable so UI tests can answer it without
+    /// a modal dialog; the app always asks through the themed message box.
+    /// </summary>
+    internal Func<string, bool> ConfirmSetAside { get; set; } = question =>
+        ThemedMessageBox.Show(question, "Older database", MessageBoxButton.YesNo, MessageBoxImage.Warning)
+            == MessageBoxResult.Yes;
+
+    /// <summary>
+    /// The one way an older version's database is replaced: the user is asked, and on Yes the file is renamed
+    /// aside (<see cref="Database.SetAside"/>, never deleted) so the next open starts a fresh database at the same
+    /// path. Returns whether the path is now usable.
+    /// </summary>
+    private bool OfferFreshDatabase(string path, int fileVersion, string reason)
+    {
+        string question =
+            $"{reason}\n\nStart a new, empty database here? The old file is kept beside it, renamed, and can " +
+            "still be opened by the version that made it.";
+        if (!ConfirmSetAside(question))
+        {
+            LogLines.Add($"  ⚠ {reason}");
+            LogLines.Add("    Choose another database with Browse, or restart to be asked again.");
+            return false;
+        }
+
+        try
+        {
+            string aside = Database.SetAside(path, fileVersion);
+            LogLines.Add($"  ✓ The older database was kept as '{aside}'; a new one starts at '{path}'.");
+            return true;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or SqliteException)
+        {
+            // Typically the file is open in another window of the older version.
+            LogLines.Add($"  ✗ The older database could not be set aside: {error.Message}");
+            return false;
         }
     }
 
@@ -494,6 +540,12 @@ public sealed class MainViewModel : ViewModelBase
     // ── Initialisation (call after window loads — needs DB open) ──────────────
     public async Task InitialiseAsync()
     {
+        // An older version's database is the first thing to settle: everything below reads it.
+        if (Database.ValidateFile(DbPath) is { OlderVersion: int older } problem)
+        {
+            OfferFreshDatabase(Path.GetFullPath(DbPath), older, problem.Message);
+        }
+
         await LoadChainLogosAsync();
         // Start with the sidebar's first chain selected: with none, Run is
         // disabled, the tab list and the map are empty, and nothing on screen
@@ -519,8 +571,13 @@ public sealed class MainViewModel : ViewModelBase
         ProgressDone = 0; ProgressTotal = 0; ProgressText = "";
 
         // If the configured database can't be opened, create a fresh one in a
-        // writable location and switch to it before the run touches it.
-        EnsureDatabaseUsable();
+        // writable location and switch to it before the run touches it — or,
+        // for an older version's database, stop unless the user sets it aside.
+        if (!EnsureDatabaseUsable())
+        {
+            IsRunning = false;
+            return;
+        }
 
         _cts = new CancellationTokenSource();
         Progress<string> progress = new(msg => LogLines.Add(msg));
@@ -1105,11 +1162,18 @@ public sealed class MainViewModel : ViewModelBase
         // Never trust a picked file blindly: a non-SQLite file or another
         // application's SQLite database is rejected here with a clear message,
         // and the previous database stays selected.
-        string? error = Database.ValidateFile(chosen);
-        if (error is not null)
+        DatabaseProblem? problem = Database.ValidateFile(chosen);
+        if (problem is { OlderVersion: int older })
+        {
+            if (!OfferFreshDatabase(chosen, older, problem.Message))
+            {
+                return;
+            }
+        }
+        else if (problem is not null)
         {
             ThemedMessageBox.Show(
-                $"Cannot use '{chosen}'.\n\n{error}",
+                $"Cannot use '{chosen}'.\n\n{problem.Message}",
                 "Database", MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }

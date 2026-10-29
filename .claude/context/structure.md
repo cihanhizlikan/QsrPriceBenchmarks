@@ -15,8 +15,9 @@
 
 ## Core, by folder
 
-- `Db/` — `Database` (open, guard against a foreign file, schema, migrations, views) and `Repository` (every
-  query). The SQLite *provider* is chosen by each host, never by `Core`; the csproj comments say why.
+- `Db/` — `Database` (open, guard against a foreign or other-version file, schema, views; no migrations —
+  see `SchemaVersion`), `RunLock` (the claim on a run being scraped) and `Repository` (every query). The SQLite
+  *provider* is chosen by each host, never by `Core`; the csproj comments say why.
 - `Scraping/` — the pipeline's steps: `ChainCrawler` (chain website), `TgScraper` (Tıkla Gelsin),
   `GeocodeAndMatchStep` with `Geocoder` and `Matcher`, and the parsers and browser plumbing they share.
 - `Services/` — `PipelineRunner`, the single entry point both hosts call, and its option and progress types.

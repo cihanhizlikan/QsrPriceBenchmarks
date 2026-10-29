@@ -75,6 +75,14 @@ try
 {
     opened = Database.Open(opts.Db);
 }
+catch (OutdatedDatabaseException outdated)
+{
+    // Never set aside on its own: starting fresh is the user's act.
+    Console.Error.WriteLine($"error: {outdated.Message}");
+    Console.Error.WriteLine("       To start a new database there, rename or move that file, or open it in qsr-ui,");
+    Console.Error.WriteLine("       which offers to set it aside for you. Or pass a different --db.");
+    return 1;
+}
 catch (Exception ex) when (ex is InvalidOperationException or SqliteException)
 {
     Console.Error.WriteLine($"error: {ex.Message}");
