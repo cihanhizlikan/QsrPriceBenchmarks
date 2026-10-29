@@ -873,7 +873,7 @@ public sealed class MainViewModel : ViewModelBase
             }, token);
             // Revealing the finished file in Explorer is the success signal now;
             // export status is no longer written to the Run Pipeline log.
-            RevealInExplorer(outPath);
+            Explorer.Reveal(outPath);
         }
         catch (OperationCanceledException)
         {
@@ -1055,20 +1055,6 @@ public sealed class MainViewModel : ViewModelBase
         catch (Exception ex)
         {
             Log($"  ✗ Could not open folder: {ex.Message}");
-        }
-    }
-
-    /// <summary>Open File Explorer with the given file selected/highlighted.</summary>
-    private static void RevealInExplorer(string filePath)
-    {
-        try
-        {
-            Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{filePath}\"")
-            { UseShellExecute = true });
-        }
-        catch
-        {
-            // Best effort — a failure to reveal must never break the export.
         }
     }
 
