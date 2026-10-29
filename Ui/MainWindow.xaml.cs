@@ -47,6 +47,7 @@ public partial class MainWindow : Window
             return;
         }
         _vm.LocationsTabActive = LocationsTab.IsSelected;
+        _vm.ScrapeRunsTabActive = ScrapeRunsTab.IsSelected;
 
         if (ScrapeRunsTab.IsSelected)
         {

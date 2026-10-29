@@ -37,7 +37,8 @@ public static class TgScraper
         ChainConfig chain, SqliteConnection conn,
         IProgress<string>? progress = null, CancellationToken ct = default,
         IReadOnlyCollection<string>? tabFilter = null,
-        long? resumeRunId = null)
+        long? resumeRunId = null,
+        IProgress<long>? onRunChanged = null)
     {
         long qsrId = Repository.QsrId(conn, chain.Name);
         string platformName = chain.PrimaryPlatform; // single platform today: "Tıkla Gelsin"
@@ -58,6 +59,7 @@ public static class TgScraper
         progress?.Report(resumeRunId is null
             ? $"  Scrape run {runId} started"
             : $"  Resuming scrape run {runId}");
+        onRunChanged?.Report(runId); // the run row exists: a Scrape Runs tab open now can show it
 
         List<(long Id, string Slug)> queue = resumeRunId is null
             ? LoadFullQueue(conn, qsrId, platformId)
@@ -85,6 +87,7 @@ public static class TgScraper
 
                 RecordDiscoveredTabs(conn, qsrId, platformId, pageData, knownTabs, observedTabs, progress);
                 RecordPage(conn, qsrId, runId, plId, pageData, progress);
+                onRunChanged?.Report(runId);
             }
 
             // Disable (never delete) every known tab no page READ in this run showed. This line is inside the
@@ -113,6 +116,7 @@ public static class TgScraper
             // never left stuck in the "running" (no FINISHED_AT) state.
             Repository.FinishScrapeRun(conn, runId);
             progress?.Report($"  ✓ Run {runId} finished.");
+            onRunChanged?.Report(runId); // finished now, though Step 3 may run on for a while
         }
     }
 
