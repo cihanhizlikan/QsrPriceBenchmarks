@@ -41,18 +41,9 @@ public sealed class ChainSessionViewModel(ChainConfig chain) : ViewModelBase
         private set
         {
             Set(ref _isRunning, value);
-            Notify(nameof(IsIdle));
             Notify(nameof(IsRematchEnabled));
             Notify(nameof(ProgressVisible));
             Notify(nameof(StatusText));
-        }
-    }
-
-    public bool IsIdle
-    {
-        get
-        {
-            return !_isRunning;
         }
     }
 

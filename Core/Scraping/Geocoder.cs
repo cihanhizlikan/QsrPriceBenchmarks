@@ -29,7 +29,7 @@ public static partial class Geocoder
     public readonly record struct GeocodeResult(GeoPoint? Point, GeocodeOutcome Outcome);
 
     /// <summary>
-    /// Like <see cref="GeocodeAsync"/> but reports the outcome so callers can
+    /// Geocodes <paramref name="address"/> and reports the outcome, so callers can
     /// distinguish a genuine "no match" from Google failing to keep up
     /// (a timeout/error) — the signal the adaptive geocode step uses to raise or
     /// lower its parallelism. Retries transient strain (timeout/error) a few
@@ -139,10 +139,5 @@ public static partial class Geocoder
         {
             // Non-fatal — absence of a consent wall is the normal case.
         }
-    }
-
-    public static async Task<GeoPoint?> GeocodeAsync(IPage page, string address)
-    {
-        return (await GeocodeDetailedAsync(page, address)).Point;
     }
 }
