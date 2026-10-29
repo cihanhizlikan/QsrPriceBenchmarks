@@ -34,4 +34,38 @@ public sealed class ExcelExporterTests
             try { if (Directory.Exists(outDir)) { Directory.Delete(outDir, recursive: true); } } catch { }
         }
     }
+
+    /// <summary>
+    /// <c>qsr --export-since RUN_ID</c> crashed every time (sweep 2026-10-29): the filter was concatenated between
+    /// two raw-string fragments with no space, so SQLite read <c>$sinceORDER</c> as one parameter and failed at
+    /// "BY". The UI never passes a run ID, so only the CLI met it.
+    /// </summary>
+    [Fact(DisplayName = "Export since a run keeps that run's rows and drops earlier ones")]
+    public void ExportSince_FiltersByRun()
+    {
+        using TempDb db = new();
+        ReportSeed.Seed(db.Conn, first: 100m, second: 120m);
+        long latestRun = Convert.ToInt64(db.Scalar("SELECT MAX(ID) FROM SCRAPE_RUNS;"));
+
+        string outDir = System.IO.Path.Combine(
+            System.IO.Path.GetTempPath(), $"qsr_xlsx_{Guid.NewGuid():N}");
+        try
+        {
+            string kept = ExcelExporter.Export(ReportSeed.Chain, db.Conn, Path.Combine(outDir, "kept"), latestRun);
+            using (XLWorkbook wb = new(kept))
+            {
+                Assert.Equal("Whopper", wb.Worksheet(1).Cell(2, 8).GetString());
+            }
+
+            string empty = ExcelExporter.Export(ReportSeed.Chain, db.Conn, Path.Combine(outDir, "empty"), latestRun + 1);
+            using (XLWorkbook wb = new(empty))
+            {
+                Assert.Equal(1, wb.Worksheet(1).LastRowUsed()!.RowNumber()); // the header row alone
+            }
+        }
+        finally
+        {
+            try { if (Directory.Exists(outDir)) { Directory.Delete(outDir, recursive: true); } } catch { }
+        }
+    }
 }

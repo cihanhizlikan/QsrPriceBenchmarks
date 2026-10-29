@@ -155,29 +155,32 @@ internal static class Program
             ForceCrawl = opts.ForceCrawl,
             Geocode = opts.Geocode,
             GeocodeRematch = opts.GeocodeRematch,
-            Export = opts.Export,
-            ExportSince = opts.ExportSince,
             // Tabs intentionally left null: the CLI has no tab picker, so a full run
             // always scrapes every configured tab.
-            OutputDir = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(opts.Db))!, "output"),
         };
 
         // Close the maintenance connection — PipelineRunner opens its own.
         conn.Dispose();
 
-        try
+        // Export is not a pipeline step but the CLI's own, after the pipeline: --export on its own runs no step
+        // at all, where a run with no flags is a full run.
+        bool exportOnly = (opts.Export || opts.ExportSince is not null) && !pipeOpts.IsSelective;
+        if (!exportOnly)
         {
-            using CancellationTokenSource cts = new();
-            Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); Log("  ⚠ Cancelling"); };
-            await PipelineRunner.RunAsync(opts.Db, pipeOpts, progress, cts.Token, progressCount);
-        }
-        catch (OperationCanceledException)
-        {
-            Log("  ✗ Cancelled."); return 1;
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"  ✗ Fatal: {ex.Message}"); return 1;
+            try
+            {
+                using CancellationTokenSource cts = new();
+                Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); Log("  ⚠ Cancelling"); };
+                await PipelineRunner.RunAsync(opts.Db, pipeOpts, progress, cts.Token, progressCount);
+            }
+            catch (OperationCanceledException)
+            {
+                Log("  ✗ Cancelled."); return 1;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"  ✗ Fatal: {ex.Message}"); return 1;
+            }
         }
 
         // Export is no longer a pipeline step; the CLI performs it directly on request.

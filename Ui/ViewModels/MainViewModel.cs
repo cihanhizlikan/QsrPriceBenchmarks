@@ -448,7 +448,6 @@ public sealed class MainViewModel : ViewModelBase
             GeocodeRematch = session.GeocodeRematch,
             // For a full run, every tab is scraped but the unticked ones. Selective runs never reach Step 2.
             Tabs = session.IsSelective ? null : [.. session.ScrapeTabs.Where(t => t.IsSelected).Select(t => t.Name)],
-            OutputDir = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(DbPath))!, "output"),
         };
 
         await RunInSessionAsync(session, token, (log, progress, locationsChanged, runChanged) =>

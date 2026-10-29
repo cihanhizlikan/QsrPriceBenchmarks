@@ -256,6 +256,9 @@ public static class ExcelExporter
 
     private static List<ReportRow> LoadReportRows(string chainName, SqliteConnection conn, long? sinceRunId)
     {
+        // One constant statement with an optional filter (a null $since keeps every run) — the shape the geocode
+        // queries use. Gluing a fragment between two raw-string literals ran "$since" into "ORDER" and every
+        // --export-since failed with 'near "BY": syntax error'.
         using SqliteCommand cmd = conn.CreateCommand();
         cmd.CommandText = """
             SELECT QSR, PROVINCE, DISTRICT, LOCATION_NAME, LOCATION_ADDRESS,
@@ -264,14 +267,11 @@ public static class ExcelExporter
                    LAST_SCRAPE_RUN, DAYS_SINCE_SCRAPE
             FROM V_MARKETING_REPORT
             WHERE QSR_ID = (SELECT ID FROM QSR WHERE NAME = $chain)
-            """ + (sinceRunId is not null ? " AND SCRAPE_RUN_ID >= $since" : "") + """
+              AND ($since IS NULL OR SCRAPE_RUN_ID >= $since)
             ORDER BY PROVINCE, DISTRICT, LOCATION_NAME, MENU_ITEM;
             """;
         cmd.Parameters.AddWithValue("$chain", chainName);
-        if (sinceRunId is not null)
-        {
-            cmd.Parameters.AddWithValue("$since", sinceRunId.Value);
-        }
+        cmd.Parameters.AddWithValue("$since", (object?)sinceRunId ?? DBNull.Value);
 
         List<ReportRow> result = [];
         using SqliteDataReader reader = cmd.ExecuteReader();

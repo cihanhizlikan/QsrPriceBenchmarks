@@ -15,8 +15,6 @@ public sealed class PipelineOptions
     public bool ForceCrawl { get; init; }
     public bool Geocode { get; init; }
     public bool GeocodeRematch { get; init; }
-    public bool Export { get; init; }
-    public long? ExportSince { get; init; }
 
     /// <summary>
     /// Optional subset of TG menu tab names to scrape during a full run
@@ -33,10 +31,7 @@ public sealed class PipelineOptions
     {
         get
         {
-            return ForceCrawl || Geocode || GeocodeRematch || Export || ExportSince is not null;
+            return ForceCrawl || Geocode || GeocodeRematch;
         }
     }
-
-    /// <summary>Output folder for Excel files. Defaults to "output" beside the DB.</summary>
-    public string OutputDir { get; init; } = "output";
 }
