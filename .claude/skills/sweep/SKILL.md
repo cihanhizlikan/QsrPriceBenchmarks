@@ -208,8 +208,8 @@ read WHAT a search matched before concluding anything from HOW MANY.
 
 **Never re-raise a settled decision.** `settled-decisions.md` is the ruling.
 
-**The database is the user's data** — a step never changes the schema without a migration and its test, and that
-is never an unambiguous correction: it is a package.
+**A schema change is never a sweep step** — it may now discard the user's database (allowed since 2026-10-29), and
+that is never an unambiguous correction: it is a package.
 
 # Finishing
 

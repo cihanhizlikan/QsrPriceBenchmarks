@@ -13,10 +13,12 @@ this one is the ruling for this repository — the differences are deliberate an
 ## Critical rules
 - The assistant runs locally with **dotnet and git on PATH** — verify changes with `dotnet build`/`dotnet test`
   through `/wp-verify` instead of asking the maintainer to build and report back.
-- **The SQLite database is the USER'S DATA, not disposable app state.** It holds every scrape run they collected,
-  at a path they chose. So a schema change ships a data-preserving migration (`Database.MigrateLegacySchema` is
-  the existing shape, `DatabaseMigrationTests` the guard), and nothing ever deletes or drops a table in a
-  database the session did not create itself. This is the opposite of Yalbuz's `yalbuz.db` rule, on purpose.
+- **The program's shape outranks the database's contents** (maintainer, 2026-10-29). A schema change may discard
+  existing databases instead of migrating them: deleting the database and scraping again is acceptable, and so is
+  what that loses — the price history `PREV_PRICE` / `PRICE_CHANGE` compare against, which no rescan brings back.
+  Two limits stay: **the app never deletes a database file on its own** — one the current schema cannot use is
+  refused with a plain message naming the file, and starting fresh is the user's act — and **a session never
+  deletes or alters the maintainer's own database file** unless told to.
 - **Never work directly on `main`** — only branch off its current tip or merge a finished branch into it. If
   `main` is checked out and new work is requested, branch off it before touching anything.
 - **Work in a worktree.** Any session about to change files opens one with `/wp-start` and works there — not in
