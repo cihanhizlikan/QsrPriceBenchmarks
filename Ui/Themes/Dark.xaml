@@ -232,8 +232,10 @@
 
     <!-- Sort arrow beside a column's title: ▲ ascending, ▼ descending, nothing while another column sorts. It
          reads the header it sits in, so it serves both a plain title and a filter header (ColumnFilterHeader). -->
-    <!-- Docked at the header's right edge, outermost (maintainer, 2026-10-30). Hidden, not collapsed, while another
-         column sorts: it keeps its place, so a filter funnel beside it never shifts as the sort moves. -->
+    <!-- Docked right (maintainer, 2026-10-30): at the edge on a plain column, just inside the funnel on a filter
+         column. Hidden, not collapsed, while another column sorts: it keeps its slot, so the title's room does not
+         change as the sort moves. -->
+
     <Style x:Key="SortArrow" TargetType="Path">
         <Setter Property="Fill"              Value="{StaticResource BrushLightCyan}"/>
         <Setter Property="Margin"            Value="6 0 0 0"/>
