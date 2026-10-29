@@ -34,7 +34,11 @@ public sealed class BrowserSession : IAsyncDisposable
     // One browser per process, shared by every session alive at once: chains scraping together each get their
     // own context and page, not their own Chromium (a few hundred MB apiece). Launched by the first session,
     // closed by the last.
-    private static readonly SemaphoreSlim SharedLock = new(1, 1);
+    // Held only while the shared browser is launched or closed. Every wait on it is bounded (plan WP-R1): a hung
+    // launch or close must fail the run that waits, not stall every chain's next scrape forever. Internal so a
+    // test can hold the lock and shorten the bound.
+    internal static readonly SemaphoreSlim SharedLock = new(1, 1);
+    internal static TimeSpan SharedLockBound { get; set; } = TimeSpan.FromMinutes(2); // Playwright's launch gives up at 30 s
     private static IPlaywright? _sharedPlaywright;
     private static IBrowser? _sharedBrowser;
     private static int _users;
@@ -55,9 +59,10 @@ public sealed class BrowserSession : IAsyncDisposable
     /// Viewport height in pixels (width is fixed at 1280). Affects only how
     /// much lazy-loaded content renders before scrolling; defaults to 900.
     /// </param>
-    public static async Task<BrowserSession> LaunchAsync(int viewportHeight = 900)
+    /// <param name="ct">The run's cancellation: Cancel reaches a run waiting for the shared browser.</param>
+    public static async Task<BrowserSession> LaunchAsync(int viewportHeight = 900, CancellationToken ct = default)
     {
-        IBrowser browser = await AcquireBrowserAsync();
+        IBrowser browser = await AcquireBrowserAsync(ct);
         try
         {
             IBrowserContext context = await browser.NewContextAsync(new BrowserNewContextOptions
@@ -83,9 +88,14 @@ public sealed class BrowserSession : IAsyncDisposable
         await ReleaseBrowserAsync();
     }
 
-    private static async Task<IBrowser> AcquireBrowserAsync()
+    private static async Task<IBrowser> AcquireBrowserAsync(CancellationToken ct)
     {
-        await SharedLock.WaitAsync();
+        if (!await SharedLock.WaitAsync(SharedLockBound, ct))
+        {
+            throw new TimeoutException(
+                $"The shared browser did not become available within {SharedLockBound.TotalSeconds:0} s: another " +
+                "run's browser launch or close is stuck. Restart the app if it persists.");
+        }
         try
         {
             if (_sharedBrowser is not { IsConnected: true })
@@ -105,7 +115,12 @@ public sealed class BrowserSession : IAsyncDisposable
 
     private static async Task ReleaseBrowserAsync()
     {
-        await SharedLock.WaitAsync();
+        if (!await SharedLock.WaitAsync(SharedLockBound))
+        {
+            // A run's cleanup must never hang behind a stuck launch or close. Giving up leaves this session
+            // counted, so the browser stays open until the process exits — the cost of not waiting forever.
+            return;
+        }
         try
         {
             if (--_users <= 0)

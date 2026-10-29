@@ -46,7 +46,7 @@ public static class ChainCrawler
         // and anything older (or never stamped) is a candidate for soft-close.
         string crawlStart = Repository.UtcStamp();
 
-        await using BrowserSession session = await BrowserSession.LaunchAsync();
+        await using BrowserSession session = await BrowserSession.LaunchAsync(ct: ct);
         IPage page = session.Page;
 
         progress?.Report($"  Crawling {chain.RootUrl}");

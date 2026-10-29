@@ -84,7 +84,7 @@ public static class TgScraper
             : LoadQueueMissingFromRun(conn, qsrId, platformId, runId);
         progress?.Report($"  Scraping {queue.Count} platform location(s)");
 
-        await using BrowserSession session = await BrowserSession.LaunchAsync();
+        await using BrowserSession session = await BrowserSession.LaunchAsync(ct: ct);
         IPage page = session.Page;
 
         try
