@@ -71,8 +71,9 @@ qsr-ui
 Select a chain in the left sidebar, choose its options, click Run. Each chain
 runs on its own, with its own log, progress bar and Cancel: switch to another
 chain mid-run to start or watch it too, and its card in the sidebar shows how
-it is doing. Chains share Tıkla Gelsin and Google politely — they take turns,
-so several at once put no more load on a site than one did. The Scrape Runs
+it is doing. Chains share Tıkla Gelsin and Google politely: two chains scrape
+Tıkla Gelsin at once and any more take turns, and Google takes no more lookups
+from several chains than it did from one. The Scrape Runs
 tab handles run management and export; the Locations tab maps where the
 chain's restaurants are.
 

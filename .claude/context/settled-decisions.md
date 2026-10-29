@@ -129,3 +129,12 @@ one chain runs exactly as fast as before, and chains together share that total i
 single chain's geocoding. Sessions share one browser (a context each). A chain's own website is not queued.
 **Re-opened by** a measurement that Tıkla Gelsin tolerates 2 concurrent pages without throttling — then raise its
 limit and chains overlap for real on Step 2; or by a site throttling at today's limits.
+
+**Amended 2026-10-30 (WP-C3): Tıkla Gelsin takes two pages at once.** A run still asks for one page at a time, so
+the second slot only lets two chains' Step 2 overlap. **Measured** live, Burger King and Popeyes, one page each at
+once vs one page in all, `TgScraper.ScrapePageAsync` on distinct sitemap listings: in phases serial / two / two /
+serial of 12 pages, every page returned its menu (130–252 items, one 14-item listing at serial), with no exception
+and no empty body, at ~6 s a page in both modes; walls 72 / 40 / 40 / 70 s. Then 80 pages two at a time: 80 menus,
+no exception, median 6.6 s, p90 7.6 s, each chain's last ten pages its fastest (6.3 / 6.6 s) — no slowing trend —
+and the sitemap answered in full afterwards (HTTP 200, 627 KB). **Re-opened by** throttling at two: empty bodies,
+pages timing out, or the sitemap answering empty — then back to one.

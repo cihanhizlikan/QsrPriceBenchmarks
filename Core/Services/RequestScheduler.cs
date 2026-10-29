@@ -4,10 +4,10 @@ namespace QsrPriceBenchmarks.Core.Services;
 /// One per process: hands out turns to send requests to a website, at most a fixed number at once per host, and
 /// takes the scrapes waiting for a host in turn (round-robin), so one chain's scrape never starves another's.
 ///
-/// The limits are what ONE run already used before several could run at once — one Tıkla Gelsin page at a time,
-/// up to four Google Maps searches — so a single chain runs exactly as fast as before, and chains running together
-/// share that same total instead of multiplying the load on the site. A host without a limit is not queued
-/// (a chain's own website: only that chain's run ever visits it).
+/// The limits: up to four Google Maps searches — what ONE run already used before several could run at once, so
+/// chains together share that total instead of multiplying the load — and two Tıkla Gelsin pages, so two chains'
+/// Step 2 overlap (a run asks for one page at a time; WP-C3 measured two at once without throttling). A host
+/// without a limit is not queued (a chain's own website: only that chain's run ever visits it).
 ///
 /// <see cref="SemaphoreSlim"/> would not do: it promises no order among waiters, so a scrape that releases and
 /// asks again at once could keep winning.
@@ -20,10 +20,10 @@ public sealed class RequestScheduler(IReadOnlyDictionary<string, int> slotsPerHo
     private readonly Dictionary<string, HostQueue> _hosts = slotsPerHost.ToDictionary(
         h => h.Key, h => new HostQueue(h.Value), StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>The limits one run used before chains could run together (see the class summary).</summary>
+    /// <summary>The measured limits (see the class summary).</summary>
     public static RequestScheduler CreateDefault()
     {
-        return new RequestScheduler(new Dictionary<string, int> { [TiklaGelsin] = 1, [GoogleMaps] = 4 });
+        return new RequestScheduler(new Dictionary<string, int> { [TiklaGelsin] = 2, [GoogleMaps] = 4 });
     }
 
     /// <summary>The gate one run passes its requests through; <paramref name="session"/> is what takes turns.</summary>

@@ -92,6 +92,21 @@ public sealed class RequestSchedulerTests
         using IDisposable cTurn = await next.WaitAsync(Bound);
     }
 
+    // WP-C3 measured 104 Tıkla Gelsin pages two at a time without a sign of throttling (settled-decisions.md).
+    [Fact(DisplayName = "Two chains scrape Tıkla Gelsin at once; a third waits")]
+    public async Task TiklaGelsin_TakesTwoChainsAtOnce()
+    {
+        RequestScheduler scheduler = RequestScheduler.CreateDefault();
+        using IDisposable first = await scheduler.For("A").TakeTurnAsync(RequestScheduler.TiklaGelsin);
+        Task<IDisposable> second = scheduler.For("B").TakeTurnAsync(RequestScheduler.TiklaGelsin);
+        Task<IDisposable> third = scheduler.For("C").TakeTurnAsync(RequestScheduler.TiklaGelsin);
+
+        Assert.True(second.IsCompletedSuccessfully, "a second chain must not wait for the first's page");
+        Assert.False(third.IsCompleted, "a third chain must wait for a slot");
+        (await second).Dispose();
+        (await third.WaitAsync(Bound)).Dispose();
+    }
+
     [Fact(DisplayName = "A host with no limit is never queued")]
     public async Task UnlimitedHost_IsNotQueued()
     {
