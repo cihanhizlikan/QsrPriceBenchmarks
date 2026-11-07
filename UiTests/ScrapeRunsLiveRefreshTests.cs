@@ -1,12 +1,11 @@
-using System.Diagnostics;
 using System.Windows.Controls;
-using System.Windows.Threading;
 using Microsoft.Data.Sqlite;
 using QsrPriceBenchmarks.Core.Db;
 using QsrPriceBenchmarks.Core.Models;
 using QsrPriceBenchmarks.Ui;
 using QsrPriceBenchmarks.Ui.ViewModels;
 using Xunit;
+using static QsrPriceBenchmarks.UiTests.Dispatching;
 
 namespace QsrPriceBenchmarks.UiTests;
 
@@ -18,6 +17,8 @@ namespace QsrPriceBenchmarks.UiTests;
 /// </summary>
 public sealed class ScrapeRunsLiveRefreshTests
 {
+    private const string Stuck = "The Scrape Runs grid did not reach the expected state";
+
     private const string Chain = "Burger King";
 
     [Fact]
@@ -43,11 +44,11 @@ public sealed class ScrapeRunsLiveRefreshTests
                 MainViewModel model = (MainViewModel)window.DataContext;
                 model.DbPath = throwaway.Path;
                 Task startup = model.InitialiseAsync();
-                PumpUntil(() => startup.IsCompleted);
+                PumpUntil(() => startup.IsCompleted, Stuck);
 
                 ((TabItem)window.FindName("ScrapeRunsTab")).IsSelected = true;
                 tabFlagSet = model.ScrapeRunsTabActive;
-                PumpUntil(() => model.Runs.Count == 1);
+                PumpUntil(() => model.Runs.Count == 1, Stuck);
                 model.SelectedRun = model.Runs[0];
 
                 // What Step 2 does as a run starts and records a page, then the signal it sends.
@@ -64,7 +65,7 @@ public sealed class ScrapeRunsLiveRefreshTests
                 }
                 model.NotifyRunsChanged();
 
-                PumpUntil(() => model.Runs.Count == 2);
+                PumpUntil(() => model.Runs.Count == 2, Stuck);
                 liveSnapshots = model.Runs.FirstOrDefault(r => r.Id == liveRun)?.SnapshotCount;
                 liveErrored = model.Runs.FirstOrDefault(r => r.Id == liveRun)?.IsErrored;
                 live.Dispose();
@@ -97,24 +98,5 @@ public sealed class ScrapeRunsLiveRefreshTests
         cmd.Parameters.AddWithValue("$qsr", qsrId);
         cmd.Parameters.AddWithValue("$plat", platformId);
         return Convert.ToInt64(cmd.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture);
-    }
-
-    /// <summary>Runs the dispatcher until <paramref name="done"/> holds; bounded so a grid that never fills fails.</summary>
-    private static void PumpUntil(Func<bool> done)
-    {
-        long started = Stopwatch.GetTimestamp();
-        while (!done())
-        {
-            if (Stopwatch.GetElapsedTime(started) > TimeSpan.FromSeconds(20))
-            {
-                throw new TimeoutException("The Scrape Runs grid did not reach the expected state within 20 s.");
-            }
-            DispatcherFrame frame = new();
-            DispatcherTimer tick = new(TimeSpan.FromMilliseconds(25), DispatcherPriority.Background,
-                (_, _) => { frame.Continue = false; }, Dispatcher.CurrentDispatcher);
-            tick.Start();
-            Dispatcher.PushFrame(frame);
-            tick.Stop();
-        }
     }
 }

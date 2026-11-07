@@ -1,11 +1,10 @@
-using System.Diagnostics;
-using System.Windows.Threading;
 using Microsoft.Data.Sqlite;
 using QsrPriceBenchmarks.Core.Db;
 using QsrPriceBenchmarks.Core.Models;
 using QsrPriceBenchmarks.Ui;
 using QsrPriceBenchmarks.Ui.ViewModels;
 using Xunit;
+using static QsrPriceBenchmarks.UiTests.Dispatching;
 
 namespace QsrPriceBenchmarks.UiTests;
 
@@ -16,6 +15,8 @@ namespace QsrPriceBenchmarks.UiTests;
 /// </summary>
 public sealed class ScrapeTabListTests
 {
+    private const string Stuck = "The tab list did not reach the expected state";
+
     private const string Chain = "Burger King";
 
     [Fact]
@@ -42,11 +43,11 @@ public sealed class ScrapeTabListTests
                 MainViewModel model = (MainViewModel)window.DataContext;
                 model.DbPath = throwaway.Path;
                 Task startup = model.InitialiseAsync();
-                PumpUntil(() => startup.IsCompleted);
+                PumpUntil(() => startup.IsCompleted, Stuck);
 
                 ChainViewModel chain = model.Chains.First(c => c.Name == Chain);
                 model.SelectedChain = chain;
-                PumpUntil(() => model.SelectedSession!.ScrapeTabs.Count == 2);
+                PumpUntil(() => model.SelectedSession!.ScrapeTabs.Count == 2, Stuck);
                 afterDisable.AddRange(model.SelectedSession!.ScrapeTabs.Select(t => (t.Name, t.IsSelected)));
 
                 // A later run's page shows the tab again.
@@ -57,7 +58,7 @@ public sealed class ScrapeTabListTests
                 }
                 model.SelectedChain = model.Chains.First(c => c.Name != Chain);
                 model.SelectedChain = chain;
-                PumpUntil(() => model.SelectedSession!.ScrapeTabs.Count == 3);
+                PumpUntil(() => model.SelectedSession!.ScrapeTabs.Count == 3, Stuck);
                 afterReenable.AddRange(model.SelectedSession!.ScrapeTabs.Select(t => (t.Name, t.IsSelected)));
                 window.Close();
             });
@@ -73,24 +74,5 @@ public sealed class ScrapeTabListTests
     {
         ChainConfig config = ChainRegistry.All.First(c => c.Name == Chain);
         return (Repository.QsrId(conn, config.Name), Repository.PlatformId(conn, config.PrimaryPlatform));
-    }
-
-    /// <summary>Runs the dispatcher until <paramref name="done"/> holds; bounded so a list that never fills fails.</summary>
-    private static void PumpUntil(Func<bool> done)
-    {
-        long started = Stopwatch.GetTimestamp();
-        while (!done())
-        {
-            if (Stopwatch.GetElapsedTime(started) > TimeSpan.FromSeconds(20))
-            {
-                throw new TimeoutException("The tab list did not reach the expected state within 20 s.");
-            }
-            DispatcherFrame frame = new();
-            DispatcherTimer tick = new(TimeSpan.FromMilliseconds(25), DispatcherPriority.Background,
-                (_, _) => { frame.Continue = false; }, Dispatcher.CurrentDispatcher);
-            tick.Start();
-            Dispatcher.PushFrame(frame);
-            tick.Stop();
-        }
     }
 }

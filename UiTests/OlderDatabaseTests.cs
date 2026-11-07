@@ -9,6 +9,7 @@ using QsrPriceBenchmarks.Core.Models;
 using QsrPriceBenchmarks.Ui;
 using QsrPriceBenchmarks.Ui.ViewModels;
 using Xunit;
+using static QsrPriceBenchmarks.UiTests.Dispatching;
 
 namespace QsrPriceBenchmarks.UiTests;
 
@@ -18,6 +19,8 @@ namespace QsrPriceBenchmarks.UiTests;
 /// </summary>
 public sealed class OlderDatabaseTests
 {
+    private const string Stuck = "The window did not reach the expected state";
+
     [Fact]
     public void Answering_Yes_Keeps_The_Old_File_Aside_And_Starts_A_Fresh_Database()
     {
@@ -96,13 +99,13 @@ public sealed class OlderDatabaseTests
                 {
                     model.DbPath = path;
                     Task startup = model.InitialiseAsync();
-                    Pump(() => startup.IsCompleted);
+                    PumpUntil(() => startup.IsCompleted, Stuck);
                     foreach (ChainViewModel chain in model.Chains)
                     {
                         model.SelectedChain = chain; // each chain's tab list and the map re-read
                     }
                     model.ReloadRunsCommand.Execute(null);
-                    Pump(() => false, TimeSpan.FromSeconds(1));
+                    PumpFor(TimeSpan.FromSeconds(1));
                     runsShown = model.Runs.Count;
                 }
                 finally
@@ -143,11 +146,11 @@ public sealed class OlderDatabaseTests
                 };
                 model.DbPath = path;
                 Task startup = model.InitialiseAsync();
-                Pump(() => startup.IsCompleted);
+                PumpUntil(() => startup.IsCompleted, Stuck);
 
                 model.DeleteBeforeId = "5";
                 model.DeleteBeforeIdCommand.Execute(null);
-                Pump(() => shown.Any(s => s.StartsWith("Delete:", StringComparison.Ordinal)));
+                PumpUntil(() => shown.Any(s => s.StartsWith("Delete:", StringComparison.Ordinal)), Stuck);
                 window.Close();
             });
 
@@ -156,30 +159,6 @@ public sealed class OlderDatabaseTests
         finally
         {
             DeleteAll(path);
-        }
-    }
-
-    /// <summary>Runs the dispatcher until <paramref name="done"/> holds, or for <paramref name="limit"/> at most.</summary>
-    private static void Pump(Func<bool> done, TimeSpan? limit = null)
-    {
-        TimeSpan bound = limit ?? TimeSpan.FromSeconds(20);
-        long started = Stopwatch.GetTimestamp();
-        while (!done())
-        {
-            if (Stopwatch.GetElapsedTime(started) > bound)
-            {
-                if (limit is not null)
-                {
-                    return; // a fixed settling time, not a wait for something
-                }
-                throw new TimeoutException("The window did not reach the expected state within 20 s.");
-            }
-            DispatcherFrame frame = new();
-            DispatcherTimer tick = new(TimeSpan.FromMilliseconds(25), DispatcherPriority.Background,
-                (_, _) => { frame.Continue = false; }, Dispatcher.CurrentDispatcher);
-            tick.Start();
-            Dispatcher.PushFrame(frame);
-            tick.Stop();
         }
     }
 

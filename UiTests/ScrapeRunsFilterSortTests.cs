@@ -1,11 +1,9 @@
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Threading;
 using Microsoft.Data.Sqlite;
 using QsrPriceBenchmarks.Core.Db;
 using QsrPriceBenchmarks.Core.Models;
@@ -14,6 +12,7 @@ using QsrPriceBenchmarks.Ui.ViewModels;
 using Xunit;
 using Path = System.Windows.Shapes.Path;
 using static QsrPriceBenchmarks.UiTests.VisualTree;
+using static QsrPriceBenchmarks.UiTests.Dispatching;
 
 namespace QsrPriceBenchmarks.UiTests;
 
@@ -25,6 +24,8 @@ namespace QsrPriceBenchmarks.UiTests;
 /// </summary>
 public sealed class ScrapeRunsFilterSortTests
 {
+    private const string Stuck = "The Scrape Runs grid did not reach the expected state";
+
     [Fact]
     public void Runs_Are_Sorted_And_The_Sort_Survives_A_Reload()
     {
@@ -39,7 +40,7 @@ public sealed class ScrapeRunsFilterSortTests
             // A header click, as a user makes it, then the reload a scraped page triggers.
             Click(window, nameof(ScrapeRunViewModel.SnapshotCount));
             model.NotifyRunsChanged();
-            Pump(() => false, TimeSpan.FromSeconds(1));
+            PumpFor(TimeSpan.FromSeconds(1));
             snapshotsAfterReload.AddRange(Shown(model));
             arrows.Add(Arrows(window));
 
@@ -89,7 +90,7 @@ public sealed class ScrapeRunsFilterSortTests
             chainFunnel.RaiseEvent(press);
             funnelPressHandled = press.Handled && SortOf(model) == sortBefore;
             chainFunnel.IsChecked = true;
-            Pump(() => false, TimeSpan.FromMilliseconds(300));
+            PumpFor(TimeSpan.FromMilliseconds(300));
             chainChoices.AddRange(PopupChoices(chainFunnel));
             chainFunnel.IsChecked = false;
 
@@ -154,9 +155,9 @@ public sealed class ScrapeRunsFilterSortTests
                 MainViewModel model = (MainViewModel)window.DataContext;
                 model.DbPath = throwaway.Path;
                 window.Show();
-                Pump(() => model.Runs.Count == 5);
+                PumpUntil(() => model.Runs.Count == 5, Stuck);
                 ((TabItem)window.FindName("ScrapeRunsTab")).IsSelected = true;
-                Pump(() => Descendants<DataGridColumnHeader>(window).Any(h => h.Column?.SortMemberPath == nameof(ScrapeRunViewModel.SnapshotCount)));
+                PumpUntil(() => Descendants<DataGridColumnHeader>(window).Any(h => h.Column?.SortMemberPath == nameof(ScrapeRunViewModel.SnapshotCount)), Stuck);
                 act(window, model);
                 window.Close();
             });
@@ -184,8 +185,8 @@ public sealed class ScrapeRunsFilterSortTests
         ListSortDirection? before = header.Column.SortDirection;
         typeof(ButtonBase).GetMethod("OnClick", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
             .Invoke(header, null);
-        Pump(() => header.Column.SortDirection != before);
-        Pump(() => false, TimeSpan.FromMilliseconds(200)); // the arrows' bindings
+        PumpUntil(() => header.Column.SortDirection != before, Stuck);
+        PumpFor(TimeSpan.FromMilliseconds(200)); // the arrows' bindings
     }
 
     /// <summary>The columns whose header shows a sort arrow, by the property each is bound to.</summary>
@@ -253,29 +254,5 @@ public sealed class ScrapeRunsFilterSortTests
     private static long Qsr(SqliteConnection conn, string chain)
     {
         return Repository.QsrId(conn, chain);
-    }
-
-    /// <summary>Runs the dispatcher until <paramref name="done"/> holds, or for <paramref name="limit"/> at most.</summary>
-    private static void Pump(Func<bool> done, TimeSpan? limit = null)
-    {
-        TimeSpan bound = limit ?? TimeSpan.FromSeconds(20);
-        long started = Stopwatch.GetTimestamp();
-        while (!done())
-        {
-            if (Stopwatch.GetElapsedTime(started) > bound)
-            {
-                if (limit is not null)
-                {
-                    return; // a fixed settling time, not a wait for something
-                }
-                throw new TimeoutException("The Scrape Runs grid did not reach the expected state within 20 s.");
-            }
-            DispatcherFrame frame = new();
-            DispatcherTimer tick = new(TimeSpan.FromMilliseconds(25), DispatcherPriority.Background,
-                (_, _) => { frame.Continue = false; }, Dispatcher.CurrentDispatcher);
-            tick.Start();
-            Dispatcher.PushFrame(frame);
-            tick.Stop();
-        }
     }
 }
