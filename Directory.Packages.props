@@ -1,0 +1,41 @@
+<Project>
+  <!-- Central package management (adopted from Yalbuz 2026-11-07). EVERY package version in the repository is stated
+       here and nowhere else; a project names a package and never a version — a Version on a PackageReference is
+       NU1008, an error. Before this, three references FLOATED (Microsoft.Data.Sqlite.Core 10.0.*,
+       SQLitePCLRaw.bundle_winsqlite3 2.1.*, xunit 2.*), so what the MSI carried depended on the day of the restore.
+       Each was pinned at the version it resolved to then, so the pin changed no build output.
+
+       THE RULE FOR A BUMP: a patch or minor is taken freely; a MAJOR is a decision, not a bump. Two SQLitePCLRaw
+       majors sit below on purpose — the hosts' provider and the tests' provider are different packages, chosen per
+       host (settled-decisions.md, SQLite provider) — and whether the tests should run the shipped major is a plan
+       row, not something this file settles. -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <!-- Shipped: Core and the two hosts. -->
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.Playwright" Version="1.61.0" />
+    <PackageVersion Include="AngleSharp" Version="1.5.1" />
+    <PackageVersion Include="ClosedXML" Version="0.105.0" />
+    <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="10.0.14" />
+    <!-- The Windows apps' SQLite provider: the SQLite that ships with Windows. -->
+    <PackageVersion Include="SQLitePCLRaw.bundle_winsqlite3" Version="2.1.11" />
+  </ItemGroup>
+
+  <!-- Build-time only: analyzers and the installer's WiX extension. -->
+  <ItemGroup>
+    <PackageVersion Include="Roslynator.Analyzers" Version="5.0.0" />
+    <PackageVersion Include="WixToolset.UI.wixext" Version="5.0.2" />
+  </ItemGroup>
+
+  <!-- Tests. -->
+  <ItemGroup>
+    <!-- The test host's SQLite provider: cross-platform native SQLite, so the hermetic tests run anywhere. -->
+    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+  </ItemGroup>
+</Project>

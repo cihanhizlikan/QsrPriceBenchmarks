@@ -50,6 +50,6 @@
          Roslynator ships is switched off in .editorconfig. Roslynator is MIT,
          actively maintained (josefpihrt/roslynator), and analysis-only: never
          flowed to anything that references these projects. -->
-    <PackageReference Include="Roslynator.Analyzers" Version="5.0.0" PrivateAssets="all" />
+    <PackageReference Include="Roslynator.Analyzers" PrivateAssets="all" />
   </ItemGroup>
 </Project>

@@ -20,6 +20,6 @@
 
   <ItemGroup>
     <!-- Provides the WixUI dialog sets (Welcome / InstallDir / Finish wizard). -->
-    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+    <PackageReference Include="WixToolset.UI.wixext" />
   </ItemGroup>
 </Project>
