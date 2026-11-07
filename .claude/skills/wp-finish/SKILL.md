@@ -23,7 +23,7 @@ section says what ships and how big a bump each kind of change is. The candidate
 
 ```bash
 git add -A
-git diff --cached --name-only main -- Core Cli Ui Installer Directory.Build.props build-installer.ps1 ':(exclude)*.md'
+git diff --cached --name-only main -- Core Cli Ui Installer Directory.Build.props ':(exclude)*.md'
 git diff --cached main -- Directory.Build.props | grep '<Version>'
 ```
 

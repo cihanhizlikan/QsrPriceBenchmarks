@@ -76,7 +76,7 @@ turned the log's error line from magenta to orange in the window capture.
 ## The version moves with every change that ships (2026-10-25)
 
 **Decision** (maintainer). `Version` in `Directory.Build.props` is bumped in the commit of every change that alters
-the built assemblies or the MSI, sized patch / minor / major by `working-agreement.md`'s *Versioning* section — not
+the built assemblies or the installer, sized patch / minor / major by `working-agreement.md`'s *Versioning* section — not
 cut by hand at release time, which for 1.6.0 meant tracing 24 commits after the fact. Two choices inside it:
 - **Changes that ship nothing do not bump** (docs, tests, `.claude/`, formatting), so every version number means a
   different installer. Re-opened by a need to version something other than the installer.
@@ -175,14 +175,16 @@ as `başarısız <name>` lines), coverage's switches, and exit code 8 when a fil
 Test Explorer runs these projects natively from Visual Studio 2022 17.14.
 **Re-opened by** a runner this project needs that cannot drive Microsoft Testing Platform.
 
-## The installer stays on WiX 5 (maintainer, 2026-11-07, WP-D5)
+## ~~The installer stays on WiX 5~~ — superseded 2026-11-07 by *The installer is Inno Setup 7*
 
-**Decision.** `WixToolset.Sdk` and `WixToolset.UI.wixext` stay on 5.0.2 although 7.0.1 is current. From WiX 6 the
-pre-built binaries come under the Open Source Maintenance Fee EULA (a fee for revenue-generating users with
-$10,000+ annual gross revenue), and WiX 7 refuses to build until the project accepts it
-(`<AcceptEula>wix7</AcceptEula>`). WiX 5 is plain MS-RL. No advisory stands against 5.0.2 (`dotnet list
-Installer/QsrPriceBenchmarks.Installer.wixproj package --vulnerable --include-transitive`, 2026-11-07), and the
-MSI builds cleanly with it, so the upgrade buys nothing measurable for a licence obligation and an install-path risk.
-**Re-opened by** a WiX 5 security advisory, a Windows Installer capability only v6+ has, a future SDK that WiX 5
-cannot build under, or the maintainer settling the fee question. A sweep reports the WiX major as held by this
-entry, never as outdated.
+## The installer is Inno Setup 7 (maintainer, 2026-11-07)
+
+**Decision.** The setup program is `Installer/QsrPriceBenchmarks.iss`, compiled by Inno Setup 7 through the
+`Installer` publish profiles; WiX and its MSI are gone. Inno Setup's licence permits commercial use with no fee,
+where WiX 6+ binaries carry the Open Source Maintenance Fee EULA. Three choices inside it, each the maintainer's:
+- **A 3.x MSI install is removed by the new setup** (found by the MSI's UpgradeCode, `msiexec /x … /qn`) before
+  its files are copied, so the two installers never both claim Program Files. Hence a minor bump, 3.6.0, not major.
+- **`build-installer.ps1` is deleted**: the publish profiles were already the one route that runs no PowerShell.
+- **Parity with the MSI**: per-machine into Program Files, Start-menu and Desktop shortcuts, the licence page, and
+  a refused downgrade.
+**Re-opened by** a need only Windows Installer meets (Group Policy deployment, an MSI-only enterprise channel).

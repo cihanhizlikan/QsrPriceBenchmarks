@@ -13,7 +13,7 @@ Cli/        – console exe  (AssemblyName: qsr)
 Ui/         – WPF exe      (AssemblyName: qsr-ui), net10.0-windows
 Tests/      – xUnit tests  (hermetic unit tests + live integration tests)
 UiTests/    – xUnit tests that need a real WPF window, net10.0-windows
-Installer/  – WiX v5 MSI authoring (built by the Ui project's Installer publish profiles)
+Installer/  – Inno Setup 7 script for the setup program (built by the Ui project's Installer publish profiles)
 ```
 
 ## Build
@@ -86,10 +86,11 @@ there, and on Yes renames the old file aside (`<name>.v<version>-<timestamp>.sql
 — never deleting it — so its runs can still be exported by the version that
 made them.
 
-## Installer (self-contained MSI)
+## Installer (self-contained setup)
 
 To hand the app to someone who can't install a .NET runtime, build a
-self-contained MSI that bundles .NET 10 **and** Chromium. In Visual Studio:
+self-contained setup program that bundles .NET 10 **and** Chromium; Inno Setup 7
+must be installed on the build machine. In Visual Studio:
 right-click **QsrPriceBenchmarks.Ui → Publish**, choose the **Installer**
 profile, and press **Publish**. From a terminal:
 
@@ -97,9 +98,9 @@ profile, and press **Publish**. From a terminal:
 dotnet publish Ui -p:PublishProfile=Installer
 ```
 
-The single `Installer\bin\Release\QsrPriceBenchmarks-Setup.msi` installs with no
+The single `Installer\bin\Release\QsrPriceBenchmarks-Setup.exe` installs with no
 prerequisites on the target PC. The **InstallerSystemEdge** profile builds a
-much smaller MSI that uses the PC's Microsoft Edge instead of bundling Chromium.
+much smaller setup that uses the PC's Microsoft Edge instead of bundling Chromium.
 See `Installer/README.md` for details.
 
 ## Architecture

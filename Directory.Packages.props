@@ -2,7 +2,7 @@
   <!-- Central package management (adopted from Yalbuz 2026-11-07). EVERY package version in the repository is stated
        here and nowhere else; a project names a package and never a version — a Version on a PackageReference is
        NU1008, an error. Before this, three references FLOATED (Microsoft.Data.Sqlite.Core 10.0.*,
-       SQLitePCLRaw.bundle_winsqlite3 2.1.*, xunit 2.*), so what the MSI carried depended on the day of the restore.
+       SQLitePCLRaw.bundle_winsqlite3 2.1.*, xunit 2.*), so what the installer carried depended on the day of the restore.
        Each was pinned at the version it resolved to then, so the pin changed no build output.
 
        THE RULE FOR A BUMP: a patch or minor is taken freely; a MAJOR is a decision, not a bump. The two SQLitePCLRaw
@@ -25,12 +25,9 @@
     <PackageVersion Include="SQLitePCLRaw.bundle_winsqlite3" Version="2.1.11" />
   </ItemGroup>
 
-  <!-- Build-time only: analyzers and the installer's WiX extension. -->
+  <!-- Build-time only: analyzers. -->
   <ItemGroup>
     <PackageVersion Include="Roslynator.Analyzers" Version="5.0.1" />
-    <!-- Held on WiX 5 with the Sdk/5.0.2 in Installer's wixproj: WiX 6+ binaries carry the Open Source
-         Maintenance Fee EULA (settled-decisions.md, "The installer stays on WiX 5"). -->
-    <PackageVersion Include="WixToolset.UI.wixext" Version="5.0.2" />
   </ItemGroup>
 
   <!-- Tests. -->

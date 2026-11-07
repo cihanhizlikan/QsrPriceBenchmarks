@@ -48,10 +48,9 @@ every time — a new rule arrives with at most one sentence of example, and its 
 - **Say plainly when what was supplied is not what was asked for**, before building on a substitute.
 - **Justify dependencies unprompted** — maintenance status and the first-party alternative.
 - **What may run on this machine.** The maintainer reviews commands; don't assume blanket trust. **Never hand over
-  a PowerShell script to run** — Defender quarantines loose scripts. `build-installer.ps1` is the maintainer's to
-  run, not a session's; a session that needs an installer uses the `Installer` publish profile, which runs no
-  PowerShell (`dotnet publish Ui -p:PublishProfile=Installer`). Say beforehand when a check needs something
-  started, and ask.
+  a PowerShell script to run** — Defender quarantines loose scripts. A session that needs an installer uses the
+  `Installer` publish profile, which runs no PowerShell (`dotnet publish Ui -p:PublishProfile=Installer`). Say
+  beforehand when a check needs something started — and running a setup on this machine always is — and ask.
 - **Never spawn a background task or a second session for an out-of-scope finding** — write it into the plan as a
   work package. The interruption is the problem, not the finding.
 - **Work arrives in packages, and each one stops for a merge.** Finish one, report, and wait.
@@ -108,8 +107,8 @@ other projects' plans and delegated agents' notes beside it.
 it changes for a user (maintainer, 2026-10-25). `/wp-finish` runs the check; the two decisions behind the rule are
 in `settled-decisions.md`.
 
-- **What ships**: a change to the built assemblies or the MSI — anything under `Core/`, `Cli/`, `Ui/`, `Installer/`,
-  or `Directory.Build.props` / `build-installer.ps1` that changes build output. Docs, `Tests/`, `UiTests/`,
+- **What ships**: a change to the built assemblies or the setup program — anything under `Core/`, `Cli/`, `Ui/`,
+  `Installer/`, or `Directory.Build.props` that changes build output. Docs, `Tests/`, `UiTests/`,
   `.claude/`, `.editorconfig`-only, comment-only and whitespace-only changes do not ship and **do not bump** —
   every version number then means a different installer.
 - **How much**, from `main`'s current version, by the largest kind in the package:
@@ -157,8 +156,8 @@ measurement that refused it and what would re-open it.
    *committed, awaiting merge*.
 
 ## Delivering a build
-The MSI is built with the Ui project's `Installer` publish profile — Visual Studio's Publish, or `dotnet publish Ui
--p:PublishProfile=Installer` (`InstallerSystemEdge` for the small Edge-driven MSI); see `Installer/README.md`.
-`build-installer.ps1` still does the same. A source zip is `git archive --format=zip -o
+The setup program (`Installer\bin\Release\QsrPriceBenchmarks-Setup.exe`, Inno Setup 7) is built with the Ui
+project's `Installer` publish profile — Visual Studio's Publish, or `dotnet publish Ui -p:PublishProfile=Installer`
+(`InstallerSystemEdge` for the small Edge-driven setup); see `Installer/README.md`. A source zip is `git archive --format=zip -o
 <outside the repo>/qsr-<branch>.zip HEAD` — it archives the committed tree, so ignored paths are excluded by
 construction; uncommitted work is not in it.

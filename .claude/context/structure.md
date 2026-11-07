@@ -9,9 +9,9 @@
 | `QsrPriceBenchmarks.Ui` | `Ui/` | `qsr-ui.exe`, `net10.0-windows`, WPF | desktop host: MVVM over the same `Core` calls |
 | `QsrPriceBenchmarks.IntegrationTests` | `Tests/` | xUnit v3 | `Tests/Hermetic/` runs offline; the files at `Tests/` root scrape live sites |
 | `QsrPriceBenchmarks.UiTests` | `UiTests/` | xUnit v3, `net10.0-windows` | tests that need a real WPF window — the window's behaviour driven on one STA dispatcher (`WpfThread`), and the gated `WindowCapture` harness. Separate because a `net10.0` project cannot reference `Ui` |
-| `QsrPriceBenchmarks.Installer` | `Installer/` | WiX v5 MSI | harvests the self-contained publish of `Ui`; built by the `Installer` / `InstallerSystemEdge` publish profiles in `Ui/Properties/PublishProfiles/` (logic in `Installer.targets` there), or `build-installer.ps1` |
+| — (no project) | `Installer/` | `QsrPriceBenchmarks-Setup.exe` | an Inno Setup 7 script packing the self-contained publish of `Ui`; compiled by the `Installer` / `InstallerSystemEdge` publish profiles in `Ui/Properties/PublishProfiles/` (logic in `Installer.targets` there) |
 
-`Directory.Build.props` carries the one product version every project — the MSI included — reads.
+`Directory.Build.props` carries the one product version every project reads, and the setup takes it as its `AppVersion`.
 `Directory.Packages.props` carries every package version (central package management: a `Version` on a
 `PackageReference` is the error `NU1008`), and `global.json` pins the SDK feature band, rolling forward to the
 latest patch, and runs `dotnet test` on Microsoft Testing Platform.

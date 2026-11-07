@@ -24,8 +24,8 @@ is its own; the moment a finding needs a POLICY over sites it is a loop however 
 
 - **Production**: `Core/` (library, `net10.0`), `Cli/` (`qsr.exe`), `Ui/` (`qsr-ui.exe`, WPF). **Tests**: `Tests/`
   (`Tests/Hermetic/` offline; the files at `Tests/` root scrape live sites) and `UiTests/` (a real WPF window on one
-  STA dispatcher, `WpfThread`). **Installer**: `Installer/`, WiX, deliberately OUTSIDE `QsrPriceBenchmarks.sln` and
-  built only by the `Installer` publish profile.
+  STA dispatcher, `WpfThread`). **Installer**: `Installer/QsrPriceBenchmarks.iss`, an Inno Setup 7 script — no
+  MSBuild project, no package — compiled only by the `Installer` publish profile.
 - **The live tests** are `Category=Integration` (`Tests/ChainWebsiteTests.cs`, `Tests/TgMenuTests.cs` and the other
   `Tests/` root files). They scrape chain websites and Tıkla Gelsin, so a red there can be the SITE. The hermetic
   half alone: `dotnet test --no-build --filter "Category!=Integration"`.
@@ -157,9 +157,10 @@ and says so, or it left work behind.
    `Core/Directory.Build.targets`) are each probed once per run.
 
    **The NuGet audit is a detector**: `dotnet list package --vulnerable --include-transitive`, `--deprecated` and
-   `--outdated`, over the solution AND `Installer/QsrPriceBenchmarks.Installer.wixproj` (outside the solution).
+   `--outdated`, over the solution.
    **Coverage**: `dotnet test --no-build --coverage --coverage-output-format cobertura` (Microsoft Testing
-   Platform's coverage extension, referenced by both test projects; `/wp-verify` says where the files land). **`CA2000` is declined by settled decision** — read only
+   Platform's coverage extension, referenced by both test projects; `/wp-verify` says where the files land).
+   **`CA2000` is declined by settled decision** — read only
    by enabling it in a throwaway worktree, never from its silence.
 
    **An inferred zero is not a measurement, and neither is an unexamined non-zero.**
@@ -259,14 +260,15 @@ because Roslynator or an SDK bump changes what steps 5 and 6 measure. Run from t
   `Microsoft.Data.Sqlite.Core` was built against — read `Tests/obj/project.assets.json` for the resolved
   `SQLitePCLRaw.core`, never the pin alone. `bundle_winsqlite3` has no 3.x, so a `bundle_e_sqlite3` 3.x "update" is
   never a correction.
-- **Microsoft.Playwright** — its version decides the Chromium revision the MSI bundles. A Playwright bump is proven
-  by the full suite (the live tests drive the new browser) AND by building the MSI —
-  `dotnet publish Ui/QsrPriceBenchmarks.Ui.csproj -p:PublishProfile=Installer`, never `build-installer.ps1` — and
-  confirming the `chromium-<rev>` folder in the publish output matches the new version.
-- **WiX** (`WixToolset.Sdk` on the wixproj's `Sdk=` attribute, `WixToolset.UI.wixext`) is outside the solution, so
-  audit it explicitly. **WiX is held on 5 by settled decision** (WiX 6+ carries the Open Source Maintenance Fee
-  EULA), so a WiX major is reported as held, not outdated; a patch within 5 is a correction proven by building the
-  MSI.
+- **Microsoft.Playwright** — its version decides the Chromium revision the setup bundles. A Playwright bump is
+  proven by the full suite (the live tests drive the new browser) AND by building the setup —
+  `dotnet publish Ui/QsrPriceBenchmarks.Ui.csproj -p:PublishProfile=Installer` — and confirming the
+  `chromium-<rev>` folder in the publish output matches the new version.
+- **Inno Setup** is a program installed on the build machine, not a package, so no NuGet audit sees it. Read the
+  installed version (`Inno Setup 7` in Apps) against https://jrsoftware.org/isdl.php; a newer 7.x is the
+  maintainer's to install, a new major is a package. A change to `Installer/QsrPriceBenchmarks.iss` is proven by
+  building the setup, and one touching install, upgrade or uninstall by running it here — which needs the
+  maintainer's yes, so an unattended run hands it over instead.
 - **The SDK** — `global.json` pins the feature band with `latestPatch`; a new feature band is a package (it moves
   every analyzer count).
 

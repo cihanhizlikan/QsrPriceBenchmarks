@@ -30,7 +30,6 @@
 #*.dbproj    merge=binary
 #*.fsproj    merge=binary
 #*.lsproj    merge=binary
-#*.wixproj   merge=binary
 #*.modelproj merge=binary
 #*.sqlproj   merge=binary
 #*.wwaproj   merge=binary
