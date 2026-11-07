@@ -38,6 +38,10 @@ null guards that nullable reference types already check). CA2000 is off because 
 transfers (a browser context the session disposes), so it could not be held at zero.
 **Re-opened by** a defect one of the declined rules would have caught.
 
+**Amended 2026-11-07 (Yalbuz adoption): one category is switched on whole — Security.** It already held CA2100
+and CA3003, it measured zero sites when switched on, and a category means a rule a future SDK adds arrives ON
+rather than silently off. Every other rule is still opted in by ID, each proven to fire by a probe first.
+
 ## No UI Register yet; a capture harness instead (2026-10-25)
 
 **Decision.** This repository does not keep Yalbuz's UI Register. It has one WPF window, no UI decision has been
