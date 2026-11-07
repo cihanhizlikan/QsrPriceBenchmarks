@@ -138,3 +138,12 @@ and no empty body, at ~6 s a page in both modes; walls 72 / 40 / 40 / 70 s. Then
 no exception, median 6.6 s, p90 7.6 s, each chain's last ten pages its fastest (6.3 / 6.6 s) — no slowing trend —
 and the sitemap answered in full afterwards (HTTP 200, 627 KB). **Re-opened by** throttling at two: empty bodies,
 pages timing out, or the sitemap answering empty — then back to one.
+
+## The console host registers no `AppDomain.UnhandledException` handler (sweep 2026-11-07, step 6)
+
+**Decision.** `Cli/Program.cs` does not register one. Its only log is the console, and on an unhandled exception the
+runtime already writes the exception and its stack to stderr before the process ends — a handler would print the
+same thing again. Every failure on the main flow is caught by `Main`'s boundary (`error: <reason>`, exit code 1).
+The WPF host is different, and got `TaskScheduler.UnobservedTaskException` in the same step: it has a crash log
+(`App.LogCrash`) that the runtime's own output never reaches. **Re-opened by** a CLI log FILE, or a background
+thread in the CLI whose failure must say more than the runtime's dump.

@@ -19,6 +19,10 @@ public partial class App : System.Windows.Application
         AppDomain.CurrentDomain.UnhandledException +=
             (_, e) => LogCrash(e.ExceptionObject as Exception, "AppDomain.UnhandledException");
         DispatcherUnhandledException += OnDispatcherUnhandledException;
+        // The window discards several tasks (`_ = RebuildMapAsync()` and the like); an exception one of them lets
+        // escape reaches neither handler above — it surfaces here, when the task is collected, or nowhere.
+        TaskScheduler.UnobservedTaskException +=
+            (_, e) => LogCrash(e.Exception, "TaskScheduler.UnobservedTaskException");
     }
 
     /// <summary>
