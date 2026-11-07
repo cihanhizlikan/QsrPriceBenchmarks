@@ -39,11 +39,11 @@ public sealed class RequestSchedulerTests
             }
         }
 
-        IDisposable aFirst = await scheduler.For("A").TakeTurnAsync("tg");
-        Task<IDisposable> bWaiting = scheduler.For("B").TakeTurnAsync("tg"); // B asks while A holds the slot
+        IDisposable aFirst = await scheduler.For("A").TakeTurnAsync("tg", TestContext.Current.CancellationToken);
+        Task<IDisposable> bWaiting = scheduler.For("B").TakeTurnAsync("tg", TestContext.Current.CancellationToken); // B asks while A holds the slot
         Task a = Scrape("A", aFirst);
-        Task b = Task.Run(async () => await Scrape("B", await bWaiting));
-        await Task.WhenAll(a, b).WaitAsync(Bound);
+        Task b = Task.Run(async () => await Scrape("B", await bWaiting), TestContext.Current.CancellationToken);
+        await Task.WhenAll(a, b).WaitAsync(Bound, TestContext.Current.CancellationToken);
 
         Assert.Equal(20, order.Count);
         for (int i = 1; i < order.Count; i++)
@@ -71,7 +71,7 @@ public sealed class RequestSchedulerTests
             }
         }
 
-        await Task.WhenAll(Enumerable.Range(0, 6).Select(c => Task.Run(() => Search($"chain{c}")))).WaitAsync(Bound);
+        await Task.WhenAll(Enumerable.Range(0, 6).Select(c => Task.Run(() => Search($"chain{c}")))).WaitAsync(Bound, TestContext.Current.CancellationToken);
 
         Assert.Equal(2, peak);
     }
@@ -80,16 +80,16 @@ public sealed class RequestSchedulerTests
     public async Task CancelledWait_GivesUpItsPlace()
     {
         RequestScheduler scheduler = new(new Dictionary<string, int> { ["tg"] = 1 });
-        IDisposable held = await scheduler.For("A").TakeTurnAsync("tg");
+        IDisposable held = await scheduler.For("A").TakeTurnAsync("tg", TestContext.Current.CancellationToken);
         using CancellationTokenSource cancel = new();
         Task<IDisposable> cancelled = scheduler.For("B").TakeTurnAsync("tg", cancel.Token);
-        Task<IDisposable> next = scheduler.For("C").TakeTurnAsync("tg");
+        Task<IDisposable> next = scheduler.For("C").TakeTurnAsync("tg", TestContext.Current.CancellationToken);
 
         await cancel.CancelAsync();
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cancelled).WaitAsync(Bound);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cancelled).WaitAsync(Bound, TestContext.Current.CancellationToken);
         held.Dispose();
 
-        using IDisposable cTurn = await next.WaitAsync(Bound);
+        using IDisposable cTurn = await next.WaitAsync(Bound, TestContext.Current.CancellationToken);
     }
 
     // WP-C3 measured 104 Tıkla Gelsin pages two at a time without a sign of throttling (settled-decisions.md).
@@ -97,22 +97,22 @@ public sealed class RequestSchedulerTests
     public async Task TiklaGelsin_TakesTwoChainsAtOnce()
     {
         RequestScheduler scheduler = RequestScheduler.CreateDefault();
-        using IDisposable first = await scheduler.For("A").TakeTurnAsync(RequestScheduler.TiklaGelsin);
-        Task<IDisposable> second = scheduler.For("B").TakeTurnAsync(RequestScheduler.TiklaGelsin);
-        Task<IDisposable> third = scheduler.For("C").TakeTurnAsync(RequestScheduler.TiklaGelsin);
+        using IDisposable first = await scheduler.For("A").TakeTurnAsync(RequestScheduler.TiklaGelsin, TestContext.Current.CancellationToken);
+        Task<IDisposable> second = scheduler.For("B").TakeTurnAsync(RequestScheduler.TiklaGelsin, TestContext.Current.CancellationToken);
+        Task<IDisposable> third = scheduler.For("C").TakeTurnAsync(RequestScheduler.TiklaGelsin, TestContext.Current.CancellationToken);
 
         Assert.True(second.IsCompletedSuccessfully, "a second chain must not wait for the first's page");
         Assert.False(third.IsCompleted, "a third chain must wait for a slot");
         (await second).Dispose();
-        (await third.WaitAsync(Bound)).Dispose();
+        (await third.WaitAsync(Bound, TestContext.Current.CancellationToken)).Dispose();
     }
 
     [Fact(DisplayName = "A host with no limit is never queued")]
     public async Task UnlimitedHost_IsNotQueued()
     {
         RequestScheduler scheduler = RequestScheduler.CreateDefault();
-        using IDisposable first = await scheduler.For("A").TakeTurnAsync("www.burgerking.com.tr");
-        Task<IDisposable> second = scheduler.For("B").TakeTurnAsync("www.burgerking.com.tr");
+        using IDisposable first = await scheduler.For("A").TakeTurnAsync("www.burgerking.com.tr", TestContext.Current.CancellationToken);
+        Task<IDisposable> second = scheduler.For("B").TakeTurnAsync("www.burgerking.com.tr", TestContext.Current.CancellationToken);
 
         Assert.True(second.IsCompletedSuccessfully);
         (await second).Dispose();

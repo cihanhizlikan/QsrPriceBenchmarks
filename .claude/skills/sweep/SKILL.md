@@ -40,7 +40,9 @@ is its own; the moment a finding needs a POLICY over sites it is a loop however 
 - **The maintainer's own database** is under `%LOCALAPPDATA%\QsrPriceBenchmarks`. A sweep never starts the app
   against it and never opens it; the window is looked at through `UiTests/WindowCapture.cs`, which uses a
   throwaway database and asserts the user's is untouched.
-- **Build output is Turkish** (`Hata`/`Uyarı`, `Başarılı`/`Başarısız`/`Atlanan`); diagnostic tokens stay English.
+- **Build and test output is Turkish** (`Hata`/`Uyarı`; the test summary's `toplam`/`başarısız oldu`/`başarılı`/
+  `atlandı`, and a failing test as a line starting `başarısız `); diagnostic tokens stay English. Both test projects
+  run on Microsoft Testing Platform (xunit.v3); `/wp-verify` holds the commands and the exit codes.
 - **Line endings**: index LF, working tree CRLF (`* text=auto`, `core.autocrlf` on). After any `sed -i` under MSYS,
   `sed -i 's/\r*$/\r/' <file>`; `git diff --stat` showing every line changed is the tell of a flip. Make and unmake a
   multi-line break with the Edit tool, never `sed` or `perl -0pi`.
@@ -84,7 +86,8 @@ plan, say so in the report, exit. It may never sit there having asked something.
   routing around a refusal**: a `git worktree remove` that ended in `Permission denied` on an empty directory is
   retried by the same literal path.
 - **The suite goes RED inside a step.** The step does not merge. **Capture the failing test NAME before re-running
-  anything**, then run it isolated several times:
+  anything** (the line starting `başarısız `), then run it isolated several times, naming its project — a filter
+  the other project cannot match ends the run with exit 8 (`/wp-verify`):
   - fails isolated and the step's changes touch its subject → revert the step's changes, hand the finding over;
   - passes every isolated run → load-sensitive; re-run the full suite once, and if green the step merges and the
     test becomes a plan row carrying the captured message;
@@ -155,8 +158,8 @@ and says so, or it left work behind.
 
    **The NuGet audit is a detector**: `dotnet list package --vulnerable --include-transitive`, `--deprecated` and
    `--outdated`, over the solution AND `Installer/QsrPriceBenchmarks.Installer.wixproj` (outside the solution).
-   **Coverage**: `dotnet test --collect:"Code Coverage;Format=cobertura"` (the Microsoft collector the test SDK
-   carries; it covered both test projects on 2026-11-07). **`CA2000` is declined by settled decision** — read only
+   **Coverage**: `dotnet test --no-build --coverage --coverage-output-format cobertura` (Microsoft Testing
+   Platform's coverage extension, referenced by both test projects; `/wp-verify` says where the files land). **`CA2000` is declined by settled decision** — read only
    by enabling it in a throwaway worktree, never from its silence.
 
    **An inferred zero is not a measurement, and neither is an unexamined non-zero.**

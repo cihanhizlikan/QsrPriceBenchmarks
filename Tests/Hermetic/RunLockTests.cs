@@ -82,7 +82,7 @@ public sealed class RunLockTests
         using RunLock live = Repository.StartScrapeRun(db.Conn, QsrId(db));
 
         InvalidOperationException refused = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            TgScraper.ScrapeAsync(chain, db.Conn, resumeRunId: live.RunId));
+            TgScraper.ScrapeAsync(chain, db.Conn, resumeRunId: live.RunId, ct: TestContext.Current.CancellationToken));
 
         Assert.Contains($"run {live.RunId}", refused.Message, StringComparison.Ordinal);
     }

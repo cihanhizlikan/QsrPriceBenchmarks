@@ -163,3 +163,14 @@ same thing again. Every failure on the main flow is caught by `Main`'s boundary 
 The WPF host is different, and got `TaskScheduler.UnobservedTaskException` in the same step: it has a crash log
 (`App.LogCrash`) that the runtime's own output never reaches. **Re-opened by** a CLI log FILE, or a background
 thread in the CLI whose failure must say more than the runtime's dump.
+
+## The tests run on Microsoft Testing Platform, not VSTest (maintainer, 2026-11-07, WP-D4)
+
+**Decision.** Both test projects are xunit.v3 4 on Microsoft Testing Platform, set for `dotnet test` by
+`global.json`'s `test.runner`; `xunit.runner.visualstudio` and `Microsoft.NET.Test.Sdk` are gone, and coverage is
+`Microsoft.Testing.Extensions.CodeCoverage`. xunit 4's default package refuses VSTest on the .NET 10 SDK. The
+alternative, `xunit.v3.mtp-off` on VSTest, was measured working with every command unchanged; the maintainer chose
+the platform Microsoft is moving to over the smaller diff. What it changed: the output shape (one summary, failures
+as `başarısız <name>` lines), coverage's switches, and exit code 8 when a filter leaves a project with no test.
+Test Explorer runs these projects natively from Visual Studio 2022 17.14.
+**Re-opened by** a runner this project needs that cannot drive Microsoft Testing Platform.

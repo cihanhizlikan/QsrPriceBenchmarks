@@ -68,7 +68,7 @@ public sealed class ExportWithoutGeocodeTests
         try
         {
             // Previously threw: "The data is NULL at ordinal 0".
-            string path = ExcelExporter.Export(Chain, db.Conn, outDir);
+            string path = ExcelExporter.Export(Chain, db.Conn, outDir, ct: TestContext.Current.CancellationToken);
             Assert.True(File.Exists(path));
 
             using XLWorkbook wb = new(path);

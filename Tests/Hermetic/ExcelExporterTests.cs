@@ -18,7 +18,7 @@ public sealed class ExcelExporterTests
             System.IO.Path.GetTempPath(), $"qsr_xlsx_{Guid.NewGuid():N}");
         try
         {
-            string path = ExcelExporter.Export(ReportSeed.Chain, db.Conn, outDir);
+            string path = ExcelExporter.Export(ReportSeed.Chain, db.Conn, outDir, ct: TestContext.Current.CancellationToken);
             Assert.True(File.Exists(path), $"Export did not create a file at {path}");
 
             using XLWorkbook wb = new(path);
@@ -51,13 +51,13 @@ public sealed class ExcelExporterTests
             System.IO.Path.GetTempPath(), $"qsr_xlsx_{Guid.NewGuid():N}");
         try
         {
-            string kept = ExcelExporter.Export(ReportSeed.Chain, db.Conn, Path.Combine(outDir, "kept"), latestRun);
+            string kept = ExcelExporter.Export(ReportSeed.Chain, db.Conn, Path.Combine(outDir, "kept"), latestRun, ct: TestContext.Current.CancellationToken);
             using (XLWorkbook wb = new(kept))
             {
                 Assert.Equal("Whopper", wb.Worksheet(1).Cell(2, 8).GetString());
             }
 
-            string empty = ExcelExporter.Export(ReportSeed.Chain, db.Conn, Path.Combine(outDir, "empty"), latestRun + 1);
+            string empty = ExcelExporter.Export(ReportSeed.Chain, db.Conn, Path.Combine(outDir, "empty"), latestRun + 1, ct: TestContext.Current.CancellationToken);
             using (XLWorkbook wb = new(empty))
             {
                 Assert.Equal(1, wb.Worksheet(1).LastRowUsed()!.RowNumber()); // the header row alone

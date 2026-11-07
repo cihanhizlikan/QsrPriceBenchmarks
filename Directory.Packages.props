@@ -35,9 +35,10 @@
   <ItemGroup>
     <!-- The test host's SQLite provider: cross-platform native SQLite, so the hermetic tests run anywhere. -->
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.14" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
-    <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.v3" Version="3.2.2" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <!-- Both test projects run on Microsoft Testing Platform (global.json's "test" section), so VSTest's adapter
+         and Microsoft.NET.Test.Sdk are gone. Coverage comes from Microsoft's own MTP extension
+         (the command is in .claude/skills/wp-verify/SKILL.md). -->
+    <PackageVersion Include="xunit.v3" Version="4.0.2" />
+    <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
   </ItemGroup>
 </Project>

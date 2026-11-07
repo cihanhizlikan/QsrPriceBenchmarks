@@ -27,7 +27,7 @@ The scrapers drive a Chromium build Playwright manages. Nothing needs installing
 hand: run the live tests once and they install it into your per-user Playwright cache,
 which a development build of the app uses too:
 ```
-dotnet test --filter Category=Integration
+dotnet test Tests --filter Category=Integration
 ```
 
 ## Test
