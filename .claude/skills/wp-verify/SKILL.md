@@ -103,6 +103,6 @@ When one project fails, everything downstream is skipped — **their silence is 
 One line: build exit and errors, distinct warning sites against `main`'s, formatter exit and count, suite
 passed/failed/skipped (and which half any failure was in). **Never `git checkout` a file to undo an experiment.**
 
-**The values in this file are this repository's**, and `.claude/project-profile.md` states them as named keys —
-`profile:live_tests`, `profile:baseline_skips`, `profile:warning_baseline`, `profile:build_output_language`,
-`profile:render_harnesses`. When one changes, change the profile and this file together.
+**The values in this file are this repository's** — the live tests, the one baseline skip, the zero-warning
+baseline, the Turkish build output, the capture harness. `/sweep` states the same facts; when one changes, change
+both.
