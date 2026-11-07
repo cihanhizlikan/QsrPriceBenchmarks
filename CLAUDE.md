@@ -41,9 +41,8 @@ this one is the ruling for this repository — the differences are deliberate an
 - @.claude/context/working-agreement.md — the maintainer's durable expectations, branching, worktrees, the plan,
   committing, what makes a test evidence, and how a package is finished
 
-[project-profile.md](.claude/project-profile.md) — every value the four workflow skills (`/sweep`, `/wp-start`,
-`/wp-verify`, `/wp-finish`) need that is true of THIS repository: projects, enforced conventions, documents, the
-plan, the live tests, the capture harness. The sweep is Yalbuz's portable core; the profile is this repository's.
+The four workflow skills (`/sweep`, `/wp-start`, `/wp-verify`, `/wp-finish`) are this repository's own and state
+its facts in place; nothing is shared with, or copied back to, another repository.
 
 [settled-decisions.md](.claude/context/settled-decisions.md) — **what has already been decided and must not be
 re-argued.** A decision there is re-opened by a new fact, never by an argument.

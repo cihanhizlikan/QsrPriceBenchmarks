@@ -10,6 +10,13 @@ Entries are appended; a superseded one is struck through with the date and the e
 `/wp-finish` around every package, the commit body as the archive entry, one plan outside the repository, and an
 unattended `/sweep`. The differences are listed in `working-agreement.md`.
 **Re-opened by** a rule of Yalbuz's that measurably costs more here than it saves.
+**Amended 2026-11-07 (maintainer): the skills are this repository's own.** *"I don't want a global skill. I want
+each C# project's tailored sweep skill to reside in that specific project."* The portable sweep and its
+`.claude/project-profile.md` were replaced by an eight-step sweep written for this stack: the culture comparison
+(English only), the UI-register drift check (no register), the ASP.NET/DI/Blazor derivation traps and Stryker
+(never installed) went; configuration became the input-validation half of robustness; the user docs and the window
+look became one step. The rest of Yalbuz's method — worktrees, the package skills, the commit body as archive,
+one plan — stands. **Re-opened by** a second repository needing the same skill, which would argue for sharing it.
 **The default branch is `main`**, as in Yalbuz (maintainer, 2026-10-26): `main` was created on origin from
 `master`'s tip (`40b1742`), made the default, and `master` deleted. Until then this repository's branch was the
 one difference the two working agreements had on it.
