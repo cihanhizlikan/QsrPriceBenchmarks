@@ -16,6 +16,10 @@ The commit body **is** the archive entry — there is no archive file. Subject w
 - **why it was not the obvious thing** — the alternative considered and the reason it lost
 - **the evidence** — the numbers `/wp-verify` produced
 
+**A change to the window moves its row in `.claude/context/ui-register.md` in THIS commit** — a new rule, a reversed
+one (the old argument struck through, the new one dated) or a re-measured count. A UI change that leaves the register
+saying something the window no longer does has built drift into the record.
+
 ## 2. Version: bump it, or say why not
 
 **Every change that ships bumps `Version` in `Directory.Build.props`** — `working-agreement.md`'s *Versioning*

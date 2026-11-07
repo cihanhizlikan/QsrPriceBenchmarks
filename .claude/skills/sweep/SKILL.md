@@ -1,6 +1,6 @@
 ---
 name: sweep
-description: QSR Price Benchmarks' sequenced quality audit — structure, test health, dependencies and the installer, dead code, robustness and input validation, maintainability, context-document drift, and what users read and see. It runs UNATTENDED: it never stops and never asks, merging each step and writing anything that needs a decision into the plan instead. The maintainer starts it and reads the report when they return.
+description: QSR Price Benchmarks' sequenced quality audit — structure, test health, dependencies and the installer, dead code, robustness and input validation, maintainability, context-document drift, and what users read and see, with the window checked against the UI register. It runs UNATTENDED: it never stops and never asks, merging each step and writing anything that needs a decision into the plan instead. The maintainer starts it and reads the report when they return.
 disable-model-invocation: true
 ---
 
@@ -352,13 +352,26 @@ looks at.** English is the only language; there is no translation to compare.
   must exist today; `--help` must list every option `CliOptions.Parse` accepts. Plain and short; cut a sentence that
   restates its heading. **Search for the construction a rule forbids across every string**, not the one somebody
   complained about last time.
-- **The window**: there is no UI register (declined 2026-10-25), so there is no drift to claim — only plain
-  DEFECTS: clipped, overlapping, unreadable, a control that is not there. Render every tab with
+- **The window, against the UI register** (`.claude/context/ui-register.md`, since 2026-11-07). The register is
+  the authority. Render every tab and both dialogs with
   `QSR_CAPTURE_DIR="$(cygpath -w "$PWD")\\TestResults\\artifacts" dotnet test UiTests --no-build` and LOOK at the
-  PNGs. **A `Popup` is a window of its own**: the capture saves its content apart (`scrape-runs-filter-list.png`).
-  `Ui/Themes/Dark.xaml` is the one colour source; chain brand colours (`Core/Models/BrandPalette.cs`) are data, and
-  the initials-badge palette in `Ui/ViewModels/ChainViewModel.cs` stays in code by settled decision. No test may pin
-  a colour, spacing or attribute.
+  PNGs. **A `Popup` is a window of its own**: the capture saves its content separately
+  (`scrape-runs-filter-list.png`).
+  - **The `read` rows are the checklist.** A `build` row has a test or analyzer that the suite and the build already
+    ran. A `read` row is the half nothing watches: read each against the PNGs and against the XAML that decides it.
+  - **Re-measure the COUNTS first**: the tokens, type sizes, radii and the size figures under *Measured, not
+    decided*. They decay by being OVERTAKEN, and a stale count can hide work that was already built.
+  - **A surface that disagrees with a row is DRIFT, and drift in shipped code is this step's to correct**, on the
+    step's branch, when the row says plainly what the surface should be. A row that is itself out of date — the code
+    moved by a decision the register never recorded — is corrected in the register, citing the commit that moved
+    it. **When it is unclear which one is wrong, it is a package.** Nothing that argues with a row is a finding:
+    a row is re-opened by a new fact, never by an argument.
+  - **Where a correction moves a rule, the register is revised in the SAME commit**, as `/wp-finish` requires of
+    every UI change. A measurement that has become a decision is the maintainer's to settle, so it is a plan row.
+  - **Plain defects are still findings without a row**: clipped, overlapping or unreadable text, or a control that
+    is missing.
+  - **Check the INSTRUMENT before believing a drift report.** A capture renders against a throwaway database, so an
+    empty grid or map may be the seed data rather than the window. No test may pin a colour, spacing or attribute.
 
 ---
 

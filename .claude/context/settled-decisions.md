@@ -54,7 +54,7 @@ transfers (a browser context the session disposes), so it could not be held at z
 and CA3003, it measured zero sites when switched on, and a category means a rule a future SDK adds arrives ON
 rather than silently off. Every other rule is still opted in by ID, each proven to fire by a probe first.
 
-## No UI Register yet; a capture harness instead (2026-10-25)
+## ~~No UI Register yet; a capture harness instead (2026-10-25)~~ — superseded 2026-11-07 by *The UI Register is a file in the repository*
 
 **Decision.** This repository does not keep Yalbuz's UI Register. It has one WPF window, no UI decision has been
 argued twice, and a register nobody consults decays — the failure `handoff.md` and `completed-work.md` died of in
@@ -188,3 +188,19 @@ where WiX 6+ binaries carry the Open Source Maintenance Fee EULA. Three choices 
 - **Parity with the MSI**: per-machine into Program Files, Start-menu and Desktop shortcuts, the licence page, and
   a refused downgrade.
 **Re-opened by** a need only Windows Installer meets (Group Policy deployment, an MSI-only enterprise channel).
+
+## The UI Register is a file in the repository (maintainer, 2026-11-07)
+
+**Decision.** `.claude/context/ui-register.md` holds the window's settled UI decisions. Each row carries a scope,
+whether a test or analyzer enforces it (`build`) or only a person looking can catch it (`read`), and the decision
+that settled it. The maintainer asked for it "to prevent UI drift", which is what the 2026-10-25 entry made the
+re-opening condition, and checks against it in sweep step 8. **It is a file, not an artifact like Yalbuz's** — the
+maintainer chose this and had Yalbuz's moved into its repository the same day:
+
+- A UI change and the row it moves land in one commit.
+- An unattended sweep revises it on its step's branch, so there is no publish to be refused.
+- `git log` keeps its history.
+
+**Its pictures are `WindowCapture`'s renders.** Yalbuz's hand-drawn specimens were found wrong in fifteen places by
+one sweep. A measurement nobody has decided is listed as measured, not as a rule. Settling it is a plan row.
+**Re-opened by** the register going unconsulted: a UI change merged without its row moving when it should have.
