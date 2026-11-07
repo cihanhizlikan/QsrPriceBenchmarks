@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using AngleSharp.Dom;
 using Microsoft.Data.Sqlite;
@@ -309,6 +310,8 @@ public static class TgScraper
     /// Returns deduplicated (name, price) pairs — later tabs never overwrite
     /// an item name already seen from an earlier tab.
     /// </summary>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "The broad catch is inside the cancellation callback: closing the page is best-effort, and an exception escaping a CancellationToken registration would surface from Cancel() instead.")]
     public static async Task<TgPageData> ScrapePageAsync(
         IPage page, string platformSlug, string slug, IReadOnlySet<string> excludedTabs, CancellationToken ct = default)
     {
@@ -473,6 +476,8 @@ public static class TgScraper
     /// Returns an empty list on any evaluation failure — a page whose tab bar
     /// can't be read simply contributes nothing to discovery/reconciliation.
     /// </summary>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Probe of a third-party page whose DOM changes without notice: any failure reads as not-found and the scrape continues with what it has.")]
     private static async Task<List<string>> ReadPageTabNamesAsync(IPage page)
     {
         try
@@ -546,6 +551,8 @@ public static class TgScraper
     /// matching the Python prototype. The modal trigger is <c>hidden sm:block</c>,
     /// so a desktop viewport (≥640px; our context is 1280px) is required.
     /// </summary>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Probe of a third-party page whose DOM changes without notice: any failure reads as not-found and the scrape continues with what it has.")]
     public static async Task<(string? Name, string? Address)> ScrapeRestaurantInfoAsync(IPage page)
     {
         // Clear any consent banner first. This makes the method self-sufficient:
@@ -595,6 +602,8 @@ public static class TgScraper
     /// label reading "Adres". Returns null on any failure (trigger absent/not
     /// clickable, modal never hydrates, label missing).
     /// </summary>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Probe of a third-party page whose DOM changes without notice: any failure reads as not-found and the scrape continues with what it has.")]
     private static async Task<string?> TryAddressFromModalAsync(IPage page)
     {
         // Opening the Ant Design modal and waiting for it to hydrate is timing
@@ -613,6 +622,8 @@ public static class TgScraper
         return null;
     }
 
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Probe of a third-party page whose DOM changes without notice: any failure reads as not-found and the scrape continues with what it has.")]
     private static async Task<string?> TryReadAddressOnceAsync(IPage page)
     {
         try
@@ -690,6 +701,8 @@ public static class TgScraper
     /// items and surface the location as unscraped rather than recording stale
     /// prices for a restaurant that can't actually take orders.
     /// </summary>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Probe of a third-party page whose DOM changes without notice: any failure reads as not-found and the scrape continues with what it has.")]
     private static async Task<bool> IsOutOfOrderAsync(IPage page)
     {
         try
@@ -714,6 +727,8 @@ public static class TgScraper
         return string.IsNullOrWhiteSpace(s) ? null : System.Net.WebUtility.HtmlDecode(s.Trim());
     }
 
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Probe of a third-party page whose DOM changes without notice: any failure reads as not-found and the scrape continues with what it has.")]
     private static async Task<bool> TryClickTabAsync(IPage page, string tabName)
     {
         try

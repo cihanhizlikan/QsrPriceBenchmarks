@@ -135,7 +135,7 @@ public sealed class ScrapeTabLifecycleTests
             SqliteConnection.ClearAllPools();
             foreach (string suffix in new[] { "", "-wal", "-shm" })
             {
-                try { File.Delete(path + suffix); } catch { /* best-effort */ }
+                try { File.Delete(path + suffix); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* best-effort cleanup */ }
             }
         }
     }

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using AngleSharp.Dom;
 using Microsoft.Playwright;
 using QsrPriceBenchmarks.Core.Models;
@@ -138,6 +139,8 @@ public sealed class ChainWebsiteTests(PlaywrightFixture pw)
     /// with a non-null <c>Name</c> is found or <paramref name="maxDepth"/> hops
     /// are exhausted.
     /// </summary>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Live crawl: a page that fails to load for any reason is skipped and the search moves to the next link.")]
     private async Task<Core.Models.RestaurantCard?> FindFirstNamedCardAsync(
         IPage page, string rootUrl, string startUrl, int maxDepth)
     {

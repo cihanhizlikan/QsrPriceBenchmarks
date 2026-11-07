@@ -75,6 +75,27 @@ dotnet_diagnostic.CA1310.severity = warning
 # CA2000 is deliberately NOT enabled: it cannot see ownership transfers (a factory returning what the caller
 # `using`s, a browser context the session disposes), so it would be held above zero by sites nobody intends to fix.
 
+# --- Robustness rules switched on so they start at ZERO and the next site is new (adopted from Yalbuz 2026-11-07).
+# Each was off at SDK defaults, so a sweep reading it measured nothing; each was proven to FIRE by a probe before
+# being trusted. They are on so a sweep's robustness step can READ the build instead of re-deriving each shape.
+# CA2016 a CancellationToken a method has but does not pass on; CA2201 throwing Exception/SystemException and the
+# other reserved types; CA2008 a task started without a TaskScheduler; CA1065 an exception thrown where none is
+# expected (a property getter, Equals, GetHashCode, Dispose, a finaliser); CA2219 an exception thrown from finally.
+# The SECURITY category is switched on whole rather than rule by rule: CA2100 and CA3003 above were already in it,
+# and a category means a rule added by a future SDK arrives on rather than silently off.
+dotnet_diagnostic.CA2016.severity = warning
+dotnet_diagnostic.CA2201.severity = warning
+dotnet_diagnostic.CA2008.severity = warning
+dotnet_diagnostic.CA1065.severity = warning
+dotnet_diagnostic.CA2219.severity = warning
+dotnet_analyzer_diagnostic.category-Security.severity = warning
+
+# CA1031 a broad `catch (Exception)`. On for the same reason: never configured, AnalysisMode=Default left it silent,
+# and an analyzer that is off is not evidence of absence. Every site it fired on when it was switched on was read
+# and either narrowed or ruled a deliberate error boundary, the ruling carried as a suppression AT THE SITE — so the
+# next broad catch to appear is a NEW one, and the build names it where it was written.
+dotnet_diagnostic.CA1031.severity = warning
+
 # --- Roslynator, opted IN one rule at a time. Both switches are deliberate: the first is Roslynator's own
 # default-off, the second the analyzer-category severity the SDK understands; a rule enabled below wins over both.
 # RCS1211 is rule 13 — no `else` after a branch that exits — which no first-party analyzer implements (IDE0046
@@ -82,6 +103,11 @@ dotnet_diagnostic.CA1310.severity = warning
 roslynator_analyzers.enabled_by_default = false
 dotnet_analyzer_diagnostic.category-roslynator.severity = none
 dotnet_diagnostic.RCS1211.severity = warning
+# RCS1236 is rule 9 — an exception FILTER rather than catch-and-retest. It implements HALF of the rule: it fires on
+# the negated retest `if (!(e is X)) throw;` and NOT on the inverted `if (e is X) return; throw;`, so a reviewer still
+# owns that spelling. RCS1075 is an empty `catch (Exception)`: CA1031 catches the breadth, this the silence.
+dotnet_diagnostic.RCS1236.severity = warning
+dotnet_diagnostic.RCS1075.severity = warning
 
 # --- Shape rules (rule 10)
 csharp_style_namespace_declarations = file_scoped:warning

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ExceptionServices;
 using System.Windows;
 using System.Windows.Threading;
@@ -24,6 +25,8 @@ public static class WpfThread
     private static readonly TimeSpan Bound = TimeSpan.FromSeconds(60);
 
     /// <summary>Runs <paramref name="body"/> on the UI thread and rethrows whatever it threw, with its stack.</summary>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Not swallowed: the exception is captured on the UI thread and rethrown on the test thread.")]
     public static void Run(Action body)
     {
         ExceptionDispatchInfo? failure = null;

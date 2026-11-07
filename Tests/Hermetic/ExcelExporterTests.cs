@@ -31,7 +31,7 @@ public sealed class ExcelExporterTests
         }
         finally
         {
-            try { if (Directory.Exists(outDir)) { Directory.Delete(outDir, recursive: true); } } catch { }
+            try { if (Directory.Exists(outDir)) { Directory.Delete(outDir, recursive: true); } } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* best-effort cleanup */ }
         }
     }
 
@@ -65,7 +65,7 @@ public sealed class ExcelExporterTests
         }
         finally
         {
-            try { if (Directory.Exists(outDir)) { Directory.Delete(outDir, recursive: true); } } catch { }
+            try { if (Directory.Exists(outDir)) { Directory.Delete(outDir, recursive: true); } } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* best-effort cleanup */ }
         }
     }
 }

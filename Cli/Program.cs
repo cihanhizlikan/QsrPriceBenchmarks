@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Data.Sqlite;
 using QsrPriceBenchmarks.Core.Db;
 using QsrPriceBenchmarks.Core.Export;
@@ -26,6 +27,8 @@ internal static class Program
         }
     }
 
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "The CLI's top-level boundary: any failure of a run is printed as Fatal and becomes exit code 1, never an unhandled-exception dump. Setting OutputEncoding is cosmetic and may fail on a redirected or legacy console.")]
     private static async Task<int> RunAsync(string[] args)
     {
         // Colour output matches the Python prototype exactly via ConsoleColouriser.

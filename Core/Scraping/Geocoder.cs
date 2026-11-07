@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using System.Web;
 using Microsoft.Playwright;
@@ -109,6 +110,8 @@ public static partial class Geocoder
     /// "accept all"/"kabul et" style control if present. No-ops when there is no
     /// consent wall (every subsequent search in the same context is then clear).
     /// </summary>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Best-effort dismissal of a consent wall on a third-party page; its absence or failure must never abort geocoding.")]
     private static async Task DismissGoogleConsentAsync(IPage page)
     {
         try

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Playwright;
 
 namespace QsrPriceBenchmarks.Core.Scraping;
@@ -82,6 +83,8 @@ public sealed class BrowserSession : IAsyncDisposable
         }
     }
 
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Best-effort teardown of a context that may already be closing; a failure here must not mask the run's own outcome.")]
     public async ValueTask DisposeAsync()
     {
         try { await Context.CloseAsync(); } catch { /* already closing */ }
@@ -152,6 +155,8 @@ public sealed class BrowserSession : IAsyncDisposable
         return await _sharedPlaywright.Chromium.LaunchAsync(launchOptions);
     }
 
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Best-effort teardown of a browser that may already be gone; a failure here must not mask the run's own outcome.")]
     private static async Task CloseSharedAsync()
     {
         if (_sharedBrowser is not null)
@@ -192,7 +197,10 @@ public sealed class BrowserSession : IAsyncDisposable
                 }
             }
         }
-        catch { /* unreadable marker — fall back to Chromium */ }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            // Unreadable marker — fall back to Chromium.
+        }
 
         return null;
     }
