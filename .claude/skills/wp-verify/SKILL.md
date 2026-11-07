@@ -62,13 +62,20 @@ it rather than hand-editing.
 
 ```bash
 dotnet test --no-build > /tmp/qsr-test.txt 2>&1; echo "exit=$?"
-grep -cE '\[FAIL\]' /tmp/qsr-test.txt          # 0, or read the names below
-grep -E '\[FAIL\]' /tmp/qsr-test.txt
-tail -3 /tmp/qsr-test.txt
+grep -E '^(başarısız|failed) ' /tmp/qsr-test.txt        # nothing, or the failing tests by name
+grep -E '^  (toplam|başarısız oldu|başarılı|atlandı):' /tmp/qsr-test.txt
 ```
 
-**Capture to a FILE and grep `[FAIL]`; never pipe the run straight to `tail`.** The summary says how many failed
-and never which, and an intermittent failure you cannot name is one you cannot fix. Record the name BEFORE
+**Both test projects run on Microsoft Testing Platform** (`global.json`'s `test.runner`, 2026-11-07), which prints
+one combined summary — `toplam`, `başarısız oldu`, `başarılı`, `atlandı` — and a failing test as a line starting
+`başarısız <display name> (<time>)`, its assertion message indented below. The words follow the machine's language;
+English output says `failed`. **Exit codes**: 0 green, 2 a test failed, 8 no test ran (a filter matched nothing —
+never read that as green). **A filter that one project cannot match fails the whole run with 8**, even when the
+other ran its tests green — so a run narrowed to one test or to the live tests names its project:
+`dotnet test Tests --no-build --filter "DisplayName~<part of the name the failure line printed>"`.
+
+**Capture to a FILE and grep the failure lines; never pipe the run straight to `tail`.** The summary says how many
+failed and never which, and an intermittent failure you cannot name is one you cannot fix. Record the name BEFORE
 re-running anything.
 
 **The suite scrapes live sites.** The `Category=Integration` tests (`Tests/ChainWebsiteTests.cs`,
@@ -82,8 +89,12 @@ dotnet test --no-build --filter "Category!=Integration" > /tmp/qsr-hermetic.txt 
 is the site; say so with the test's name rather than calling the package red or green.
 
 **ONE skip is the baseline and is not drift**: `UiTests/WindowCapture.cs`, a capture harness that produces images
-to LOOK at rather than something to assert, gated on `QSR_CAPTURE_DIR`. The suite reports two summary lines now,
-one per test project; read both.
+to LOOK at rather than something to assert, gated on `QSR_CAPTURE_DIR`.
+
+**Coverage**, when a check needs it: `dotnet test --no-build --coverage --coverage-output-format cobertura` (the
+`Microsoft.Testing.Extensions.CodeCoverage` extension both test projects reference). Each project writes a
+`*.cobertura.xml` under the gitignored `TestResults/`; the run prints their paths. The VSTest form
+`--collect:"Code Coverage"` runs no test here (exit 5).
 
 **A package that changes anything under `Ui/` runs the capture and looks at it** — no test sees a WPF layout:
 

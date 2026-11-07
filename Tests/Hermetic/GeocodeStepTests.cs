@@ -22,13 +22,13 @@ public sealed class GeocodeStepTests
         long qsr = Repository.QsrId(db.Conn, "Burger King");
 
         // Must not throw 'near "BY": syntax error'.
-        await GeocodeAndMatchStep.RunAsync(db.Conn, qsr, rematch: false);
+        await GeocodeAndMatchStep.RunAsync(db.Conn, qsr, rematch: false, ct: TestContext.Current.CancellationToken);
     }
 
     [Fact(DisplayName = "Whole-DB geocode with rematch also runs cleanly")]
     public async Task RunAsync_NoFilter_Rematch_Ok()
     {
         using TempDb db = new();
-        await GeocodeAndMatchStep.RunAsync(db.Conn, chainQsrId: null, rematch: true);
+        await GeocodeAndMatchStep.RunAsync(db.Conn, chainQsrId: null, rematch: true, ct: TestContext.Current.CancellationToken);
     }
 }

@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <InvariantGlobalization>false</InvariantGlobalization>
     <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Core\QsrPriceBenchmarks.Core.csproj" />
@@ -14,11 +15,7 @@
          hermetic DB / view / export tests run on Linux CI and any dev box.
          (The shipping apps use bundle_winsqlite3; Core is provider-agnostic.) -->
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="xunit" />
-    <PackageReference Include="xunit.runner.visualstudio">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
   </ItemGroup>
 </Project>

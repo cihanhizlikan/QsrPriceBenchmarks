@@ -22,7 +22,7 @@ public sealed class PlaywrightFixture : IAsyncLifetime
     private IPlaywright? _playwright;
     public IBrowser? Browser { get; private set; }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         // Idempotent: a fast no-op once the correct browser build is cached,
         // and the one-time download (~150 MB) after a Playwright version bump.
@@ -43,7 +43,7 @@ public sealed class PlaywrightFixture : IAsyncLifetime
         });
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (Browser is not null)
         {

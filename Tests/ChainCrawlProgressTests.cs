@@ -23,7 +23,7 @@ public sealed class ChainCrawlProgressTests
         FirstReport first = new(stop);
 
         Task crawl = ChainCrawler.CrawlAsync(chain, db.Conn, ct: stop.Token, progressCount: first);
-        StepProgress report = await first.Received.WaitAsync(TimeSpan.FromMinutes(3));
+        StepProgress report = await first.Received.WaitAsync(TimeSpan.FromMinutes(3), TestContext.Current.CancellationToken);
         try
         {
             await crawl;

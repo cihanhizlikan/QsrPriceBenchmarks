@@ -45,8 +45,8 @@ public sealed class TgAllTabsTests(PlaywrightFixture pw)
             TgScraper.TgPageData data;
             try
             {
-                data = await TgScraper.ScrapePageAsync(page, platformSlug, slug, new HashSet<string>())
-                    .WaitAsync(TimeSpan.FromMinutes(4));
+                data = await TgScraper.ScrapePageAsync(page, platformSlug, slug, new HashSet<string>(), TestContext.Current.CancellationToken)
+                    .WaitAsync(TimeSpan.FromMinutes(4), TestContext.Current.CancellationToken);
             }
             catch (Exception error) when (error is PlaywrightException or TimeoutException)
             {

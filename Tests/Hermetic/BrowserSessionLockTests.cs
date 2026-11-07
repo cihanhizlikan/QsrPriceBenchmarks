@@ -17,14 +17,14 @@ public sealed class BrowserSessionLockTests
     public async Task StuckLock_FailsAtTheBound()
     {
         TimeSpan saved = BrowserSession.SharedLockBound;
-        await BrowserSession.SharedLock.WaitAsync();
+        await BrowserSession.SharedLock.WaitAsync(TestContext.Current.CancellationToken);
         try
         {
             BrowserSession.SharedLockBound = TimeSpan.FromMilliseconds(500);
             Stopwatch clock = Stopwatch.StartNew();
 
             await Assert.ThrowsAsync<TimeoutException>(() =>
-                BrowserSession.LaunchAsync().WaitAsync(TimeSpan.FromSeconds(30)));
+                BrowserSession.LaunchAsync(ct: TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
 
             Assert.True(clock.Elapsed < TimeSpan.FromSeconds(10), $"gave up after {clock.Elapsed}");
         }
@@ -38,13 +38,13 @@ public sealed class BrowserSessionLockTests
     [Fact(DisplayName = "Cancel reaches a run that is waiting for the shared browser")]
     public async Task WaitingRun_IsCancellable()
     {
-        await BrowserSession.SharedLock.WaitAsync();
+        await BrowserSession.SharedLock.WaitAsync(TestContext.Current.CancellationToken);
         try
         {
             using CancellationTokenSource cancel = new(TimeSpan.FromMilliseconds(300));
 
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-                BrowserSession.LaunchAsync(ct: cancel.Token).WaitAsync(TimeSpan.FromSeconds(30)));
+                BrowserSession.LaunchAsync(ct: cancel.Token).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
         }
         finally
         {

@@ -10,18 +10,14 @@
     <Nullable>enable</Nullable>
     <InvariantGlobalization>false</InvariantGlobalization>
     <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
     <RootNamespace>QsrPriceBenchmarks.UiTests</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <!-- xunit v3 for Assert.SkipWhen: a capture that did not happen must read as
-         SKIPPED, not as a pass. The runner is the one the main test project uses,
-         and it drives v2 and v3 projects alike. -->
-    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+         SKIPPED, not as a pass. It runs on Microsoft Testing Platform, like Tests. -->
     <PackageReference Include="xunit.v3" />
-    <PackageReference Include="xunit.runner.visualstudio">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
   </ItemGroup>
   <ItemGroup>
     <!-- Brings the app's own SQLite provider (bundle_winsqlite3) with it. -->
