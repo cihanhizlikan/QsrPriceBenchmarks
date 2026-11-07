@@ -28,6 +28,8 @@
   <!-- Build-time only: analyzers and the installer's WiX extension. -->
   <ItemGroup>
     <PackageVersion Include="Roslynator.Analyzers" Version="5.0.1" />
+    <!-- Held on WiX 5 with the Sdk/5.0.2 in Installer's wixproj: WiX 6+ binaries carry the Open Source
+         Maintenance Fee EULA (settled-decisions.md, "The installer stays on WiX 5"). -->
     <PackageVersion Include="WixToolset.UI.wixext" Version="5.0.2" />
   </ItemGroup>
 
