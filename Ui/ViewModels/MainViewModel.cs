@@ -363,7 +363,6 @@ public sealed class MainViewModel : ViewModelBase
     public RelayCommand CancelCommand { get; }
     public RelayCommand BrowseDbCommand { get; }
     public AsyncRelayCommand ReloadRunsCommand { get; }
-    public RelayCommand OpenUrlCommand { get; }
     public AsyncRelayCommand DeleteRunCommand { get; }
     public AsyncRelayCommand ExportRunCommand { get; }
     public RelayCommand CancelExportCommand { get; }
@@ -381,7 +380,6 @@ public sealed class MainViewModel : ViewModelBase
         // The database stays put while any chain is being scraped into it.
         BrowseDbCommand = new RelayCommand(_ => BrowseDb(), _ => !IsAnyRunning);
         ReloadRunsCommand = new AsyncRelayCommand(_ => ReloadRunsAsync());
-        OpenUrlCommand = new RelayCommand(p => OpenUrl(p as string), p => p is string s && s.Length > 0);
         // Export/Delete of a completed run are allowed while a scrape run is in
         // progress (WAL makes concurrent read/write safe); only a second export
         // is blocked, since exports share one cancellation source and progress UI.
@@ -754,24 +752,6 @@ public sealed class MainViewModel : ViewModelBase
                 }
             });
         });
-    }
-
-    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
-        Justification = "Shell launch of a link the user clicked: if the shell refuses for any reason there is nothing to do, and a click must not crash the window.")]
-    private static void OpenUrl(string? url)
-    {
-        if (string.IsNullOrWhiteSpace(url))
-        {
-            return;
-        }
-        try
-        {
-            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
-        }
-        catch
-        {
-            // nothing we can do if the shell refuses
-        }
     }
 
     // ── Scrape-runs management ────────────────────────────────────────────────
