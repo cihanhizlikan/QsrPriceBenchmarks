@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:cv="clr-namespace:QsrPriceBenchmarks.Ui.Converters"
         xmlns:local="clr-namespace:QsrPriceBenchmarks.Ui"
+        xmlns:sys="clr-namespace:System;assembly=System.Runtime"
         x:Class="QsrPriceBenchmarks.Ui.MainWindow"
         Title="QSR Price Benchmarks"
         Width="1200" Height="820" MinWidth="900" MinHeight="620"
@@ -32,6 +33,13 @@
                StaysOpen="False" AllowsTransparency="True">
           <Border Background="{StaticResource BrushBg2}" BorderBrush="{StaticResource BrushBorder}"
                   BorderThickness="1" CornerRadius="6" Padding="12 10">
+            <!-- The popup sits inside the header, so the header's implicit string template (Dark.xaml), which draws
+                 the sort arrow, would label every option with the column's arrow; a plain one here wins. -->
+            <Border.Resources>
+              <DataTemplate DataType="{x:Type sys:String}">
+                <TextBlock Text="{Binding}"/>
+              </DataTemplate>
+            </Border.Resources>
             <StackPanel MinWidth="170">
               <CheckBox Content="(Select all)" IsChecked="{Binding AllSelected}" Margin="0 0 0 6"/>
               <Border Height="1" Background="{StaticResource BrushBorder}" Margin="0 2 0 4"/>
