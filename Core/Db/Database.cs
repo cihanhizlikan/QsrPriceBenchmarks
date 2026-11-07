@@ -134,6 +134,8 @@ public static class Database
     /// fine, so the header is read with ReadWrite sharing and the probe connection gets a busy timeout; any
     /// genuinely unreadable file comes back as a problem, not a crash.
     /// </summary>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Validation reports ANY failure to read the chosen file as a plain message naming it; the caller refuses the file instead of crashing.")]
     public static DatabaseProblem? ValidateFile(string path)
     {
         try

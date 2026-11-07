@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -27,6 +28,8 @@ public partial class App : System.Windows.Application
     /// took the whole app down). Marking the exception handled keeps the app
     /// alive; the message box tells the user what failed and where it's logged.
     /// </summary>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "The themed dialog failing for ANY reason falls back to the native box: the error being reported may itself be what breaks WPF rendering.")]
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         LogCrash(e.Exception, "DispatcherUnhandledException");
@@ -48,6 +51,8 @@ public partial class App : System.Windows.Application
         }
     }
 
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Crash logging must never throw: any failure to write in one directory moves on to the next.")]
     internal static void LogCrash(Exception? ex, string source)
     {
         foreach (string dir in new[] { AppContext.BaseDirectory, Path.GetTempPath() })

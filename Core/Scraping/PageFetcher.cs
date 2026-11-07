@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using AngleSharp;
 using AngleSharp.Dom;
 using Microsoft.Playwright;
@@ -12,6 +13,8 @@ namespace QsrPriceBenchmarks.Core.Scraping;
 /// </summary>
 public static class PageFetcher
 {
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "The broad catch is inside the cancellation callback: closing the page is best-effort, and an exception escaping a CancellationToken registration would surface from Cancel() instead.")]
     public static async Task<string> FetchHtmlAsync(
         IPage page, string url,
         string? waitForSelector = null,
@@ -57,6 +60,8 @@ public static class PageFetcher
         return await page.ContentAsync();
     }
 
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Best-effort dismissal of a cookie banner on a third-party page; its absence or failure must never abort the crawl.")]
     public static async Task DismissCookieBannerAsync(IPage page)
     {
         try

@@ -63,7 +63,7 @@ internal sealed class TempDb : IDisposable
                 File.Delete(Path);
             }
         }
-        catch { /* best-effort cleanup */ }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* best-effort cleanup */ }
     }
 }
 

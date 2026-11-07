@@ -81,7 +81,7 @@ public sealed class ExportWithoutGeocodeTests
         }
         finally
         {
-            try { if (Directory.Exists(outDir)) { Directory.Delete(outDir, recursive: true); } } catch { }
+            try { if (Directory.Exists(outDir)) { Directory.Delete(outDir, recursive: true); } } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* best-effort cleanup */ }
         }
     }
 }

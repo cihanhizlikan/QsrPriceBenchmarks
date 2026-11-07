@@ -41,7 +41,7 @@ public sealed class DatabaseTests
         finally
         {
             Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
-            try { if (File.Exists(path)) { File.Delete(path); } } catch { }
+            try { if (File.Exists(path)) { File.Delete(path); } } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* best-effort cleanup */ }
         }
     }
 
@@ -122,7 +122,7 @@ public sealed class DatabaseTests
             Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
             foreach (string suffix in new[] { "", "-wal", "-shm" })
             {
-                try { File.Delete(path + suffix); } catch { /* best-effort */ }
+                try { File.Delete(path + suffix); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* best-effort cleanup */ }
             }
         }
     }

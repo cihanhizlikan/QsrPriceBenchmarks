@@ -154,6 +154,8 @@ public sealed class MainViewModel : ViewModelBase
     /// An older version's database is never swapped out silently: the user is
     /// asked to set it aside, and false (nothing may run) when they decline.
     /// </summary>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Any failure to open the chosen database is logged and the default database used instead; the window must stay usable.")]
     private bool EnsureDatabaseUsable()
     {
         try
@@ -322,6 +324,8 @@ public sealed class MainViewModel : ViewModelBase
     /// disables the ones that vanish; an empty list just means no run has discovered this chain's tabs yet (the
     /// hint on the Run Pipeline tab says so).
     /// </summary>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "An unreadable database shows as no scrape tabs yet; the session stays usable.")]
     private async Task RebuildScrapeTabsAsync(ChainSessionViewModel? session)
     {
         if (session is null)
@@ -486,6 +490,8 @@ public sealed class MainViewModel : ViewModelBase
     /// session (the Progress objects are made here, on the UI thread, so the pipeline's reports land on it), a
     /// cancellation is reported as one, and afterwards the runs list, map and tab list are re-read.
     /// </summary>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "The run's top-level boundary in the window: any failure is reported in the session log as Failed and never crashes the app.")]
     private async Task RunInSessionAsync(
         ChainSessionViewModel session, CancellationToken token,
         Func<IProgress<string>, IProgress<StepProgress>, IProgress<int>, IProgress<long>, Task> pipeline)
@@ -570,6 +576,8 @@ public sealed class MainViewModel : ViewModelBase
 
     // Parsed-and-frozen district outlines, built once and reused across rebuilds.
     private static IReadOnlyList<(string Name, Geometry Shape, double Cx, double Cy)>? _mapGeo;
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Compiled-in province outlines: one that fails to parse for any reason draws as empty rather than losing the whole map.")]
     private static IReadOnlyList<(string Name, Geometry Shape, double Cx, double Cy)> MapGeometries()
     {
         if (_mapGeo is null)
@@ -637,6 +645,8 @@ public sealed class MainViewModel : ViewModelBase
         _ = RebuildMapAsync();
     }
 
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Any read failure is written to the log rather than leaving the map silently empty.")]
     private Task RebuildMapAsync()
     {
         string? chainName = SelectedChain?.Name;
@@ -746,6 +756,8 @@ public sealed class MainViewModel : ViewModelBase
         });
     }
 
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Shell launch of a link the user clicked: if the shell refuses for any reason there is nothing to do, and a click must not crash the window.")]
     private static void OpenUrl(string? url)
     {
         if (string.IsNullOrWhiteSpace(url))
@@ -782,6 +794,8 @@ public sealed class MainViewModel : ViewModelBase
         }
     }
 
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "Any read failure is written to the log rather than leaving the runs grid silently stale.")]
     private Task ReloadRunsAsync()
     {
         return Task.Run(() =>
@@ -836,6 +850,8 @@ public sealed class MainViewModel : ViewModelBase
     });
     }
 
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "User-command boundary: any failure is shown in a message box instead of crashing the window.")]
     private async Task ExportRunAsync(object? parameter)
     {
         if (parameter is not ScrapeRunViewModel vm || vm.IsErrored)
@@ -906,6 +922,8 @@ public sealed class MainViewModel : ViewModelBase
         _exportCts.Cancel();
     }
 
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "User-command boundary: any failure is shown in a message box instead of crashing the window.")]
     private async Task DeleteRunAsync(object? parameter)
     {
         if (parameter is not ScrapeRunViewModel vm || vm.IsErrored)
@@ -991,9 +1009,10 @@ public sealed class MainViewModel : ViewModelBase
                 currentFile = file;
             }
         }
-        catch (Exception)
+        catch (Exception e) when (e is ArgumentException or IOException)
         {
-            // Malformed DbPath — the dialog simply opens at its default folder.
+            // Malformed DbPath (GetFullPath's ArgumentException, or a PathTooLongException, which is an
+            // IOException) — the dialog simply opens at its default folder.
         }
 
         Microsoft.Win32.OpenFileDialog dlg = new()
@@ -1041,6 +1060,8 @@ public sealed class MainViewModel : ViewModelBase
     }
 
     /// <summary>Open the output folder (creating it if needed) in File Explorer.</summary>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+        Justification = "User-command boundary: any failure is written to the log instead of crashing the window.")]
     private void OpenFolder()
     {
         try

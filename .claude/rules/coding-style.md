@@ -6,9 +6,11 @@ paths: ["**/*.cs"]
 
 Adopted from Yalbuz on 2026-10-24. **Rules 1, 2, 5, 7, 8, 10, 11 and 13 are build-enforced** by `.editorconfig`
 (`EnforceCodeStyleInBuild` is on; rule 13 through Roslynator's `RCS1211`), and the solution builds at **zero
-warnings**, so any warning is new and the change that raised it owns it. **Rules 3, 4, 6, 9 and 12 are
-reviewer-carried**: no analyzer prefers `as` to a cast, exception filters to catch-and-retest, or an honest name to
-a vague one, and nothing checks for a trailing blank line or a top-level-statements `Program`. A site that cannot
+warnings**, so any warning is new and the change that raised it owns it. **Rule 9 is half build-enforced**:
+Roslynator's `RCS1236` fires on the negated retest `if (!(e is X)) throw;` but not on the inverted
+`if (e is X) return; throw;`, and `CA1031` flags every broad `catch` so each one is narrowed or carries its ruling.
+**Rules 3, 4, 6, 12 and the other half of 9 are reviewer-carried**: no analyzer prefers `as` to a cast, or an
+honest name to a vague one, and nothing checks for a trailing blank line or a top-level-statements `Program`. A site that cannot
 comply is suppressed AT the site with `[SuppressMessage(..., Justification = "...")]`, never in a global file.
 
 1. **Never use `var`.** Explicit types, preferring target-typed `new()`: `StringBuilder builder = new();`
