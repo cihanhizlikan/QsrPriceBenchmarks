@@ -174,3 +174,15 @@ the platform Microsoft is moving to over the smaller diff. What it changed: the 
 as `başarısız <name>` lines), coverage's switches, and exit code 8 when a filter leaves a project with no test.
 Test Explorer runs these projects natively from Visual Studio 2022 17.14.
 **Re-opened by** a runner this project needs that cannot drive Microsoft Testing Platform.
+
+## The installer stays on WiX 5 (maintainer, 2026-11-07, WP-D5)
+
+**Decision.** `WixToolset.Sdk` and `WixToolset.UI.wixext` stay on 5.0.2 although 7.0.1 is current. From WiX 6 the
+pre-built binaries come under the Open Source Maintenance Fee EULA (a fee for revenue-generating users with
+$10,000+ annual gross revenue), and WiX 7 refuses to build until the project accepts it
+(`<AcceptEula>wix7</AcceptEula>`). WiX 5 is plain MS-RL. No advisory stands against 5.0.2 (`dotnet list
+Installer/QsrPriceBenchmarks.Installer.wixproj package --vulnerable --include-transitive`, 2026-11-07), and the
+MSI builds cleanly with it, so the upgrade buys nothing measurable for a licence obligation and an install-path risk.
+**Re-opened by** a WiX 5 security advisory, a Windows Installer capability only v6+ has, a future SDK that WiX 5
+cannot build under, or the maintainer settling the fee question. A sweep reports the WiX major as held by this
+entry, never as outdated.

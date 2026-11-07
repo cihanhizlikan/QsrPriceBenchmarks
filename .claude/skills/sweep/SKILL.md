@@ -264,8 +264,9 @@ because Roslynator or an SDK bump changes what steps 5 and 6 measure. Run from t
   `dotnet publish Ui/QsrPriceBenchmarks.Ui.csproj -p:PublishProfile=Installer`, never `build-installer.ps1` — and
   confirming the `chromium-<rev>` folder in the publish output matches the new version.
 - **WiX** (`WixToolset.Sdk` on the wixproj's `Sdk=` attribute, `WixToolset.UI.wixext`) is outside the solution, so
-  audit it explicitly. Any WiX change is proven by building the MSI; a major is always a package needing an
-  install-and-uninstall check on this machine.
+  audit it explicitly. **WiX is held on 5 by settled decision** (WiX 6+ carries the Open Source Maintenance Fee
+  EULA), so a WiX major is reported as held, not outdated; a patch within 5 is a correction proven by building the
+  MSI.
 - **The SDK** — `global.json` pins the feature band with `latestPatch`; a new feature band is a package (it moves
   every analyzer count).
 
