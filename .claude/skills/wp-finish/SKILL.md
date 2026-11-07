@@ -78,3 +78,6 @@ Say the branch name, the commit, and what was verified. Then **stop**.
   *committed, awaiting merge*.
 - **`/sweep` is the one exception to this section** — it merges and continues on its own authority, and says so
   in its own file.
+
+**The paths and commands above are this repository's**; the values every workflow skill shares are in
+`.claude/project-profile.md`, read as `profile:<key>`.

@@ -23,6 +23,10 @@ every time — a new rule arrives with at most one sentence of example, and its 
 - **Line endings**: `.gitattributes` says `* text=auto` and `core.autocrlf` is on, so the index holds LF and the
   working tree CRLF. Nothing in the suite checks endings; `git diff --stat` showing every line of a file changed
   is the tell of an ending flip.
+- **The sweep is Yalbuz's portable core with five hooks Yalbuz's copy lacks** (2026-11-07): the live-test red
+  (`profile:live_tests`), repository-specific derivation traps, a never-a-correction class (a schema change), a
+  look at the window without a register, and `/wp-start`'s app-worktree variant. Each is generic and reads the
+  profile; carrying them back keeps the two copies identical.
 
 ## The maintainer's working style
 

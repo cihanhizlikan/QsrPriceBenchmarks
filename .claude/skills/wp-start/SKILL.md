@@ -10,7 +10,7 @@ files; this is how one is opened correctly.
 
 ## The steps
 
-Run from the **primary checkout** (`C:\Users\ihizl\source\repos\QsrPriceBenchmarks`), which stays on `main`
+Run from the **primary checkout** (`D:\source\repos\QsrPriceBenchmarks`), which stays on `main`
 and is nobody's workspace.
 
 ```bash
@@ -67,3 +67,6 @@ in a session.
 ## What this skill does NOT do
 
 It does not choose the package. **Work is ISSUED, never taken** — if no package has been named, ask.
+
+**The paths and commands above are this repository's**; the values every workflow skill shares (projects, the
+plan, the live tests, the capture harness) are in `.claude/project-profile.md`, read as `profile:<key>`.
