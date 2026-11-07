@@ -1,23 +1,23 @@
 <Project>
   <!--
     Single source of truth for the product version. Auto-imported by every
-    MSBuild project under this folder (Core / Ui / Cli / Tests AND the WiX
-    installer project). Bump this — and only this — with every change that
-    ships, sized patch/minor/major by the Versioning section of
-    .claude/context/working-agreement.md: the assemblies, the in-app
-    "vX.Y.Z" badge, and the MSI ProductVersion all follow. MSI major-upgrade replacement keys on this number, so two
-    builds must never ship with the same version.
+    MSBuild project under this folder (Core / Ui / Cli / Tests / UiTests), and
+    passed to the setup program's compiler by Installer.targets. Bump this — and
+    only this — with every change that ships, sized patch/minor/major by the
+    Versioning section of .claude/context/working-agreement.md: the assemblies,
+    the in-app "vX.Y.Z" badge, and the setup's AppVersion all follow. The setup
+    refuses to install over a newer version, so two builds must never ship with
+    the same version.
   -->
   <PropertyGroup>
-    <Version>3.5.9</Version>
+    <Version>3.6.0</Version>
   </PropertyGroup>
 
   <!--
-    Code style and analysis, for the C# projects only — the WiX project imports
-    this file too and has no use for analyzers. Ported from Yalbuz 2026-10-24
-    (plan WP-S4); the rules themselves are in .editorconfig.
+    Code style and analysis. Ported from Yalbuz 2026-10-24 (plan WP-S4); the
+    rules themselves are in .editorconfig.
   -->
-  <PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
+  <PropertyGroup>
     <!-- Makes the .editorconfig style rules compiler warnings rather than IDE hints. -->
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <!-- PINNED so a warning count means the same thing twice running: the default
@@ -38,8 +38,8 @@
          IDE0005, so silence the missing-doc warning it would otherwise raise. -->
     <NoWarn>$(NoWarn);CS1591</NoWarn>
     <!-- Generate the XML docs (for IDE0005), never SHIP them: without these the
-         publish folder build-installer.ps1 harvests carried qsr-ui.xml and
-         QsrPriceBenchmarks.Core.xml into the MSI. Affects dotnet publish only. -->
+         publish folder the setup packages carried qsr-ui.xml and
+         QsrPriceBenchmarks.Core.xml to every install. Affects dotnet publish only. -->
     <PublishDocumentationFile>false</PublishDocumentationFile>
     <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
   </PropertyGroup>

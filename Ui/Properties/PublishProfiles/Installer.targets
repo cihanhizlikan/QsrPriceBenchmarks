@@ -2,24 +2,37 @@
   <!--
     The installer build, run by the two publish profiles in this folder
     (Installer.pubxml, InstallerSystemEdge.pubxml) when QsrBuildInstaller is
-    true. It does what build-installer.ps1 does, without PowerShell:
+    true:
 
       1. empty the publish folder, so nothing from an earlier publish (or the
-         other profile's browser choice) is harvested into the MSI;
+         other profile's browser choice) goes into the setup;
       2. the publish itself (the profile's own properties);
       3. bundle Chromium into <publish>\ms-playwright through the Playwright
          driver the publish already copied in - or, for the system-Edge
          profile, write browser-channel.txt instead;
-      4. build Installer\QsrPriceBenchmarks.Installer.wixproj against that
-         folder. Its version comes from Directory.Build.props, as always.
+      4. compile Installer\QsrPriceBenchmarks.iss with Inno Setup 7's ISCC.exe
+         against that folder. Its version comes from Directory.Build.props.
 
     Works from Visual Studio (right-click QsrPriceBenchmarks.Ui > Publish) and
     from the command line: dotnet publish Ui -p:PublishProfile=Installer
+    Inno Setup 7 must be installed; -p:InnoSetupCompiler=<path to ISCC.exe>
+    overrides where it is looked for.
   -->
   <PropertyGroup>
     <_QsrRepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\'))</_QsrRepoRoot>
-    <_QsrWixProject>$(_QsrRepoRoot)Installer\QsrPriceBenchmarks.Installer.wixproj</_QsrWixProject>
+    <_QsrSetupScript>$(_QsrRepoRoot)Installer\QsrPriceBenchmarks.iss</_QsrSetupScript>
+    <_QsrInnoFolder>$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 7_is1', 'InstallLocation', null, RegistryView.Registry64, RegistryView.Registry32))</_QsrInnoFolder>
+    <InnoSetupCompiler Condition="'$(InnoSetupCompiler)' == '' and '$(_QsrInnoFolder)' != ''">$(_QsrInnoFolder.TrimEnd('\'))\ISCC.exe</InnoSetupCompiler>
+    <InnoSetupCompiler Condition="'$(InnoSetupCompiler)' == ''">$(ProgramFiles)\Inno Setup 7\ISCC.exe</InnoSetupCompiler>
   </PropertyGroup>
+
+  <!-- Before anything is published: a missing compiler fails in a second, not after the publish and the browser
+       download. -->
+  <Target Name="QsrCheckInnoSetup" BeforeTargets="PrepareForPublish"
+          Condition="'$(QsrBuildInstaller)' == 'true'">
+    <Error Condition="!Exists('$(InnoSetupCompiler)')"
+           Text="Inno Setup 7 was not found at '$(InnoSetupCompiler)'. Install it from https://jrsoftware.org/isdl.php, or pass -p:InnoSetupCompiler=&lt;path to ISCC.exe&gt;." />
+  </Target>
 
   <Target Name="QsrCleanPublishFolder" BeforeTargets="PrepareForPublish"
           Condition="'$(QsrBuildInstaller)' == 'true'">
@@ -42,15 +55,14 @@
     <PropertyGroup>
       <_QsrPublishFolder>$([System.IO.Path]::GetFullPath('$(PublishDir)'))</_QsrPublishFolder>
       <!-- No trailing backslash when it is quoted on a command line: "…\ui\"
-           escapes the closing quote, WiX then harvests a path that does not
-           exist, and (before -warnaserror below) built an EMPTY MSI. -->
+           escapes the closing quote and the compiler receives a different path. -->
       <_QsrPublishFolderArg>$(_QsrPublishFolder.TrimEnd('\'))</_QsrPublishFolderArg>
       <_QsrDriverNode>$(_QsrPublishFolder).playwright\node\win32_x64\node.exe</_QsrDriverNode>
       <_QsrDriverCli>$(_QsrPublishFolder).playwright\package\cli.js</_QsrDriverCli>
-      <_QsrWixPlatform>x64</_QsrWixPlatform>
-      <_QsrWixPlatform Condition="'$(RuntimeIdentifier)' == 'win-arm64'">arm64</_QsrWixPlatform>
-      <_QsrWixPlatform Condition="'$(RuntimeIdentifier)' == 'win-x86'">x86</_QsrWixPlatform>
-      <_QsrMsi>$(_QsrRepoRoot)Installer\bin\$(Configuration)\QsrPriceBenchmarks-Setup.msi</_QsrMsi>
+      <_QsrArch>x64</_QsrArch>
+      <_QsrArch Condition="'$(RuntimeIdentifier)' == 'win-arm64'">arm64</_QsrArch>
+      <_QsrArch Condition="'$(RuntimeIdentifier)' == 'win-x86'">x86</_QsrArch>
+      <_QsrSetupFolder>$(_QsrRepoRoot)Installer\bin\$(Configuration)</_QsrSetupFolder>
     </PropertyGroup>
 
     <!-- 3a. Bundled Chromium: the target PC never downloads a browser. -->
@@ -64,16 +76,10 @@
     <WriteLinesToFile Condition="'$(QsrUseSystemBrowser)' == 'true'"
                       File="$(_QsrPublishFolder)browser-channel.txt" Lines="msedge" Overwrite="true" />
 
-    <!-- 4. The MSI. dotnet build rather than an MSBuild task, so the WiX SDK
-         restores and builds exactly as it does from the command line, whichever
-         MSBuild (Visual Studio's or the SDK's) is running this target. -->
-    <!-- -warnaserror:WIX8601: a harvest that finds no directory must FAIL the
-         build, not produce an installer with nothing in it (measured: without
-         it, exit 0 and a 348 KB MSI). no-incremental: WiX's up-to-date check
-         sees neither the publish folder's contents nor the version passed in,
-         so an incremental build could keep the previous MSI. -->
-    <Exec Command="dotnet build &quot;$(_QsrWixProject)&quot; --no-incremental -c $(Configuration) &quot;-p:PublishDir=$(_QsrPublishFolderArg)&quot; -p:InstallerPlatform=$(_QsrWixPlatform) -warnaserror:WIX8601" />
+    <!-- 4. The setup program. /Q keeps the compiler to errors and warnings; an empty or missing publish folder
+         fails the compile ("No files found matching"), never an empty setup. -->
+    <Exec Command="&quot;$(InnoSetupCompiler)&quot; /Q &quot;/DPublishDir=$(_QsrPublishFolderArg)&quot; &quot;/DAppVersion=$(Version)&quot; &quot;/DArch=$(_QsrArch)&quot; &quot;/O$(_QsrSetupFolder)&quot; &quot;$(_QsrSetupScript)&quot;" />
 
-    <Message Importance="high" Text="Installer built: $(_QsrMsi)" />
+    <Message Importance="high" Text="Installer built: $(_QsrSetupFolder)\QsrPriceBenchmarks-Setup.exe" />
   </Target>
 </Project>

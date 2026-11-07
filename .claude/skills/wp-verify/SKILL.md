@@ -15,8 +15,8 @@ dotnet build --no-incremental > /tmp/qsr-build.txt 2>&1; echo "exit=$?"
 ```
 
 `--no-incremental` because an incremental build re-emits warnings only for projects it rebuilt, so it
-under-reports. **This builds the solution: the five C# projects.** The WiX installer project is deliberately not
-in it (`Installer/README.md` says why); a publish profile builds it.
+under-reports. **This builds the solution: the five C# projects.** The installer is not an MSBuild project at
+all: the `Installer` publish profile compiles `Installer/QsrPriceBenchmarks.iss` with Inno Setup 7.
 
 ## 2. Errors
 
@@ -44,13 +44,13 @@ never a raised baseline.
 ## 4. Formatter, into a file that you then READ
 
 ```bash
-dotnet format --verify-no-changes --exclude Installer > /tmp/qsr-format.txt 2>&1; echo "exit=$?"
+dotnet format --verify-no-changes > /tmp/qsr-format.txt 2>&1; echo "exit=$?"
 grep -cE 'WHITESPACE|ENDOFLINE|IDE[0-9]+|CS[0-9]+' /tmp/qsr-format.txt
 ```
 
 **Never `dotnet format … | tail -3; echo $?`** — that reports `tail`'s exit code. **The baseline is exit 0 and
 a count of 0** (WP-S3): alignment whitespace was formatted away when `.editorconfig` landed, so a non-zero result
-is this package's slip. Run `dotnet format whitespace --exclude Installer` (and `style` for IDE fixes) to repair
+is this package's slip. Run `dotnet format whitespace` (and `style` for IDE fixes) to repair
 it rather than hand-editing.
 
 ## 5. Line endings, if anything was edited with `sed`

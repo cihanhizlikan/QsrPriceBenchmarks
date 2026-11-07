@@ -3,7 +3,7 @@
 QSR Price Benchmarks scrapes quick-service-restaurant chains' own websites and their Tıkla Gelsin (TG) listings,
 geocodes and matches the two sets of locations, stores every scrape run in a SQLite database the user chooses, and
 exports price comparisons to Excel. One `Core` library is driven by two hosts — a console app (`qsr`) and a WPF
-app (`qsr-ui`) — and shipped to non-technical users as a self-contained MSI. See `README.md`.
+app (`qsr-ui`) — and shipped to non-technical users as a self-contained Inno Setup installer. See `README.md`.
 
 **The working method is Yalbuz's, adopted 2026-10-24**: worktrees, three package skills, a commit body as the
 archive entry, one plan outside the repository, and an unattended `/sweep`. Where this file and Yalbuz's disagree,
