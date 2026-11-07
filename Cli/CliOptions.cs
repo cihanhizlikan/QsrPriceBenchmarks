@@ -40,7 +40,7 @@ public static class CliParser
     /// any invalid combination — mirrors argparse.error()'s exit-with-message
     /// behaviour from the Python prototype.
     /// </summary>
-    [SuppressMessage("Maintainability", "CA1502", Justification = "Measured 26: one flat case per flag plus one check per refused combination, which reads better in one place than split.")]
+    [SuppressMessage("Maintainability", "CA1502", Justification = "One flat case per flag plus one check per refused combination, which reads better in one place than split.")]
     public static CliOptions Parse(string[] args)
     {
         CliOptions opts = new();
