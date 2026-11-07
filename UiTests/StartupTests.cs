@@ -1,8 +1,7 @@
-using System.Diagnostics;
-using System.Windows.Threading;
 using QsrPriceBenchmarks.Ui;
 using QsrPriceBenchmarks.Ui.ViewModels;
 using Xunit;
+using static QsrPriceBenchmarks.UiTests.Dispatching;
 
 namespace QsrPriceBenchmarks.UiTests;
 
@@ -13,6 +12,8 @@ namespace QsrPriceBenchmarks.UiTests;
 /// </summary>
 public sealed class StartupTests
 {
+    private const string Stuck = "InitialiseAsync did not finish";
+
     [Fact]
     public void The_First_Chain_In_The_Sidebar_Is_Selected_After_Startup()
     {
@@ -33,7 +34,7 @@ public sealed class StartupTests
                 hadSelectionBeforeStartup = model.SelectedChain is not null;
 
                 Task startup = model.InitialiseAsync();
-                PumpUntil(() => startup.IsCompleted);
+                PumpUntil(() => startup.IsCompleted, Stuck);
                 startup.GetAwaiter().GetResult();
 
                 first = model.Chains.FirstOrDefault();
@@ -48,27 +49,5 @@ public sealed class StartupTests
         Assert.Same(first, selected);
         Assert.True(canRun, "with a chain selected, Run must be available");
         Assert.Equal(userDatabaseBefore, UserDatabaseFile.State());
-    }
-
-    /// <summary>
-    /// Runs the dispatcher until <paramref name="done"/> holds. Bounded: a startup
-    /// that never finishes fails here instead of hanging the suite.
-    /// </summary>
-    private static void PumpUntil(Func<bool> done)
-    {
-        long started = Stopwatch.GetTimestamp();
-        while (!done())
-        {
-            if (Stopwatch.GetElapsedTime(started) > TimeSpan.FromSeconds(20))
-            {
-                throw new TimeoutException("InitialiseAsync did not finish within 20 s.");
-            }
-            DispatcherFrame frame = new();
-            DispatcherTimer tick = new(TimeSpan.FromMilliseconds(25), DispatcherPriority.Background,
-                (_, _) => { frame.Continue = false; }, Dispatcher.CurrentDispatcher);
-            tick.Start();
-            Dispatcher.PushFrame(frame);
-            tick.Stop();
-        }
     }
 }

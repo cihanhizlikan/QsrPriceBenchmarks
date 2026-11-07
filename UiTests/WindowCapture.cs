@@ -5,7 +5,6 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Threading;
 using Microsoft.Data.Sqlite;
 using QsrPriceBenchmarks.Core.Db;
 using QsrPriceBenchmarks.Core.Scraping;
@@ -97,7 +96,7 @@ public sealed class WindowCapture(ITestOutputHelper output)
         model.SelectedChain = model.Chains.First(c => c.Name == Chain);
 
         window.Show();
-        Settle(window, () => model.Runs.Count > 0 && model.MapCells.Count > 0);
+        Settle(() => model.Runs.Count > 0 && model.MapCells.Count > 0);
         // Two chains scraping at once, stood in by runs that only report progress: the sidebar then shows a
         // running card beside an idle one, and the selected chain's progress bar is on screen.
         model.RunPipeline = async call =>
@@ -111,7 +110,7 @@ public sealed class WindowCapture(ITestOutputHelper output)
             model.SelectedChain = running;
             model.RunCommand.Execute(null);
         }
-        Settle(window, () => selected.Session.ProgressVisible);
+        Settle(() => selected.Session.ProgressVisible);
         // One line of each kind LogLineColouriser tells apart, so the log's colours
         // are on screen: a step widget, a ratio widget with a marked value, a
         // district sub-line, a URL, numbers and symbols, SKIP, a warning, an error.
@@ -119,15 +118,15 @@ public sealed class WindowCapture(ITestOutputHelper output)
         {
             model.SelectedSession!.LogLines.Add(line);
         }
-        Settle(window, () => true);
+        Settle(() => true);
         written.Add(Save(window, into, "run-pipeline.png"));
 
         Select(window, "LocationsTab");
-        Settle(window, () => model.MapCells.Count > 0);
+        Settle(() => model.MapCells.Count > 0);
         written.Add(Save(window, into, "locations.png"));
 
         Select(window, "ScrapeRunsTab");
-        Settle(window, () => model.Runs.Count > 0);
+        Settle(() => model.Runs.Count > 0);
         written.Add(Save(window, into, "scrape-runs.png"));
         written.AddRange(SaveFilter(window, model.RunsFilter.State, into));
 
@@ -141,7 +140,7 @@ public sealed class WindowCapture(ITestOutputHelper output)
             "Export", MessageBoxButton.OK, MessageBoxImage.Error)));
 
         model.CancelAllRuns(); // closing with runs going would ask first
-        Settle(window, () => !model.IsAnyRunning);
+        Settle(() => !model.IsAnyRunning);
         window.Close();
     }
 
@@ -160,7 +159,7 @@ public sealed class WindowCapture(ITestOutputHelper output)
             .Invoke(header, null);
         ToggleButton funnel = VisualTree.Descendants<ToggleButton>(header).Single();
         funnel.IsChecked = true;
-        Settle(window, () => true);
+        Settle(() => true);
         string filtered = Save(window, into, "scrape-runs-filtered.png");
         Popup popup = VisualTree.Descendants<Popup>(VisualTreeHelper.GetParent(funnel)).Single();
         FrameworkElement list = popup.Child as FrameworkElement
@@ -176,7 +175,7 @@ public sealed class WindowCapture(ITestOutputHelper output)
         dialog.Owner = owner;
         dialog.ShowActivated = false;
         dialog.Show();
-        Settle(dialog, () => true);
+        Settle(() => true);
         string saved = Save(dialog, into, file);
         dialog.Close();
         return saved;
@@ -206,30 +205,17 @@ public sealed class WindowCapture(ITestOutputHelper output)
     /// monotonic clock. Expiring is not an error: the capture then shows whatever
     /// the window reached, which is more useful than no image.
     /// </summary>
-    private static void Settle(Window window, Func<bool> ready)
+    private static void Settle(Func<bool> ready)
     {
         long started = Stopwatch.GetTimestamp();
         do
         {
-            DispatcherFrame frame = new();
-            DispatcherTimer settled = new(
-                TimeSpan.FromMilliseconds(50),
-                DispatcherPriority.Background,
-                (_, _) => { frame.Continue = false; },
-                window.Dispatcher);
-            settled.Start();
-            Dispatcher.PushFrame(frame);
-            settled.Stop();
+            Dispatching.Turn(TimeSpan.FromMilliseconds(50));
         }
         while (!ready() && Stopwatch.GetElapsedTime(started) < TimeSpan.FromSeconds(20));
 
         // One more turn so a bound collection that just filled has laid out.
-        DispatcherFrame last = new();
-        DispatcherTimer tick = new(TimeSpan.FromMilliseconds(250), DispatcherPriority.Background,
-            (_, _) => { last.Continue = false; }, window.Dispatcher);
-        tick.Start();
-        Dispatcher.PushFrame(last);
-        tick.Stop();
+        Dispatching.Turn(TimeSpan.FromMilliseconds(250));
     }
 
     /// <summary>
