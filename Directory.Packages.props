@@ -5,10 +5,12 @@
        SQLitePCLRaw.bundle_winsqlite3 2.1.*, xunit 2.*), so what the MSI carried depended on the day of the restore.
        Each was pinned at the version it resolved to then, so the pin changed no build output.
 
-       THE RULE FOR A BUMP: a patch or minor is taken freely; a MAJOR is a decision, not a bump. Two SQLitePCLRaw
-       majors sit below on purpose — the hosts' provider and the tests' provider are different packages, chosen per
-       host (settled-decisions.md, SQLite provider) — and whether the tests should run the shipped major is a plan
-       row, not something this file settles. -->
+       THE RULE FOR A BUMP: a patch or minor is taken freely; a MAJOR is a decision, not a bump. The two SQLitePCLRaw
+       bundles below are different packages, chosen per host (settled-decisions.md, SQLite provider), but they MUST
+       share one SQLitePCLRaw.core major: Tests references both (Cli brings the hosts' bundle in), so a 3.x test
+       bundle drags core to 3.x under Microsoft.Data.Sqlite (built against core 2.1) and the hosts' 2.1 provider.
+       bundle_winsqlite3 has no 3.x, so the test bundle stays on 2.1 until it does (plan WP-T3, 2026-11-07) — at
+       2.1.14 or later: lib.e_sqlite3 2.1.11 and below carry advisory GHSA-2m69-gcr7-jv3q (High). -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
@@ -32,7 +34,7 @@
   <!-- Tests. -->
   <ItemGroup>
     <!-- The test host's SQLite provider: cross-platform native SQLite, so the hermetic tests run anywhere. -->
-    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
+    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.14" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.v3" Version="3.2.2" />

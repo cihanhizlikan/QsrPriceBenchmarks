@@ -27,6 +27,11 @@ one difference the two working agreements had on it.
 SQLite that ships with Windows: no native binary shipped, no third-party CVE surface); `Tests` pins
 `bundle_e_sqlite3` so the hermetic DB tests run on any platform. The reasoning is in the csproj comments.
 **Re-opened by** a SQLite feature the hosts need that Windows' build lacks.
+**Amended 2026-11-07 (WP-T3): the two bundles share one `SQLitePCLRaw.core` major.** `Tests` references both (Cli
+brings the hosts' in), and the test bundle at 3.0.3 had dragged core to 3.x under `Microsoft.Data.Sqlite.Core`
+(built against core 2.1.13) and the hosts' 2.1 provider — measured in `Tests/obj/project.assets.json`. The test
+bundle is pinned to 2.1.14 (not 2.1.11: `lib.e_sqlite3` ≤ 2.1.11 carries GHSA-2m69-gcr7-jv3q, High).
+`bundle_winsqlite3` has no 3.x release. **Re-opened by** one: then both move to 3.x together, as a shipped major.
 
 ## ~~The database is the user's data~~ — superseded 2026-10-29 by *The program's shape outranks the database*
 
