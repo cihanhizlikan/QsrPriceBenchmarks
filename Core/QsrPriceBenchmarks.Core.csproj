@@ -6,9 +6,9 @@
     <InvariantGlobalization>false</InvariantGlobalization>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Playwright" Version="1.61.0" />
-    <PackageReference Include="AngleSharp" Version="1.5.1" />
-    <PackageReference Include="ClosedXML" Version="0.105.0" />
+    <PackageReference Include="Microsoft.Playwright" />
+    <PackageReference Include="AngleSharp" />
+    <PackageReference Include="ClosedXML" />
     <!-- Core depends ONLY on the provider-agnostic ADO.NET layer
          (Microsoft.Data.Sqlite.Core). It deliberately does NOT reference a
          SQLitePCLRaw "bundle_*" package, because a bundle carries a native
@@ -22,7 +22,7 @@
              SQLite, so the hermetic DB/view/export tests run on Linux CI and
              any dev box, not only on Windows.
          Each host therefore selects exactly one provider; Core stays portable. -->
-    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.*" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" />
   </ItemGroup>
   <ItemGroup>
     <!-- TgScraper.ResolveTabs (which tabs a run leaves out) is tested hermetically without widening it to public. -->

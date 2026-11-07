@@ -12,6 +12,9 @@
 | `QsrPriceBenchmarks.Installer` | `Installer/` | WiX v5 MSI | harvests the self-contained publish of `Ui`; built by the `Installer` / `InstallerSystemEdge` publish profiles in `Ui/Properties/PublishProfiles/` (logic in `Installer.targets` there), or `build-installer.ps1` |
 
 `Directory.Build.props` carries the one product version every project — the MSI included — reads.
+`Directory.Packages.props` carries every package version (central package management: a `Version` on a
+`PackageReference` is the error `NU1008`), and `global.json` pins the SDK feature band, rolling forward to the
+latest patch.
 
 ## Core, by folder
 

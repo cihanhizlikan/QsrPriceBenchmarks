@@ -11,6 +11,6 @@
     <ProjectReference Include="..\Core\QsrPriceBenchmarks.Core.csproj" />
     <!-- Provider chosen by the host (not Core): the SQLite that ships with
          Windows. No native binary shipped, OS-maintained, no 3rd-party CVE. -->
-    <PackageReference Include="SQLitePCLRaw.bundle_winsqlite3" Version="2.1.*" />
+    <PackageReference Include="SQLitePCLRaw.bundle_winsqlite3" />
   </ItemGroup>
 </Project>
