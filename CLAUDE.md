@@ -34,6 +34,10 @@ this one is the ruling for this repository — the differences are deliberate an
   ship nothing and do not bump. `/wp-finish` runs the check.
 - **The suite touches the live internet.** `ChainWebsiteTests` and `TgMenuTests` (trait `Category=Integration`)
   scrape real sites, so a red there can be the site rather than the code. `/wp-verify` says how to tell which.
+- **A UI decision is checked against [the UI Register](.claude/context/ui-register.md) BEFORE it is taken**, not
+  defended afterwards. If a surface disagrees with a row, that is drift; if a proposal disagrees with one, it is an
+  argument with a decision, re-opened by a new fact only. A change that moves a rule revises the register in the
+  same commit.
 - **A session never pushes.**
 
 ## Reference
@@ -46,6 +50,8 @@ its facts in place; nothing is shared with, or copied back to, another repositor
 
 [settled-decisions.md](.claude/context/settled-decisions.md) — **what has already been decided and must not be
 re-argued.** A decision there is re-opened by a new fact, never by an argument.
+[ui-register.md](.claude/context/ui-register.md) holds the same kind of decisions about the window, together with the
+measurements they rest on.
 
 **The plan is one file OUTSIDE the repository**: `C:\Users\ihizl\.claude\plans\qsr-price-benchmarks.md`. It is
 named here because nothing else names it, and a session that writes findings anywhere else has built a second

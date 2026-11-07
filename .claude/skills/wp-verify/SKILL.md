@@ -102,8 +102,10 @@ to LOOK at rather than something to assert, gated on `QSR_CAPTURE_DIR`.
 QSR_CAPTURE_DIR="$(cygpath -w "$PWD")\\TestResults\\artifacts" dotnet test UiTests --no-build
 ```
 
-It writes one PNG per tab to the gitignored `TestResults/artifacts`, against a throwaway database (it asserts
-that the user's own database is untouched). The window appears on screen for a few seconds while it runs.
+It writes one PNG per tab and per dialog to the gitignored `TestResults/artifacts`, against a throwaway database (it
+asserts that the user's own database is untouched). The window appears on screen for a few seconds while it runs.
+**Read the PNGs against `.claude/context/ui-register.md`**: a row the change contradicts is either drift the change
+introduced, or a rule it moved, which `/wp-finish` revises in the same commit.
 
 ## 7. A failed build means the rest never compiled
 
