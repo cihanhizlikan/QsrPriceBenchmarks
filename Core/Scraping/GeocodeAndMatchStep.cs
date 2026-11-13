@@ -334,6 +334,6 @@ public static class GeocodeAndMatchStep
         RequestGate gate, IPage page, string query, CancellationToken ct)
     {
         using IDisposable turn = await gate.TakeTurnAsync(RequestScheduler.GoogleMaps, ct);
-        return await Geocoder.GeocodeDetailedAsync(page, query);
+        return await Geocoder.GeocodeDetailedAsync(page, query, ct);
     }
 }

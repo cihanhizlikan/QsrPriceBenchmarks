@@ -29,8 +29,10 @@ latest patch, and runs `dotnet test` on Microsoft Testing Platform.
 - `Util/` — pure helpers: text normalisation, price parsing, and the log markup both hosts render (the CLI as
   ANSI in `Cli/ConsoleColouriser`, the UI as WPF runs in `Ui/LogLineColouriser`).
 
-**Progress is `IProgress<string>` and cancellation is a `CancellationToken` on every async `Core` method**, so
-neither host is known to `Core`.
+**Progress is `IProgress<string>` and cancellation is a `CancellationToken` on every `Core` entry point a host
+calls** (`PipelineRunner` and the steps it runs), so neither host is known to `Core`. Long loops check the token
+between units of work. Playwright calls take no token, so code that drives a page closes the page when the token
+fires, and a pending navigation or wait then throws at once (`PageFetcher`, `TgScraper`, `Geocoder`).
 
 ## The placement rule
 
