@@ -32,6 +32,11 @@ brings the hosts' in), and the test bundle at 3.0.3 had dragged core to 3.x unde
 (built against core 2.1.13) and the hosts' 2.1 provider — measured in `Tests/obj/project.assets.json`. The test
 bundle is pinned to 2.1.14 (not 2.1.11: `lib.e_sqlite3` ≤ 2.1.11 carries GHSA-2m69-gcr7-jv3q, High).
 `bundle_winsqlite3` has no 3.x release. **Re-opened by** one: then both move to 3.x together, as a shipped major.
+**Amended 2026-11-13 (WP-D7): both are on SQLitePCLRaw 3, without a winsqlite3 bundle.** `Microsoft.Data.Sqlite.Core`
+11.0.0 needs `SQLitePCLRaw.core` 3.0.5. The new fact: `SQLitePCLRaw.provider.winsqlite3` has a 3.0.5 release, and
+only the bundle, which registered it from a module initializer, does not. The hosts reference the provider and register it
+themselves before the first connection (`Cli/Program.cs`'s `Main`, `Ui/SqliteProvider.cs` from `App`); the tests
+take `bundle_e_sqlite3` 3.0.5. The choice per host is unchanged.
 
 ## ~~The database is the user's data~~ — superseded 2026-10-29 by *The program's shape outranks the database*
 

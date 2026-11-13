@@ -10,7 +10,7 @@ namespace QsrPriceBenchmarks.IntegrationTests.Hermetic;
 /// <summary>
 /// Registers the SQLitePCLRaw native provider exactly once when this test
 /// assembly loads. The test project references the cross-platform
-/// <c>bundle_e_sqlite3</c> (the shipping apps use bundle_winsqlite3); calling
+/// <c>bundle_e_sqlite3</c> (the shipping apps use provider.winsqlite3); calling
 /// <see cref="Batteries_V2.Init"/> here is idempotent and guarantees the
 /// provider is set before any test opens a connection, regardless of test
 /// runner module-initializer behaviour.

@@ -17,7 +17,7 @@
     <ProjectReference Include="..\Core\QsrPriceBenchmarks.Core.csproj" />
     <!-- Provider chosen by the host (not Core): the SQLite that ships with
          Windows. No native binary shipped, OS-maintained, no 3rd-party CVE. -->
-    <PackageReference Include="SQLitePCLRaw.bundle_winsqlite3" />
+    <PackageReference Include="SQLitePCLRaw.provider.winsqlite3" />
   </ItemGroup>
   <ItemGroup>
     <!-- The live Scrape Runs reload is driven by a signal only a real scrape sends; UiTests fires it directly. -->

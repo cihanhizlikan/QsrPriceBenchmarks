@@ -13,7 +13,7 @@
     <ProjectReference Include="..\Cli\QsrPriceBenchmarks.Cli.csproj" />
     <!-- The test host's SQLite provider: cross-platform native SQLite, so the
          hermetic DB / view / export tests run on Linux CI and any dev box.
-         (The shipping apps use bundle_winsqlite3; Core is provider-agnostic.) -->
+         (The shipping apps use provider.winsqlite3; Core is provider-agnostic.) -->
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />

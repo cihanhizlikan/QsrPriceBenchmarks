@@ -255,11 +255,11 @@ because Roslynator or an SDK bump changes what steps 5 and 6 measure. Run from t
 - **Outdated** — a patch or minor within the current major is a correction, taken together in one step; a MAJOR is a
   package naming its breaking-change notes. `Directory.Packages.props`' header comment states the rule and the
   pins' reasons; keep it true.
-- **The SQLite provider is chosen per host** (settled): `Cli` and `Ui` ship `SQLitePCLRaw.bundle_winsqlite3`, the
-  tests use `bundle_e_sqlite3`. **The two bundles must sit on the SAME `SQLitePCLRaw.core` major** that
-  `Microsoft.Data.Sqlite.Core` was built against — read `Tests/obj/project.assets.json` for the resolved
-  `SQLitePCLRaw.core`, never the pin alone. `bundle_winsqlite3` has no 3.x, so a `bundle_e_sqlite3` 3.x "update" is
-  never a correction.
+- **The SQLite provider is chosen per host** (settled): `Cli` and `Ui` ship `SQLitePCLRaw.provider.winsqlite3`
+  and register it at start, the tests use `bundle_e_sqlite3`. **Both must sit on the SAME `SQLitePCLRaw.core`
+  major** that `Microsoft.Data.Sqlite.Core` was built against — read `Tests/obj/project.assets.json` for the
+  resolved `SQLitePCLRaw.core`, never the pin alone. A SQLitePCLRaw major moves all three together, so it is a
+  package, never a correction.
 - **Microsoft.Playwright** — its version decides the Chromium revision the setup bundles. A Playwright bump is
   proven by the full suite (the live tests drive the new browser) AND by building the setup —
   `dotnet publish Ui/QsrPriceBenchmarks.Ui.csproj -p:PublishProfile=Installer` — and confirming the
