@@ -20,6 +20,8 @@
     <Color x:Key="ColorAccentBg">#004D5C</Color>
     <Color x:Key="ColorSelected">#00838F</Color>
     <Color x:Key="ColorDanger">#C62828</Color>
+    <Color x:Key="ColorDangerBg">#3B0000</Color>      <!-- a danger button at rest -->
+    <Color x:Key="ColorCellSelected">#3F3F3F</Color>  <!-- a selected grid cell -->
     <Color x:Key="ColorPurple">#FF00FF</Color>        <!-- ANSI 95  bright magenta -->
     <Color x:Key="ColorChromeCyan">#33C4CC</Color>    <!-- UI furniture only, not log text -->
     <Color x:Key="ColorBgChrome">#111111</Color>      <!-- header bar and chain sidebar -->
@@ -41,6 +43,8 @@
     <SolidColorBrush x:Key="BrushAccentBg"  Color="{StaticResource ColorAccentBg}"/>
     <SolidColorBrush x:Key="BrushSelected"  Color="{StaticResource ColorSelected}"/>
     <SolidColorBrush x:Key="BrushDanger"    Color="{StaticResource ColorDanger}"/>
+    <SolidColorBrush x:Key="BrushDangerBg"  Color="{StaticResource ColorDangerBg}"/>
+    <SolidColorBrush x:Key="BrushCellSelected" Color="{StaticResource ColorCellSelected}"/>
     <SolidColorBrush x:Key="BrushPurple"    Color="{StaticResource ColorPurple}"/>
     <SolidColorBrush x:Key="BrushChromeCyan" Color="{StaticResource ColorChromeCyan}"/>
     <SolidColorBrush x:Key="BrushBgChrome"  Color="{StaticResource ColorBgChrome}"/>
@@ -127,7 +131,7 @@
 
     <!-- Danger button — delete actions -->
     <Style x:Key="ButtonDanger" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
-        <Setter Property="Background"  Value="#3B0000"/>
+        <Setter Property="Background"  Value="{StaticResource BrushDangerBg}"/>
         <Setter Property="BorderBrush" Value="{StaticResource BrushDanger}"/>
         <Setter Property="Foreground"  Value="{StaticResource BrushDanger}"/>
         <Style.Triggers>
@@ -316,7 +320,7 @@
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Style.Triggers>
             <Trigger Property="IsSelected" Value="True">
-                <Setter Property="Background" Value="#3F3F3F"/>
+                <Setter Property="Background" Value="{StaticResource BrushCellSelected}"/>
                 <Setter Property="Foreground" Value="{StaticResource BrushText}"/>
             </Trigger>
         </Style.Triggers>

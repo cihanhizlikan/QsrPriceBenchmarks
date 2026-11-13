@@ -34,6 +34,7 @@ Unlike Yalbuz's, this register is a file in the repository: a UI change and the 
 | Rule | Scope | Enforced | Settled |
 |---|---|---|---|
 | **Every colour is defined in `Ui/Themes/Dark.xaml`** and read from it as a resource. `Transparent` is the one literal allowed elsewhere. | both | build | `ThemeColourTests`, 2026-11-07; before that, sweep 2026-10-24 step 8 moved seven literals into tokens |
+| **Inside the theme, every colour is a named `Color` token** with a `Brush` of the same name, and the theme's own styles read the brushes. The token list is the whole palette. | both | build | WP-U7, 2026-11-13; `ThemeColourTests` |
 | **Dark only.** There is no light theme, no toggle and no `prefers`-style switch. | both | read | Measured since the first commit and never asked otherwise. Re-opened by a request for a light theme |
 | **The palette is cmd.exe's (legacy conhost)**, so the log reads exactly as the CLI prints it: `ColorLightCyan` `#00FFFF` (ANSI 96), `ColorDimCyan` `#00B3B3` (ANSI 2;96), `ColorText` `#FFFFFF`, `ColorPurple` `#FF00FF` (ANSI 95). | both | read | The theme's own header comment. Re-tinting one of the four changes the log's agreement with the console |
 | **`ColorChromeCyan` (`#33C4CC`) is for UI furniture only, never log text**, so the furniture stays visually layered behind the log. | window | read | The theme's header comment |
@@ -41,10 +42,8 @@ Unlike Yalbuz's, this register is a file in the repository: a UI change and the 
 | **The initials-badge palette stays in code** (`Ui/ViewModels/ChainViewModel.cs`): a per-chain identity colour chosen from data, as the chain brand colours in `Core/Models/BrandPalette.cs` are. It is not theme. | window | build | settled-decisions.md *The log reads the theme; the initials-badge palette stays in code*, 2026-10-25. `ThemeColourTests` exempts that one file by name |
 | **Message boxes are drawn in the app's theme**, never by Windows. `System.Windows.MessageBox` is Win32 chrome that no brush can reach. The crash handler alone falls back to the native box, because the failure it reports may be what stops a WPF window rendering. | dialog | read | 2026-10-26, *message boxes are drawn in the app's theme* |
 
-**Measured 2026-11-07:** 19 `Color` tokens in `Dark.xaml`, each with a `Brush` of the same name. Two colours inside
-the theme are literals rather than named tokens: `ButtonDanger`'s resting background `#3B0000` and a selected grid
-cell's `#3F3F3F`. The guard allows them because they are in the theme file. Whether they should be tokens is a plan
-row, not a rule.
+**Measured 2026-11-13:** 21 `Color` tokens in `Dark.xaml`, each with a `Brush` of the same name. The last two,
+`ColorDangerBg` and `ColorCellSelected`, were literals inside styles until WP-U7.
 
 ## Type, space and shape
 

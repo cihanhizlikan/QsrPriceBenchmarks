@@ -62,6 +62,27 @@ public sealed partial class ThemeColourTests
             + string.Join("\n", offenders));
     }
 
+    [Fact(DisplayName = "Inside the theme, every colour is a named Color token")]
+    public void ThemeColours_AreNamedTokens()
+    {
+        // The theme's own styles read its tokens like every other file does, so the token list is the whole palette
+        // (WP-U7, 2026-11-13: a danger button's background and a selected cell's were literals inside a style).
+        string theme = Path.Combine(RepositoryRoot(), "Ui", "Themes", "Dark.xaml");
+        string[] lines = File.ReadAllLines(theme);
+        List<string> offenders = [];
+        for (int i = 0; i < lines.Length; i++)
+        {
+            foreach (Match match in XamlColourLiteral().Matches(lines[i]))
+            {
+                offenders.Add($"Ui/Themes/Dark.xaml:{i + 1}: {match.Value}");
+            }
+        }
+
+        Assert.True(offenders.Count == 0,
+            "A colour inside the theme is a literal; make it a <Color x:Key> token and reference its brush:\n"
+            + string.Join("\n", offenders));
+    }
+
     [Fact(DisplayName = "The theme guard scans the real UI folder")]
     public void Guard_FindsTheThemeItProtects()
     {
