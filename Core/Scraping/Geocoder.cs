@@ -37,20 +37,36 @@ public static partial class Geocoder
     /// times, and dismisses Google's consent interstitial which otherwise blocks
     /// the "/@lat,lon" redirect and shows up as a flaky ~50% failure rate.
     /// </summary>
-    public static async Task<GeocodeResult> GeocodeDetailedAsync(IPage page, string address)
+    public static async Task<GeocodeResult> GeocodeDetailedAsync(IPage page, string address, CancellationToken ct)
     {
+        // Playwright calls take no token, so Cancel closes the page: a pending navigation or wait then throws at
+        // once, where it would otherwise run out up to three 20 s + 12 s attempts (WP-R2).
+        await using CancellationTokenRegistration closeOnCancel = ct.Register(() => Close(page));
+
         GeocodeResult result = new(null, GeocodeOutcome.Error);
         for (int attempt = 1; attempt <= 3; attempt++)
         {
             result = await GeocodeOnceAsync(page, address);
+            // A page closed by Cancel reads as an Error; it is the Cancel, not Google straining.
+            ct.ThrowIfCancellationRequested();
             if (result.Outcome is GeocodeOutcome.Found or GeocodeOutcome.NoMatch)
             {
                 return result;  // a definitive answer — don't waste retries
             }
             // TimedOut / Error → Google is straining; brief backoff then retry.
-            await page.WaitForTimeoutAsync(800 * attempt);
+            await Task.Delay(800 * attempt, ct);
         }
         return result;
+    }
+
+    /// <summary>Closes the page without waiting, observing a failed close so it never reaches the crash log.</summary>
+    private static void Close(IPage page)
+    {
+        _ = page.CloseAsync().ContinueWith(
+            static closing => closing.Exception,
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted,
+            TaskScheduler.Default);
     }
 
     private static async Task<GeocodeResult> GeocodeOnceAsync(IPage page, string address)
