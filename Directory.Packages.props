@@ -18,9 +18,9 @@
   <!-- Shipped: Core and the two hosts. -->
   <ItemGroup>
     <PackageVersion Include="Microsoft.Playwright" Version="1.64.1" />
-    <PackageVersion Include="AngleSharp" Version="1.10.0" />
+    <PackageVersion Include="AngleSharp" Version="1.10.2" />
     <PackageVersion Include="ClosedXML" Version="0.105.1" />
-    <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="10.0.15" />
     <!-- The Windows apps' SQLite provider: the SQLite that ships with Windows. -->
     <PackageVersion Include="SQLitePCLRaw.bundle_winsqlite3" Version="2.1.11" />
   </ItemGroup>
@@ -37,7 +37,7 @@
     <!-- Both test projects run on Microsoft Testing Platform (global.json's "test" section), so VSTest's adapter
          and Microsoft.NET.Test.Sdk are gone. Coverage comes from Microsoft's own MTP extension
          (the command is in .claude/skills/wp-verify/SKILL.md). -->
-    <PackageVersion Include="xunit.v3" Version="4.0.2" />
+    <PackageVersion Include="xunit.v3" Version="4.0.3" />
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
   </ItemGroup>
 </Project>
