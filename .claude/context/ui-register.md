@@ -87,11 +87,10 @@ Each figure is a measurement, not a rule. It becomes one when somebody decides i
 
 ## Motion
 
-**Measured 2026-11-07, not decided:** there are three animations, and none has a branch for Windows' *Show
-animations* setting being off:
+| Rule | Scope | Enforced | Settled |
+|---|---|---|---|
+| **Windows' *Show animations* setting is honoured, and a cue holds its end state rather than disappearing.** With it off: the progress fill is still at full opacity, the header keeps its logo while chains run, and a marker keeps its dot without the ring. `Ui/Motion.cs` reads the setting once, at start. | window | build | Maintainer, 2026-11-13 (WP-U8); `MotionTests` |
+| **The progress bar is Yalbuz's, in this theme's colours and height.** The running fill breathes in opacity (1 to 0.35, sine ease, 1 s each way), and its width glides to each new value over 0.3 s (`Ui/ProgressGlide.cs`). The glide stays when animations are off, as Yalbuz keeps it, because the width is the bar's meaning. | window | read | Maintainer, 2026-11-13 (WP-U8): "the same progress bar as Yalbuz except for the color and thickness" |
 
-- **The progress fill pulses** in opacity, between 0.6 and 1.0 over 0.9 s.
-- **The header logo becomes three equaliser bars** while any chain runs, on a 0.5 s cycle.
-- **A ring pulses out from each district marker** that has locations, over 2 s.
-
-Whether they should honour that setting is a plan row.
+**Measured 2026-11-13:** three animations. The progress fill breathes. The header logo becomes three equaliser bars
+while any chain runs, on a 0.5 s cycle. A ring pulses out from each district marker that has locations, over 2 s.

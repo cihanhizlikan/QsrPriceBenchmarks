@@ -1,6 +1,7 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+                    xmlns:local="clr-namespace:QsrPriceBenchmarks.Ui">
 
     <!-- ── Colour palette matching cmd.exe (legacy conhost) default scheme ────
          The CLI prints ANSI codes; cmd.exe renders them with these exact RGB
@@ -388,7 +389,10 @@
         <Setter Property="Margin"     Value="0 8"/>
     </Style>
 
-    <!-- Progress bar: rounded track + cyan gradient fill that gently pulses -->
+    <!-- Progress bar: Yalbuz's, in this theme's colours and height (WP-U8). The fill breathes in opacity
+         (1 to 0.35, 1 s each way) to say the run is alive while one item is slow, and its width glides to each
+         new value (local:ProgressGlide.Value, bound in place of Value). With Windows' "Show animations" off the
+         fill holds still at full opacity; the glide stays, as Yalbuz keeps it, because the width is the meaning. -->
     <Style TargetType="ProgressBar">
         <Setter Property="Height"          Value="12"/>
         <Setter Property="Background"      Value="{StaticResource BrushBg3}"/>
@@ -402,6 +406,32 @@
                         <Grid ClipToBounds="True">
                             <Border Name="PART_Track"/>
                             <Border Name="PART_Indicator" HorizontalAlignment="Left" CornerRadius="5">
+                                <!-- The breath animates the fill's own Opacity from its own style, so it needs no
+                                     Storyboard.TargetName: naming a template part from ControlTemplate.Triggers threw
+                                     'name cannot be found in namescope' on Loaded. -->
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Path=(local:Motion.Enabled)}" Value="True">
+                                                <DataTrigger.EnterActions>
+                                                    <BeginStoryboard x:Name="Breath">
+                                                        <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                             From="1.0" To="0.35" Duration="0:0:1">
+                                                                <DoubleAnimation.EasingFunction>
+                                                                    <SineEase EasingMode="EaseInOut"/>
+                                                                </DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </DataTrigger.EnterActions>
+                                                <DataTrigger.ExitActions>
+                                                    <RemoveStoryboard BeginStoryboardName="Breath"/>
+                                                </DataTrigger.ExitActions>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
                                 <Border.Background>
                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                         <GradientStop Color="{StaticResource ColorChromeCyan}" Offset="0"/>
@@ -411,22 +441,6 @@
                             </Border>
                         </Grid>
                     </Border>
-                    <ControlTemplate.Triggers>
-                        <!-- A subtle, slow opacity pulse gives the fill some life.
-                             No Storyboard.TargetName: inside ControlTemplate.Triggers
-                             a name-less target animates the templated ProgressBar
-                             itself. Targeting "PART_Indicator" by name here throws
-                             'name cannot be found in namescope' on Loaded and crashes
-                             startup, so we animate the control's own Opacity instead. -->
-                        <EventTrigger RoutedEvent="Loaded">
-                            <BeginStoryboard>
-                                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
-                                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                     From="0.6" To="1.0" Duration="0:0:0.9"/>
-                                </Storyboard>
-                            </BeginStoryboard>
-                        </EventTrigger>
-                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

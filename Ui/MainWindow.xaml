@@ -101,14 +101,34 @@
           <Grid Width="22" Height="22" Margin="0 0 9 0" VerticalAlignment="Center"
                 UseLayoutRounding="True" SnapsToDevicePixels="True">
             <!-- Static logo when idle -->
-            <Image Source="{StaticResource AppLogo}" Width="22" Height="22"
-                   Visibility="{Binding IsAnyRunning, Converter={StaticResource InvVis}}"/>
+            <Image Source="{StaticResource AppLogo}" Width="22" Height="22">
+              <!-- With Windows' "Show animations" off the logo stays while chains run: the bars' end state. -->
+              <Image.Style>
+                <Style TargetType="Image">
+                  <Setter Property="Visibility" Value="{Binding IsAnyRunning, Converter={StaticResource InvVis}}"/>
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding Path=(local:Motion.Enabled)}" Value="False">
+                      <Setter Property="Visibility" Value="Visible"/>
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </Image.Style>
+            </Image>
             <!-- Animated cyan equalizer bars while a step is running. Shown by
                  toggling visibility against the logo (no opaque cover) so there's
                  no seam, and sized to the full 22×22 logo footprint. -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
-                        VerticalAlignment="Bottom"
-                        Visibility="{Binding IsAnyRunning, Converter={StaticResource BoolVis}}">
+                        VerticalAlignment="Bottom">
+              <StackPanel.Style>
+                <Style TargetType="StackPanel">
+                  <Setter Property="Visibility" Value="{Binding IsAnyRunning, Converter={StaticResource BoolVis}}"/>
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding Path=(local:Motion.Enabled)}" Value="False">
+                      <Setter Property="Visibility" Value="Collapsed"/>
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </StackPanel.Style>
               <StackPanel.Triggers>
                 <EventTrigger RoutedEvent="Loaded">
                   <BeginStoryboard>
@@ -240,7 +260,7 @@
       <TabControl Grid.Column="1" SelectionChanged="MainTabs_SelectionChanged">
 
         <!-- ═══ TAB 1: Run Pipeline ══════════════════════════════════════════ -->
-        <TabItem Header="  Run Pipeline  ">
+        <TabItem x:Name="RunPipelineTab" Header="  Run Pipeline  ">
           <Grid Margin="12 10 12 12">
             <Grid.RowDefinitions>
               <RowDefinition Height="Auto"/>
@@ -341,7 +361,7 @@
                         Visibility="{Binding ProgressVisible, Converter={StaticResource BoolVis}}">
                   <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <ProgressBar Width="240" Minimum="0"
-                                 Maximum="{Binding ProgressTotal, Mode=OneWay}" Value="{Binding ProgressDone, Mode=OneWay}"
+                                 Maximum="{Binding ProgressTotal, Mode=OneWay}" local:ProgressGlide.Value="{Binding ProgressDone, Mode=OneWay}"
                                  VerticalAlignment="Center"/>
                     <TextBlock Text="{Binding ProgressText}" Margin="10 0 0 0" VerticalAlignment="Center"
                                FontFamily="Consolas" FontSize="12" Foreground="{StaticResource BrushDimCyan}"/>
@@ -496,10 +516,20 @@
                               </BeginStoryboard>
                             </EventTrigger>
                           </Grid.Triggers>
+                          <!-- With Windows' "Show animations" off the ring is gone and the dot stays. -->
                           <Ellipse x:Name="Ring" Width="14" Height="14" Opacity="0"
                                    HorizontalAlignment="Center" VerticalAlignment="Center"
                                    Stroke="{StaticResource BrushLightCyan}" StrokeThickness="1.5"
                                    RenderTransformOrigin="0.5,0.5">
+                            <Ellipse.Style>
+                              <Style TargetType="Ellipse">
+                                <Style.Triggers>
+                                  <DataTrigger Binding="{Binding Path=(local:Motion.Enabled)}" Value="False">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                  </DataTrigger>
+                                </Style.Triggers>
+                              </Style>
+                            </Ellipse.Style>
                             <Ellipse.RenderTransform>
                               <ScaleTransform/>
                             </Ellipse.RenderTransform>
@@ -613,7 +643,7 @@
                     Visibility="{Binding ExportProgressVisible, Converter={StaticResource BoolVis}}">
               <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <ProgressBar Width="240" Minimum="0"
-                             Maximum="{Binding ExportTotal, Mode=OneWay}" Value="{Binding ExportDone, Mode=OneWay}"
+                             Maximum="{Binding ExportTotal, Mode=OneWay}" local:ProgressGlide.Value="{Binding ExportDone, Mode=OneWay}"
                              VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding ExportText}" Margin="10 0 0 0" VerticalAlignment="Center"
                            FontFamily="Consolas" FontSize="12" Foreground="{StaticResource BrushDimCyan}"/>
