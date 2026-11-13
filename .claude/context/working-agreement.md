@@ -11,7 +11,10 @@ every time — a new rule arrives with at most one sentence of example, and its 
 
 - **The database is disposable** (see `CLAUDE.md`), as Yalbuz's is — since 2026-10-29. A schema change may discard
   it rather than migrate; the app still never deletes the file itself, and a session never touches the
-  maintainer's own file unasked.
+  maintainer's own file unasked. **And it never GETS a migration shim** (maintainer, 2026-11-07, in Yalbuz: *"I can
+  always rescan"*): a schema change goes into the `CREATE TABLE` and `Database.SchemaVersion`, and nowhere else.
+  That means no `ADD COLUMN` if missing, no backfill and no legacy-shape fixture. An older file is refused with
+  `OutdatedDatabaseException`.
 - **There is no web app, no sink and no secrets file.** No gitignored settings file has to be copied into a
   worktree, and nothing a test or a run does publishes anywhere.
 - **The suite scrapes live sites.** A red in `Tests/ChainWebsiteTests.cs` or `Tests/TgMenuTests.cs` is first
@@ -37,6 +40,10 @@ every time — a new rule arrives with at most one sentence of example, and its 
   - **A measured "nothing to do here" is a deliverable.** Never manufacture work to look busy.
   - **A hypothesis assembled from reading the code is a candidate, never a conclusion** — when the evidence is one
     run away, run it.
+  - **A number inside a question is evidence too, so it is either measured or labelled a guess.** The maintainer
+    decides on the cost a question quotes, and one grep is cheaper than a decision taken on a wrong number (in
+    Yalbuz, "about a dozen" sites were 175). **When an answer widens the package, the quoted cost no longer holds**:
+    re-measure it and say so before building on it.
   - **Say so when the instrument, not the system, is what answered.**
 - **Take a position, and argue it.** An open question wants a recommendation and its reasoning, not a menu; say
   what would change it, and flag any part that is an addition of your own.
@@ -98,7 +105,9 @@ other projects' plans and delegated agents' notes beside it.
 
 ## Committing
 - All changes happen on the task branch. Never commit to `main` directly.
-- Commit after a coherent unit of work. Run `dotnet format` before committing (`/wp-verify` does).
+- Commit after a coherent unit of work.
+- **`/wp-verify` runs before the commit and `/wp-finish` makes it.** The formatter, the build and the suite run
+  there, with their traps, and are not restated here.
 - Subject tags: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`.
 - **No separate `docs:` commit for a package's own archive entry** — it is that commit's body.
 
@@ -125,8 +134,8 @@ in `settled-decisions.md`.
 - **Two branches bumping from the same base conflict on `<Version>`** at merge: the one merged second is re-bumped
   from the newly merged version, by its own size.
 
-## Test loop after committing
-Run the suite after each commit. If it fails: assume the CODE broke something real and fix that first. Modify or
+## When the suite goes red
+`/wp-verify` runs the suite; this section says what to do with a failure. Assume the CODE broke something real, and fix that first. Modify or
 remove a test only when it demonstrably tests superseded behaviour, and say so in the commit message. Never weaken
 a test to make the suite pass without stating why. After four failed attempts, stop and report.
 
@@ -151,7 +160,8 @@ measurement that refused it and what would re-open it.
 `/wp-finish` runs this:
 
 1. **The archive prose is the commit's MESSAGE BODY** — what changed, why it was not the obvious thing, and the
-   evidence — capped at about 1,500 bytes. Long reasoning goes to `settled-decisions.md`.
+   evidence — capped at about 1,500 bytes. Long reasoning goes elsewhere: a rule to `settled-decisions.md`, a UI
+   design finding to `ui-register.md`.
 2. **Remove its plan row only once its branch is merged and the merge checked.** Until then the row says
    *committed, awaiting merge*.
 

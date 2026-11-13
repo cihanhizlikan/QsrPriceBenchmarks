@@ -53,9 +53,11 @@ a count of 0** (WP-S3): alignment whitespace was formatted away when `.editorcon
 is this package's slip. Run `dotnet format whitespace` (and `style` for IDE fixes) to repair
 it rather than hand-editing.
 
-## 5. Line endings, if anything was edited with `sed`
+## 5. Line endings, if anything was edited with `sed` or created with the Write tool
 
-`sed -i` under MSYS strips CRs. The index is LF under `text=auto`, so git normalises on add — but check
+`sed -i` under MSYS strips CRs, and **a file the Write tool creates is LF with no final newline** — the formatter's
+`ENDOFLINE` on a new `.cs` file is that, not the code. Fix either with `sed -i 's/\r*$/\r/' <file>` and a final
+newline. The index is LF under `text=auto`, so git normalises on add — but check
 `git diff --stat`: a file showing every line changed has had its endings flipped, and that diff is noise.
 
 ## 6. The suite, captured to a file
