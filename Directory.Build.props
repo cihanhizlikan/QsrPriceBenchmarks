@@ -10,7 +10,7 @@
     the same version.
   -->
   <PropertyGroup>
-    <Version>3.7.1</Version>
+    <Version>3.7.2</Version>
   </PropertyGroup>
 
   <!--

@@ -12,6 +12,7 @@ public partial class App : System.Windows.Application
 {
     public App()
     {
+        SqliteProvider.Register();
         // A WPF GUI app prints nothing to the console and routes unhandled
         // exceptions to the Windows Event Log, so a startup crash looks like the
         // app silently failing to launch. Capture everything to a log file next

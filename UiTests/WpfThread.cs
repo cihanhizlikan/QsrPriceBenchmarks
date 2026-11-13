@@ -50,7 +50,7 @@ public static class WpfThread
 
     private static Dispatcher Create()
     {
-        SQLitePCL.Batteries_V2.Init();
+        QsrPriceBenchmarks.Ui.SqliteProvider.Register();
 
         Dispatcher? dispatcher = null;
         using ManualResetEventSlim ready = new();

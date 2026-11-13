@@ -15,9 +15,9 @@
          SQLite binary + a [ModuleInitializer] that registers the global
          provider — a hosting concern that belongs to the executable, not to
          a shared library. Keeping it out of Core means:
-           • the Windows apps (Cli/Ui) pin bundle_winsqlite3 → the SQLite that
-             ships with Windows (no native binary shipped, OS-maintained,
-             no third-party CVE surface); and
+           • the Windows apps (Cli/Ui) reference provider.winsqlite3 and register
+             it at start → the SQLite that ships with Windows (no native binary
+             shipped, OS-maintained, no third-party CVE surface); and
            • the test project pins bundle_e_sqlite3 → a cross-platform native
              SQLite, so the hermetic DB/view/export tests run on Linux CI and
              any dev box, not only on Windows.

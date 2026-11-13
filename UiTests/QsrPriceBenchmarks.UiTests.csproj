@@ -20,7 +20,7 @@
     <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
   </ItemGroup>
   <ItemGroup>
-    <!-- Brings the app's own SQLite provider (bundle_winsqlite3) with it. -->
+    <!-- Brings the app's own SQLite provider (provider.winsqlite3, registered by WpfThread) with it. -->
     <ProjectReference Include="..\Ui\QsrPriceBenchmarks.Ui.csproj" />
   </ItemGroup>
 </Project>
