@@ -204,3 +204,14 @@ maintainer chose this and had Yalbuz's moved into its repository the same day:
 **Its pictures are `WindowCapture`'s renders.** Yalbuz's hand-drawn specimens were found wrong in fifteen places by
 one sweep. A measurement nobody has decided is listed as measured, not as a rule. Settling it is a plan row.
 **Re-opened by** the register going unconsulted: a UI change merged without its row moving when it should have.
+
+## The build uses SDK 11; the app stays on .NET 10 (maintainer, 2026-11-13, WP-D6)
+
+**Decision.** `global.json` pins SDK `11.0.100` with `latestPatch`, and every project still targets `net10.0` /
+`net10.0-windows`. The 10.0.403 SDK was no longer on the build machine: an SDK 11 install on 2026-11-11 left only
+11.0.100 registered, so nothing built and sweep 2026-11-13 ended at preflight. Moving the pin was chosen over
+reinstalling SDK 10, because the tooling that removed it would be fought on every update. `AnalysisLevel=10.0`
+keeps the analyzer rule set, so the zero-warning baseline still means what it did, and the .NET 10 runtime the app
+ships with is unchanged.
+**Re-opened by** a reason to build with an older SDK, or a move of the app's target framework to `net11.0`, which
+is its own package because it changes what the setup bundles.

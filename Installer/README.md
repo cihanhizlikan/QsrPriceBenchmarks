@@ -46,7 +46,7 @@ reads it and tells Playwright to drive the installed Edge, so no Chromium is shi
 
 | Tool | Why | Get it |
 |------|-----|--------|
-| .NET 10 SDK | build and publish the app | already required to build the solution |
+| .NET 11 SDK | build and publish the app, which targets .NET 10 | already required to build the solution (`global.json`) |
 | Inno Setup 7 | compiles the setup | https://jrsoftware.org/isdl.php — found through its own Apps entry; `-p:InnoSetupCompiler=<path to ISCC.exe>` overrides |
 | Internet | downloads Chromium once | only on the build machine |
 
