@@ -77,8 +77,13 @@ git status --porcelain                                    # empty
 
 Say the branch name, the commit, and what was verified. Then **stop**.
 
-- **Merging is the maintainer's**, and only when they name the branch. **A session NEVER pushes.**
+- **Merging is the maintainer's**, and only when they name the branch. **A session NEVER pushes.** **A merge
+  instruction is per-moment, never standing**: a branch that becomes eligible later needs a new one.
 - **The package's plan row stays** until its branch is merged AND that merge has been checked; it says
-  *committed, awaiting merge*.
+  *committed, awaiting merge*. Not at commit time: a finished branch may wait days, and a row removed early is
+  invisible in both places meanwhile.
+- **Verification only another machine or the maintainer can do** — installing the setup (UAC), anything that would
+  open the maintainer's own database — becomes a plan row with what to do and what passes. There is no offsite
+  register here (`working-agreement.md`).
 - **`/sweep` is the one exception to this section** — it merges and continues on its own authority, and says so
   in its own file.

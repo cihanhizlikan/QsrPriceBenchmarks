@@ -61,6 +61,13 @@ every time — a new rule arrives with at most one sentence of example, and its 
 - **Never spawn a background task or a second session for an out-of-scope finding** — write it into the plan as a
   work package. The interruption is the problem, not the finding.
 - **Work arrives in packages, and each one stops for a merge.** Finish one, report, and wait.
+- **The session the maintainer is talking to builds the packages — never a background agent** (Yalbuz,
+  2026-11-20). An agent's choices arrive as a summary nobody saw being made. Agents are for wide **read-only**
+  searches whose conclusion is all that is wanted, or when asked for; building, verifying and merging stay here.
+  - **"Fork a session" means a real session they can open and talk to.** If no tool can create one, say so and give
+    a brief to paste into a fork they make — never substitute an agent silently.
+  - **Plan mode is the whole session's, background agents included**: entering it froze a running agent
+    mid-package. Revise the plan only when nothing runs in the background.
 
 ## Branching
 - **Never check out `main` to work on it.** Its two uses are branching a new task off its tip and merging a
@@ -149,6 +156,8 @@ a test to make the suite pass without stating why. After four failed attempts, s
 - **A test asserts a requirement, never a preference** — *"if I change the visual style tomorrow, did the
   application regress? Obviously not."* No test pins a colour, spacing value or markup attribute.
 - **Render UI changes and look at them.** No unit test sees a WPF binding mistake.
+- **Look without touching** (Yalbuz, 2026-11-20): inspect a rendered surface by reading it — its capture, its
+  text — never by changing it to see what happens; a look that alters the thing looked at has measured the change.
 
 ## One register: findings are work packages too
 There is no separate list of parked findings. Anything worth keeping is a work package in the plan with two
