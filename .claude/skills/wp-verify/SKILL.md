@@ -58,7 +58,12 @@ it rather than hand-editing.
 `sed -i` under MSYS strips CRs, and **a file the Write tool creates is LF with no final newline** — the formatter's
 `ENDOFLINE` on a new `.cs` file is that, not the code. Fix either with `sed -i 's/\r*$/\r/' <file>` and a final
 newline. The index is LF under `text=auto`, so git normalises on add — but check
-`git diff --stat`: a file showing every line changed has had its endings flipped, and that diff is noise.
+`git diff --stat`: a file showing every line changed has had its endings flipped, and that diff is noise. To see the
+repair took, count rather than look: `cat -A` and a `sed`-piped `xxd` lie under MSYS for the same text-mode reason.
+
+```bash
+echo "lines=$(wc -l < <file>) CRs=$(tr -cd '\r' < <file> | wc -c)"   # must be equal
+```
 
 ## 6. The suite, captured to a file
 
@@ -71,7 +76,8 @@ grep -E '^  (toplam|başarısız oldu|başarılı|atlandı):' /tmp/qsr-test.txt
 **Both test projects run on Microsoft Testing Platform** (`global.json`'s `test.runner`, 2026-11-07), which prints
 one combined summary — `toplam`, `başarısız oldu`, `başarılı`, `atlandı` — and a failing test as a line starting
 `başarısız <display name> (<time>)`, its assertion message indented below. The words follow the machine's language;
-English output says `failed`. **Exit codes**: 0 green, 2 a test failed, 8 no test ran (a filter matched nothing —
+English output says `failed`. **The `^` matters**: the indented summary line `başarısız oldu: N` must not count as a
+failure, and VSTest's old `[FAIL]` grep scores 0 against a real failure here. **Exit codes**: 0 green, 2 a test failed, 8 no test ran (a filter matched nothing —
 never read that as green). **A filter that one project cannot match fails the whole run with 8**, even when the
 other ran its tests green — so a run narrowed to one test or to the live tests names its project:
 `dotnet test Tests --no-build --filter "DisplayName~<part of the name the failure line printed>"`.
@@ -111,12 +117,15 @@ introduced, or a rule it moved, which `/wp-finish` revises in the same commit.
 
 ## 7. A failed build means the rest never compiled
 
-When one project fails, everything downstream is skipped — **their silence is not a clean result.**
+When one project fails, everything downstream is skipped — **their silence is not a clean result.** Re-run the
+remaining projects on their own before concluding anything from an absence.
 
 ## Reporting
 
 One line: build exit and errors, distinct warning sites against `main`'s, formatter exit and count, suite
-passed/failed/skipped (and which half any failure was in). **Never `git checkout` a file to undo an experiment.**
+passed/failed/skipped (and which half any failure was in). **The formatter's EXIT CODE catches what its grep does
+not** — a missing final newline on a new file is the case that proved it. **Never `git checkout` a file to undo an
+experiment.**
 
 **The values in this file are this repository's** — the live tests, the one baseline skip, the zero-warning
 baseline, the Turkish build output, the capture harness. `/sweep` states the same facts; when one changes, change

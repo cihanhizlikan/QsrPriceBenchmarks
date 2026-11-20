@@ -174,6 +174,11 @@ member lists. Every cached list decays. The shapes here that look DEAD and are a
   `StartupUri` and merged dictionaries, `Ui/Themes/Dark.xaml`'s implicit styles and templates, `{Binding}` paths, the
   window's `BindingProxy`. A `.cs`-only count calls all of it dead. The reverse holds too: a member nothing binds
   is dead even though WPF *could* bind it (`OpenUrlCommand`, removed 2026-11-07).
+- **An ATTACHED PROPERTY's setter is reached from markup that never names the method** (from Yalbuz, 2026-11-06).
+  The markup names the PROPERTY — `local:ProgressGlide.Value="…"` in `Ui/MainWindow.xaml` — so neither
+  `ProgressGlide.SetValue` nor `GetValue` appears in any other file, and a `.xaml`-inclusive member search still
+  calls them dead. Search the markup for `<prefix>:<Type>.<Property>` before counting the pair
+  (`ProgressGlide`, `LogTextBehavior`: `grep -rn RegisterAttached Ui`).
 - **SQL by name.** `Repository` and `ExcelExporter` read views and tables `Database` creates, named inside strings; a
   view named in a string is alive.
 - **The chain registry** (`Core/Models/ChainConfig.cs`) is configuration, not dead code, even when no test names a
@@ -217,8 +222,17 @@ five fields are for a package, never a commit body, which `/wp-finish` caps at a
   never reference each other; namespace follows folder (nothing checks it). A type named for one host sitting in
   `Core`, or pipeline logic in a host, is misplaced. A settled case gets a row in that table.
 - **Naming**: `.claude/rules/coding-style.md` rule 12 — a name a reader would have to open the file to understand.
-- **Every `Core` async method takes a `CancellationToken` and reports through `IProgress<string>`** (structure.md);
-  a new one that does not is this step's.
+- **Every `Core` entry point a host calls takes a `CancellationToken` and reports through `IProgress<string>`**, and
+  code that drives a Playwright page closes the page when the token fires (structure.md, since WP-R2); a new one
+  that does not is this step's.
+- **One word, one meaning — whole tree, every run** (from Yalbuz, 2026-11-21). A concept name is any word that recurs
+  across project folders, namespaces, top-level folders and type stems. For each one used in more than one place,
+  **write down what each use MEANS, read from the code it names and never from the name itself**: what goes in and
+  what comes out. Two meanings are a finding, and so is a meaning that clashes with the term's settled meaning in a
+  framework the repository uses (a "parser", a "session", a "runner"). **The sweep never renames a concept**: a
+  rename reaches every layer and this run is unattended, so the finding IS the question, written as a plan row with
+  each meaning and its `file:line`. Names taken from an outside convention are not candidates: Tıkla Gelsin's own
+  terms (`Tg`), Playwright's types, xUnit's and WPF's.
 
 ## 2. Test-suite health
 **Second, deliberately: every step after this leans on the suite.** Over `Tests/` and `UiTests/`.
@@ -311,8 +325,10 @@ start at zero, so a non-zero is new and the build names it. **Then the shapes no
   message, a window that will not open), **refuse the OPERATION with a reason** (the run does not start; the user is
   told why), or **report and change nothing**. **The behaviour is chosen by what is LOST, never by how wrong the
   value looks**: an argument that would overwrite or delete a scrape run refuses; one that only narrows output
-  reports. Read the code that decides — `CliOptions.Parse`, `PipelineRunner`'s option checks, the view models'
-  `CanExecute` — never a sample or a help string.
+  reports. Read the code that decides — `CliParser.Parse` (`Cli/CliOptions.cs`), `PipelineRunner`'s option checks, the view models'
+  `CanExecute` — never a sample or a help string. **A silent clamp is the same finding** (from Yalbuz,
+  2026-11-20): `Math.Max(1, …)` where a value is used accepts a wrong number without saying so. **Then compare
+  siblings**: the same kind of value checked two ways in two places is a finding by itself.
 - **A missing handler or guard is a correction only where the project already has the path to route it to** (the
   crash log, the progress reporter, an exit code); otherwise a package.
 
@@ -342,6 +358,16 @@ The audit half of `csharp-refactor-streamline`. **Late, because the code's shape
 - **Claims of STATE** — a sentence saying a rule "is off", stating a count or a version, or "has not been split
   yet". Read each against the file that decides it. **A claim decays by being OVERTAKEN, not contradicted.**
 - **The facts this skill states in *The repository, in the terms the steps use*** are checked like any other claim.
+- **Claims about the CODE, against the code — whole documents, every run** (from Yalbuz's step 8b, 2026-11-13). A
+  path check cannot see a sentence that still names a real file but describes code that moved: in Yalbuz a run
+  reported this step clean and an audit straight after it found ~40 wrong claims. The documents that describe code
+  here are `.claude/context/structure.md`, `README.md` and `Installer/README.md` (249 lines together, measured
+  2026-11-21), small enough to read WHOLE each run, so there is no audit baseline to keep. **Check every sentence
+  stating a CURRENT fact** — a type, member, option, default, count, order, which class does what — against the
+  source; skip history dated as such. **Report what was READ**: the claims verified TRUE as well as the ones
+  corrected. A list of corrections alone does not show the rest was read. Correct the sentence to the code. A CODE
+  defect found on the way is not this step's: it goes to the plan as a finding, and the document says what the code
+  DOES. `ui-register.md` is not here: step 8 reads it against the window.
 
 ## 8. What users read and see
 **Last, because it describes what every step above would change, and its wording can change the layout it then
@@ -349,7 +375,7 @@ looks at.** English is the only language; there is no translation to compare.
 
 - **The words**: `README.md`, `Installer/README.md`, the CLI's `--help` (`Cli/CliOptions.cs`) and the strings the UI
   and CLI show (status lines, error and refusal messages). Every command, flag, path and file name a README names
-  must exist today; `--help` must list every option `CliOptions.Parse` accepts. Plain and short; cut a sentence that
+  must exist today; `--help` must list every option `CliParser.Parse` (`Cli/CliOptions.cs`) accepts. Plain and short; cut a sentence that
   restates its heading. **Search for the construction a rule forbids across every string**, not the one somebody
   complained about last time.
 - **The window, against the UI register** (`.claude/context/ui-register.md`, since 2026-11-07). The register is
