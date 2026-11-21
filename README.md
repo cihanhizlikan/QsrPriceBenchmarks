@@ -105,12 +105,14 @@ See `Installer/README.md` for details.
 
 ## Architecture
 
-Progress is `IProgress<string>` on every Core method.
-Both CLI and UI construct a `Progress<string>` tailored to their output:
-- CLI: wraps `Console.WriteLine` with ANSI colour formatting
-- WPF: appends to `ObservableCollection<string>` on the UI thread
-  (captured `SynchronizationContext` via `Progress<T>` handles dispatch)
+Progress is `IProgress<string>` on every Core entry point a host calls
+(`PipelineRunner` and the steps it runs). Each host supplies its own:
+- CLI: a synchronous `IProgress<string>` that writes to the console with ANSI colour formatting,
+  on the calling thread so lines stay in order
+- WPF: a `Progress<string>` that appends to an `ObservableCollection<string>` on the UI thread
+  (`Progress<T>` captures the `SynchronizationContext`)
 
-Every async Core method takes a `CancellationToken` — each chain's Cancel button
-uses its own `CancellationTokenSource`; CLI wires `Console.CancelKeyPress`.
+The same entry points take a `CancellationToken` — each chain's Cancel button
+uses its own `CancellationTokenSource`; CLI wires `Console.CancelKeyPress`. Playwright
+calls take no token, so cancelling closes the page a scrape is waiting on.
 
