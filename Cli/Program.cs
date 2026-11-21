@@ -16,11 +16,12 @@ internal static class Program
     /// </summary>
     private static async Task<int> Main(string[] args)
     {
-        // The SQLite that ships with Windows. SQLitePCLRaw 3 has no winsqlite3 bundle to register it from a module
-        // initializer, so the host does it before the first connection opens (WP-D7).
-        SQLitePCL.raw.SetProvider(new SQLitePCL.SQLite3Provider_winsqlite3());
         try
         {
+            // The SQLite that ships with Windows. SQLitePCLRaw 3 has no winsqlite3 bundle to register it from a
+            // module initializer, so the host does it before the first connection opens (WP-D7). Inside the
+            // boundary, so a provider that fails to load is a reason and exit code 1 like any other failure.
+            SQLitePCL.raw.SetProvider(new SQLitePCL.SQLite3Provider_winsqlite3());
             return await RunAsync(args);
         }
         catch (Exception unexpected) when (unexpected is not OperationCanceledException)
