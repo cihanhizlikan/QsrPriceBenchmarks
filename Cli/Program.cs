@@ -72,16 +72,17 @@ internal static class Program
               qsr --delete-scrape-runs-before-id RUN_ID
 
             Options:
-              --db DB                           Database path (default: QsrPriceBenchmarks.sqlite here)
-              --chain CHAIN_SLUG                Chain slug (e.g. burger-king, popeyes, usta-donerci)
-              --force-crawl                     Run Step 1: re-crawl the chain's website
-              --geocode                         Run Step 3: geocode and match what is unmatched
-              --geocode-rematch                 Run Step 3: reset every match first, then rematch
-              --export                          Export all snapshots to Excel, after any step
-              --export-since RUN_ID             Export the snapshots from RUN_ID onwards, after any step
-              --delete-scrape-run RUN_ID        Delete exactly this run and its snapshots, then exit
-              --delete-scrape-runs-before-id N  Delete all runs with ID < N, then exit
-              --list-scrape-runs                Print all scrape runs and exit
+              -h, --help                             Print this help and exit
+              --db DB                                Database path (default: QsrPriceBenchmarks.sqlite here)
+              --chain CHAIN_SLUG                     Chain slug (e.g. burger-king, popeyes, usta-donerci)
+              --force-crawl                          Run Step 1: re-crawl the chain's website
+              --geocode                              Run Step 3: geocode and match what is unmatched
+              --geocode-rematch                      Run Step 3: reset every match first, then rematch
+              --export                               Export all snapshots to Excel, after any step
+              --export-since RUN_ID                  Export the snapshots from RUN_ID onwards, after any step
+              --delete-scrape-run RUN_ID             Delete exactly this run and its snapshots, then exit
+              --delete-scrape-runs-before-id RUN_ID  Delete all runs with ID < RUN_ID, then exit
+              --list-scrape-runs                     Print all scrape runs and exit
 
             Available chain slugs: {string.Join(", ", ChainRegistry.AllPlatformSlugs())}
             """);
