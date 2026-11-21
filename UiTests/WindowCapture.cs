@@ -82,14 +82,7 @@ public sealed class WindowCapture(ITestOutputHelper output)
 
     private static void Shoot(string into, string throwaway, List<string> written)
     {
-        MainWindow window = new()
-        {
-            ShowInTaskbar = false,
-            ShowActivated = false,
-            WindowStartupLocation = WindowStartupLocation.Manual,
-            Left = 0,
-            Top = 0,
-        };
+        MainWindow window = ShownWindow.Create();
         MainViewModel model = (MainViewModel)window.DataContext;
         // BEFORE Show: OnContentRendered initialises against whatever this holds.
         model.DbPath = throwaway;
