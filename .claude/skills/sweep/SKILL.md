@@ -150,7 +150,9 @@ and says so, or it left work behind.
    **An ANALYZER RULE is a detector, and a rule that is off reads exactly like a rule at zero.** Read its effective
    severity in `.editorconfig` first. A rule not configured on is UNAVAILABLE until probed: in a THROWAWAY
    worktree, enable it at `warning`, add a file that breaks it, build, confirm the ID appears, discard. **Probe the
-   SHAPE the rule documents** — CA1065 permits `InvalidOperationException` in a getter; RCS1236 fires on
+   SHAPE the rule documents** — CA1065 permits `InvalidOperationException` in a getter and fires only on a public
+   member of a public type (measured 2026-11-21: three internal getters throwing `IOException` were silent), so
+   internal code is read, not left to the rule; RCS1236 fires on
    `if (!(e is X)) throw;` but not on `if (e is X) return; throw;`. The robustness rules held at warning
    (`CA1031`, `CA2016`, `CA2201`, `CA2008`, `CA1065`, `CA2219`, the Security category, `RCS1236`, `RCS1075`) and the
    complexity pair (`CA1502`/`CA1506`, proven by lowering their thresholds in a temporary
@@ -361,7 +363,7 @@ The audit half of `csharp-refactor-streamline`. **Late, because the code's shape
 - **Claims about the CODE, against the code — whole documents, every run** (from Yalbuz's step 8b, 2026-11-13). A
   path check cannot see a sentence that still names a real file but describes code that moved: in Yalbuz a run
   reported this step clean and an audit straight after it found ~40 wrong claims. The documents that describe code
-  here are `.claude/context/structure.md`, `README.md` and `Installer/README.md` (249 lines together, measured
+  here are `.claude/context/structure.md`, `README.md` and `Installer/README.md` (253 lines together, measured
   2026-11-21), small enough to read WHOLE each run, so there is no audit baseline to keep. **Check every sentence
   stating a CURRENT fact** — a type, member, option, default, count, order, which class does what — against the
   source; skip history dated as such. **Report what was READ**: the claims verified TRUE as well as the ones

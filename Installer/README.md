@@ -26,7 +26,9 @@ Output: `Installer\bin\Release\QsrPriceBenchmarks-Setup.exe`. The steps after th
 4. Compile `QsrPriceBenchmarks.iss` with Inno Setup's `ISCC.exe`, packing the whole publish folder. A missing or
    empty publish folder fails the compile rather than producing an empty setup.
 
-For ARM64 Windows add `-p:RuntimeIdentifier=win-arm64` to the `dotnet publish` line.
+For ARM64 Windows add `-p:RuntimeIdentifier=win-arm64` to the `dotnet publish` line. That setup builds on an x64
+machine (measured 2026-11-21) and has never been run on an ARM64 PC: the app in it is ARM64, the browser and
+Playwright's driver are the x64 ones.
 
 ### Which browser mode?
 
@@ -38,8 +40,8 @@ window the user clicks around in, and it is separate from whatever browser they 
 | **Installer** | the Chromium build Playwright manages, bundled into the app | none |
 | **InstallerSystemEdge** | the PC's installed **Microsoft Edge** | a current Edge (it ships with Windows 10/11) |
 
-The Edge profile writes a `browser-channel.txt` marker (`msedge`) next to the exe; at startup `BrowserSession`
-reads it and tells Playwright to drive the installed Edge, so no Chromium is shipped or downloaded. Setting the
+The Edge profile writes a `browser-channel.txt` marker (`msedge`) next to the exe; when a run opens its
+browser, `BrowserSession` reads it and tells Playwright to drive the installed Edge, so no Chromium is shipped or downloaded. Setting the
 `QSR_BROWSER_CHANNEL` environment variable (`msedge` or `chrome`) forces the same on any install.
 
 ## Build-machine prerequisites (one-time)
