@@ -27,9 +27,12 @@
   </PropertyGroup>
 
   <!-- Before anything is published: a missing compiler fails in a second, not after the publish and the browser
-       download. -->
+       download. So does another architecture: the setup is x64 only (WP-I1), and an ARM64 publish would have put an
+       ARM64 app beside the x64 browser in a setup that installs only on x64. -->
   <Target Name="QsrCheckInnoSetup" BeforeTargets="PrepareForPublish"
           Condition="'$(QsrBuildInstaller)' == 'true'">
+    <Error Condition="'$(RuntimeIdentifier)' != 'win-x64'"
+           Text="The setup is built for x64 Windows only (win-x64), not '$(RuntimeIdentifier)'." />
     <Error Condition="!Exists('$(InnoSetupCompiler)')"
            Text="Inno Setup 7 was not found at '$(InnoSetupCompiler)'. Install it from https://jrsoftware.org/isdl.php, or pass -p:InnoSetupCompiler=&lt;path to ISCC.exe&gt;." />
   </Target>
@@ -59,9 +62,6 @@
       <_QsrPublishFolderArg>$(_QsrPublishFolder.TrimEnd('\'))</_QsrPublishFolderArg>
       <_QsrDriverNode>$(_QsrPublishFolder).playwright\node\win32_x64\node.exe</_QsrDriverNode>
       <_QsrDriverCli>$(_QsrPublishFolder).playwright\package\cli.js</_QsrDriverCli>
-      <_QsrArch>x64</_QsrArch>
-      <_QsrArch Condition="'$(RuntimeIdentifier)' == 'win-arm64'">arm64</_QsrArch>
-      <_QsrArch Condition="'$(RuntimeIdentifier)' == 'win-x86'">x86</_QsrArch>
       <_QsrSetupFolder>$(_QsrRepoRoot)Installer\bin\$(Configuration)</_QsrSetupFolder>
     </PropertyGroup>
 
@@ -78,7 +78,7 @@
 
     <!-- 4. The setup program. /Q keeps the compiler to errors and warnings; an empty or missing publish folder
          fails the compile ("No files found matching"), never an empty setup. -->
-    <Exec Command="&quot;$(InnoSetupCompiler)&quot; /Q &quot;/DPublishDir=$(_QsrPublishFolderArg)&quot; &quot;/DAppVersion=$(Version)&quot; &quot;/DArch=$(_QsrArch)&quot; &quot;/O$(_QsrSetupFolder)&quot; &quot;$(_QsrSetupScript)&quot;" />
+    <Exec Command="&quot;$(InnoSetupCompiler)&quot; /Q &quot;/DPublishDir=$(_QsrPublishFolderArg)&quot; &quot;/DAppVersion=$(Version)&quot; &quot;/O$(_QsrSetupFolder)&quot; &quot;$(_QsrSetupScript)&quot;" />
 
     <Message Importance="high" Text="Installer built: $(_QsrSetupFolder)\QsrPriceBenchmarks-Setup.exe" />
   </Target>

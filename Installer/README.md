@@ -26,9 +26,8 @@ Output: `Installer\bin\Release\QsrPriceBenchmarks-Setup.exe`. The steps after th
 4. Compile `QsrPriceBenchmarks.iss` with Inno Setup's `ISCC.exe`, packing the whole publish folder. A missing or
    empty publish folder fails the compile rather than producing an empty setup.
 
-For ARM64 Windows add `-p:RuntimeIdentifier=win-arm64` to the `dotnet publish` line. That setup builds on an x64
-machine (measured 2026-11-21) and has never been run on an ARM64 PC: the app in it is ARM64, the browser and
-Playwright's driver are the x64 ones.
+The setup is for x64 Windows only. A publish for another architecture (`-p:RuntimeIdentifier=win-arm64`) is
+refused before anything is built.
 
 ### Which browser mode?
 

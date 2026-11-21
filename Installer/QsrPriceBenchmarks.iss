@@ -6,7 +6,10 @@
 ;
 ; Built by Ui\Properties\PublishProfiles\Installer.targets, which passes:
 ;   /DPublishDir=<publish folder, no trailing backslash>   /DAppVersion=<Version from Directory.Build.props>
-;   /DArch=x64|arm64|x86                                   /O<output folder>
+;   /O<output folder>
+;
+; x64 only (maintainer, 2026-11-21, WP-I1): an ARM64 build bundled x64 Chromium beside an ARM64 app and was never
+; run on an ARM64 PC, so the arm64 and x86 branches were removed rather than kept untested.
 ;
 ; AppId MUST stay constant across versions: it is how a new setup finds and replaces the installed one.
 
@@ -15,9 +18,6 @@
 #endif
 #ifndef AppVersion
   #error AppVersion is not defined - build through a publish profile (Installer.targets passes it)
-#endif
-#ifndef Arch
-  #define Arch "x64"
 #endif
 
 #define AppName "QSR Price Benchmarks"
@@ -38,13 +38,8 @@ DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 LicenseFile=License.rtf
 PrivilegesRequired=admin
-#if Arch == "arm64"
-ArchitecturesAllowed=arm64
-ArchitecturesInstallIn64BitMode=arm64
-#elif Arch == "x64"
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-#endif
 OutputBaseFilename=QsrPriceBenchmarks-Setup
 SetupIconFile=..\Ui\Assets\app.ico
 UninstallDisplayIcon={app}\{#AppExe}
