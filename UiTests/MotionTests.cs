@@ -73,7 +73,7 @@ public sealed class MotionTests
                     PumpUntil(() => model.MapCells.Count > 0, Stuck);
 
                     model.RunCommand.Execute(null);
-                    PumpUntil(() => model.SelectedSession!.ProgressVisible, Stuck);
+                    PumpUntil(() => model.SelectedPipeline!.ProgressVisible, Stuck);
                     running = model.IsAnyRunning;
 
                     foreach (string tab in (string[])["RunPipelineTab", "LocationsTab"])

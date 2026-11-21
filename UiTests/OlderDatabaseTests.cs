@@ -186,7 +186,7 @@ public sealed class OlderDatabaseTests
                 Dispatcher.PushFrame(frame);
                 tick.Stop();
             }
-            log.AddRange(model.SelectedSession!.LogLines);
+            log.AddRange(model.SelectedPipeline!.LogLines);
             window.Close();
         });
         SqliteConnection.ClearAllPools();

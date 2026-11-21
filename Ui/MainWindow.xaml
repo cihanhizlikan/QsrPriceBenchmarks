@@ -245,9 +245,9 @@
                        state is visible without switching to it. -->
                   <StackPanel VerticalAlignment="Center" Width="128">
                     <TextBlock Text="{Binding Name}" FontSize="12" TextWrapping="Wrap"/>
-                    <TextBlock Text="{Binding Session.StatusText}" FontSize="10" Margin="0 2 0 0"
+                    <TextBlock Text="{Binding Pipeline.StatusText}" FontSize="10" Margin="0 2 0 0"
                                Foreground="{StaticResource BrushDimCyan}" TextTrimming="CharacterEllipsis"
-                               Visibility="{Binding Session.StatusText, Converter={StaticResource NullVis}}"/>
+                               Visibility="{Binding Pipeline.StatusText, Converter={StaticResource NullVis}}"/>
                   </StackPanel>
                 </StackPanel>
               </DataTemplate>
@@ -270,7 +270,7 @@
             </Grid.RowDefinitions>
 
             <!-- Step options panel: the selected chain's own options and tab ticks -->
-            <Border Grid.Row="0" DataContext="{Binding SelectedSession}" Background="{StaticResource BrushBg2}"
+            <Border Grid.Row="0" DataContext="{Binding SelectedPipeline}" Background="{StaticResource BrushBg2}"
                     BorderBrush="{StaticResource BrushBorder}" BorderThickness="1"
                     CornerRadius="6" Padding="16 12" Margin="0 0 0 12">
               <StackPanel>
@@ -328,11 +328,11 @@
                       Command="{Binding RunCommand}" Margin="0 0 8 0"/>
               <Button Content="■  Cancel" Padding="14 8"
                       Command="{Binding CancelCommand}" Margin="0 0 8 0"
-                      Visibility="{Binding SelectedSession.IsRunning, Converter={StaticResource BoolVis}}"/>
+                      Visibility="{Binding SelectedPipeline.IsRunning, Converter={StaticResource BoolVis}}"/>
             </StackPanel>
 
             <!-- Log output: the selected chain's own log and progress -->
-            <Border Grid.Row="2" DataContext="{Binding SelectedSession}" Background="{StaticResource BrushBg2}"
+            <Border Grid.Row="2" DataContext="{Binding SelectedPipeline}" Background="{StaticResource BrushBg2}"
                     BorderBrush="{StaticResource BrushBorder}" BorderThickness="1" CornerRadius="6">
               <Grid>
                 <Grid.RowDefinitions>
@@ -371,7 +371,7 @@
             </Border>
 
             <!-- Footer -->
-            <TextBlock Grid.Row="3" DataContext="{Binding SelectedSession}" Margin="0 8 0 0" FontSize="11"
+            <TextBlock Grid.Row="3" DataContext="{Binding SelectedPipeline}" Margin="0 8 0 0" FontSize="11"
                        Foreground="{StaticResource BrushTextDim}">
               <Run Foreground="{StaticResource BrushLightCyan}" Text="{Binding LogLines.Count, Mode=OneWay}"/>
               <Run Text=" log lines"/>

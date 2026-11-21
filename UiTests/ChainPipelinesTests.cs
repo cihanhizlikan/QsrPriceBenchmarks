@@ -8,11 +8,11 @@ namespace QsrPriceBenchmarks.UiTests;
 /// <summary>
 /// The maintainer's request, 2026-10-29 (plan WP-C2): switch chains mid-scrape to start, watch or cancel other
 /// scrapes, each chain with its own log and progress. The pipeline is stood in by a run that logs, reports progress
-/// and waits for its cancellation — the window, sessions and commands are the real ones.
+/// and waits for its cancellation — the window, pipelines and commands are the real ones.
 /// </summary>
-public sealed class ChainSessionsTests
+public sealed class ChainPipelinesTests
 {
-    private const string Stuck = "The sessions did not reach the expected state";
+    private const string Stuck = "The pipelines did not reach the expected state";
 
     [Fact]
     public void Two_Chains_Run_At_Once_Each_With_Its_Own_Log_And_Cancel()
@@ -41,30 +41,30 @@ public sealed class ChainSessionsTests
                 ChainViewModel a = model.Chains[0], b = model.Chains[1];
                 model.SelectedChain = a;
                 model.RunCommand.Execute(null);
-                PumpUntil(() => a.Session.ProgressTotal == 10, Stuck);
+                PumpUntil(() => a.Pipeline.ProgressTotal == 10, Stuck);
 
                 // The chain list is not locked: another chain can be chosen and started while A runs.
                 model.SelectedChain = b;
                 Assert.True(model.RunCommand.CanExecute(null), "Run must be available for an idle chain while another runs");
                 model.RunCommand.Execute(null);
-                PumpUntil(() => b.Session.ProgressTotal == 10, Stuck);
-                bothRunning = a.Session.IsRunning && b.Session.IsRunning && model.IsAnyRunning;
-                aStatusWhileBothRun = a.Session.StatusText;
+                PumpUntil(() => b.Pipeline.ProgressTotal == 10, Stuck);
+                bothRunning = a.Pipeline.IsRunning && b.Pipeline.IsRunning && model.IsAnyRunning;
+                aStatusWhileBothRun = a.Pipeline.StatusText;
 
                 // Cancel acts on the chain on screen only.
                 model.SelectedChain = a;
                 model.CancelCommand.Execute(null);
-                PumpUntil(() => !a.Session.IsRunning, Stuck);
-                bRunningAfterACancelled = b.Session.IsRunning;
-                aStatusAfter = a.Session.StatusText;
+                PumpUntil(() => !a.Pipeline.IsRunning, Stuck);
+                bRunningAfterACancelled = b.Pipeline.IsRunning;
+                aStatusAfter = a.Pipeline.StatusText;
 
                 model.SelectedChain = b;
                 model.CancelCommand.Execute(null);
-                PumpUntil(() => !b.Session.IsRunning, Stuck);
-                bStatusAfter = b.Session.StatusText;
+                PumpUntil(() => !b.Pipeline.IsRunning, Stuck);
+                bStatusAfter = b.Pipeline.StatusText;
                 anyRunningAtEnd = model.IsAnyRunning;
-                aLog.AddRange(a.Session.LogLines);
-                bLog.AddRange(b.Session.LogLines);
+                aLog.AddRange(a.Pipeline.LogLines);
+                bLog.AddRange(b.Pipeline.LogLines);
                 window.Close();
             });
         }
