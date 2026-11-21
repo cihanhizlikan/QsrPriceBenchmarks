@@ -144,14 +144,7 @@ public sealed class ScrapeRunsFilterSortTests
         {
             WpfThread.Run(() =>
             {
-                MainWindow window = new()
-                {
-                    ShowInTaskbar = false,
-                    ShowActivated = false,
-                    WindowStartupLocation = WindowStartupLocation.Manual,
-                    Left = 0,
-                    Top = 0,
-                };
+                MainWindow window = ShownWindow.Create();
                 MainViewModel model = (MainViewModel)window.DataContext;
                 model.DbPath = throwaway.Path;
                 window.Show();
