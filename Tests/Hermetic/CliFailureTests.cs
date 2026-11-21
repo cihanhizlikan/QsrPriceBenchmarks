@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Microsoft.Data.Sqlite;
 using QsrPriceBenchmarks.Core.Db;
 using Xunit;
@@ -33,7 +32,7 @@ public sealed class CliFailureTests
             SqliteConnection.ClearAllPools();
             File.WriteAllText(Path.Combine(dir, "output"), "a file where the export folder goes");
 
-            (int exitCode, string output) = RunQsr("--db", db, "--chain", "burger-king", "--export");
+            (int exitCode, string output) = QsrProcess.Run("", "--db", db, "--chain", "burger-king", "--export");
 
             Assert.Equal(1, exitCode);
             Assert.Contains("error: ", output, StringComparison.Ordinal); // the reason itself is the OS's wording
@@ -45,32 +44,5 @@ public sealed class CliFailureTests
             SqliteConnection.ClearAllPools();
             try { Directory.Delete(dir, recursive: true); } catch (IOException) { /* best effort */ }
         }
-    }
-
-    private static (int ExitCode, string Output) RunQsr(params string[] args)
-    {
-        ProcessStartInfo start = new(Path.Combine(AppContext.BaseDirectory, "qsr.exe"))
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            StandardOutputEncoding = System.Text.Encoding.UTF8, // the CLI sets UTF-8 output for its glyphs
-            StandardErrorEncoding = System.Text.Encoding.UTF8,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
-        foreach (string arg in args)
-        {
-            start.ArgumentList.Add(arg);
-        }
-
-        using Process qsr = Process.Start(start)!;
-        Task<string> stdout = qsr.StandardOutput.ReadToEndAsync();
-        Task<string> stderr = qsr.StandardError.ReadToEndAsync();
-        if (!qsr.WaitForExit(60_000))
-        {
-            qsr.Kill(entireProcessTree: true);
-            throw new TimeoutException("qsr did not exit within 60 s.");
-        }
-        return (qsr.ExitCode, stdout.Result + stderr.Result);
     }
 }
