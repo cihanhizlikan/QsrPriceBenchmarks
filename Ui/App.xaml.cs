@@ -12,7 +12,6 @@ public partial class App : System.Windows.Application
 {
     public App()
     {
-        SqliteProvider.Register();
         // A WPF GUI app prints nothing to the console and routes unhandled
         // exceptions to the Windows Event Log, so a startup crash looks like the
         // app silently failing to launch. Capture everything to a log file next
@@ -24,6 +23,9 @@ public partial class App : System.Windows.Application
         // escape reaches neither handler above — it surfaces here, when the task is collected, or nowhere.
         TaskScheduler.UnobservedTaskException +=
             (_, e) => LogCrash(e.Exception, "TaskScheduler.UnobservedTaskException");
+        // After the handlers, so a provider that fails to load is written to the crash log like any other
+        // start-up failure.
+        SqliteProvider.Register();
     }
 
     /// <summary>
