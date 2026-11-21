@@ -103,13 +103,13 @@ public sealed class WindowCapture(ITestOutputHelper output)
             model.SelectedChain = running;
             model.RunCommand.Execute(null);
         }
-        Settle(() => selected.Session.ProgressVisible);
+        Settle(() => selected.Pipeline.ProgressVisible);
         // One line of each kind LogLineColouriser tells apart, so the log's colours
         // are on screen: a step widget, a ratio widget with a marked value, a
         // district sub-line, a URL, numbers and symbols, SKIP, a warning, an error.
         foreach (string line in SampleLog())
         {
-            model.SelectedSession!.LogLines.Add(line);
+            model.SelectedPipeline!.LogLines.Add(line);
         }
         Settle(() => true);
         written.Add(Save(window, into, "run-pipeline.png"));

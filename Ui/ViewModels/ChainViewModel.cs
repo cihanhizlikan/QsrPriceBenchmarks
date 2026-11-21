@@ -5,14 +5,14 @@ namespace QsrPriceBenchmarks.Ui.ViewModels;
 
 /// <summary>
 /// View-model for one chain in the sidebar selector: the chain config, its
-/// coloured initials badge, and its session (whose status the card shows).
+/// coloured initials badge, and its pipeline (whose status the card shows).
 /// </summary>
-public sealed class ChainViewModel(ChainConfig chain, ChainSessionViewModel session) : ViewModelBase
+public sealed class ChainViewModel(ChainConfig chain, ChainPipelineViewModel pipeline) : ViewModelBase
 {
     public ChainConfig Chain { get; } = chain;
 
     /// <summary>This chain's run, whose status the sidebar card shows.</summary>
-    public ChainSessionViewModel Session { get; } = session;
+    public ChainPipelineViewModel Pipeline { get; } = pipeline;
 
     public string Name
     {

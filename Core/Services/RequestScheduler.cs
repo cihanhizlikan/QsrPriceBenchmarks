@@ -26,20 +26,20 @@ public sealed class RequestScheduler(IReadOnlyDictionary<string, int> slotsPerHo
         return new RequestScheduler(new Dictionary<string, int> { [TiklaGelsin] = 2, [GoogleMaps] = 4 });
     }
 
-    /// <summary>The gate one run passes its requests through; <paramref name="session"/> is what takes turns.</summary>
-    public RequestGate For(string session)
+    /// <summary>The gate one run passes its requests through; <paramref name="chain"/> is what takes turns.</summary>
+    public RequestGate For(string chain)
     {
-        return new RequestGate(this, session);
+        return new RequestGate(this, chain);
     }
 
-    internal Task<IDisposable> TakeTurnAsync(string host, string session, CancellationToken ct)
+    internal Task<IDisposable> TakeTurnAsync(string host, string chain, CancellationToken ct)
     {
         return _hosts.TryGetValue(host, out HostQueue? queue)
-            ? queue.TakeTurnAsync(session, ct)
+            ? queue.TakeTurnAsync(chain, ct)
             : Task.FromResult<IDisposable>(NoTurn.Instance);
     }
 
-    /// <summary>One host's free slots and its waiters, grouped by session and served round-robin.</summary>
+    /// <summary>One host's free slots and its waiters, grouped by chain and served round-robin.</summary>
     private sealed class HostQueue(int slots)
     {
         private readonly Lock _lock = new();
@@ -47,7 +47,7 @@ public sealed class RequestScheduler(IReadOnlyDictionary<string, int> slotsPerHo
         private readonly Dictionary<string, Queue<TaskCompletionSource<IDisposable>>> _waiting = [];
         private int _free = slots;
 
-        public Task<IDisposable> TakeTurnAsync(string session, CancellationToken ct)
+        public Task<IDisposable> TakeTurnAsync(string chain, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
             TaskCompletionSource<IDisposable> waiter = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -59,21 +59,21 @@ public sealed class RequestScheduler(IReadOnlyDictionary<string, int> slotsPerHo
                     return Task.FromResult<IDisposable>(new Turn(this));
                 }
 
-                if (!_waiting.TryGetValue(session, out Queue<TaskCompletionSource<IDisposable>>? queue))
+                if (!_waiting.TryGetValue(chain, out Queue<TaskCompletionSource<IDisposable>>? queue))
                 {
                     queue = new Queue<TaskCompletionSource<IDisposable>>();
-                    _waiting[session] = queue;
+                    _waiting[chain] = queue;
                 }
                 if (queue.Count == 0)
                 {
-                    _rotation.AddLast(session);
+                    _rotation.AddLast(chain);
                 }
                 queue.Enqueue(waiter);
             }
 
             if (ct.CanBeCanceled)
             {
-                CancellationTokenRegistration registration = ct.Register(() => Withdraw(session, waiter, ct));
+                CancellationTokenRegistration registration = ct.Register(() => Withdraw(chain, waiter, ct));
                 _ = waiter.Task.ContinueWith(_ => registration.Dispose(), TaskScheduler.Default);
             }
             return waiter.Task;
@@ -86,13 +86,13 @@ public sealed class RequestScheduler(IReadOnlyDictionary<string, int> slotsPerHo
             {
                 while (next is null && _rotation.First is { } first)
                 {
-                    string session = first.Value;
+                    string chain = first.Value;
                     _rotation.RemoveFirst();
-                    Queue<TaskCompletionSource<IDisposable>> queue = _waiting[session];
+                    Queue<TaskCompletionSource<IDisposable>> queue = _waiting[chain];
                     next = queue.Dequeue();
                     if (queue.Count > 0)
                     {
-                        _rotation.AddLast(session); // its next request waits behind every other session's
+                        _rotation.AddLast(chain); // its next request waits behind every other chain's
                     }
                 }
                 if (next is null)
@@ -101,22 +101,22 @@ public sealed class RequestScheduler(IReadOnlyDictionary<string, int> slotsPerHo
                     return;
                 }
             }
-            next.TrySetResult(new Turn(this)); // the slot passes straight to the next session in turn
+            next.TrySetResult(new Turn(this)); // the slot passes straight to the next chain in turn
         }
 
-        private void Withdraw(string session, TaskCompletionSource<IDisposable> waiter, CancellationToken ct)
+        private void Withdraw(string chain, TaskCompletionSource<IDisposable> waiter, CancellationToken ct)
         {
             lock (_lock)
             {
-                if (!_waiting.TryGetValue(session, out Queue<TaskCompletionSource<IDisposable>>? queue)
+                if (!_waiting.TryGetValue(chain, out Queue<TaskCompletionSource<IDisposable>>? queue)
                     || !queue.Contains(waiter))
                 {
                     return; // already handed a turn
                 }
-                _waiting[session] = new Queue<TaskCompletionSource<IDisposable>>(queue.Where(w => w != waiter));
-                if (_waiting[session].Count == 0)
+                _waiting[chain] = new Queue<TaskCompletionSource<IDisposable>>(queue.Where(w => w != waiter));
+                if (_waiting[chain].Count == 0)
                 {
-                    _rotation.Remove(session);
+                    _rotation.Remove(chain);
                 }
             }
             waiter.TrySetCanceled(ct);
@@ -155,12 +155,12 @@ public sealed class RequestScheduler(IReadOnlyDictionary<string, int> slotsPerHo
 public sealed class RequestGate
 {
     private readonly RequestScheduler? _scheduler;
-    private readonly string _session;
+    private readonly string _chain;
 
-    internal RequestGate(RequestScheduler? scheduler, string session)
+    internal RequestGate(RequestScheduler? scheduler, string chain)
     {
         _scheduler = scheduler;
-        _session = session;
+        _chain = chain;
     }
 
     public static RequestGate Unlimited { get; } = new(null, "");
@@ -170,7 +170,7 @@ public sealed class RequestGate
     {
         return _scheduler is null
             ? Task.FromResult<IDisposable>(RequestScheduler.NoTurn.Instance)
-            : _scheduler.TakeTurnAsync(host, _session, ct);
+            : _scheduler.TakeTurnAsync(host, _chain, ct);
     }
 
 }

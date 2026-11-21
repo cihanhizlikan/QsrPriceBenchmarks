@@ -4,12 +4,13 @@ using QsrPriceBenchmarks.Core.Models;
 namespace QsrPriceBenchmarks.Ui.ViewModels;
 
 /// <summary>
-/// One chain's run, apart from every other chain's (plan WP-C2): its own log, progress bar, options, tab ticks and
-/// Cancel, so the user can switch chains mid-scrape to start, watch or cancel another. The Run Pipeline tab shows
-/// the selected chain's session; the sidebar card shows each session's status. A run takes its options when it
-/// starts, so changing them while it runs affects only the next one.
+/// One chain's pipeline as the window holds it, apart from every other chain's (plan WP-C2): its own log, progress
+/// bar, options, tab ticks and Cancel, kept across runs, so the user can switch chains mid-scrape to start, watch or
+/// cancel another. The Run Pipeline tab shows the selected chain's pipeline; the sidebar card shows each one's
+/// status. A run takes its options when it starts, so changing them while it runs affects only the next one. Named
+/// "pipeline" rather than "session", which <c>BrowserSession</c> keeps for a Playwright browser (WP-N1).
 /// </summary>
-public sealed class ChainSessionViewModel(ChainConfig chain) : ViewModelBase
+public sealed class ChainPipelineViewModel(ChainConfig chain) : ViewModelBase
 {
     private bool _isRunning;
     private int _progressDone;
