@@ -159,8 +159,16 @@ internal static class Program
 
         if (opts.DeleteScrapeRunsBeforeId is not null)
         {
-            int affected = Repository.DeleteScrapeRunsBefore(conn, opts.DeleteScrapeRunsBeforeId.Value);
-            Log($"  ✓ Deleted {affected} run(s) with ID < {opts.DeleteScrapeRunsBeforeId}.");
+            // Asks first, as the single delete and the window do: a deleted run's prices are the history the next
+            // run compares against, and no rescan brings them back (WP-R3).
+            long before = opts.DeleteScrapeRunsBeforeId.Value;
+            (int runs, int snapshots) = Repository.CountScrapeRunsBefore(conn, before);
+            if (runs == 0) { Log($"  No scrape runs with ID < {before} to delete."); return 0; }
+            Log($"  About to delete {runs} run(s) with ID < {before} and {snapshots} snapshot(s).");
+            Console.Write("  Confirm? [y/N] ");
+            if (Console.ReadLine()?.Trim().ToLowerInvariant() != "y") { Log("  Aborted."); return 0; }
+            int affected = Repository.DeleteScrapeRunsBefore(conn, before);
+            Log($"  ✓ Deleted {affected} run(s) with ID < {before}.");
             return 0;
         }
 

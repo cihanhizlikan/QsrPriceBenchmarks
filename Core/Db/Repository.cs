@@ -830,9 +830,7 @@ public static class Repository
     /// </summary>
     public static int DeleteScrapeRunsBefore(SqliteConnection conn, long runId)
     {
-        List<long> doomed = [.. ListScrapeRuns(conn)
-            .Where(r => r.Id < runId && (r.FinishedAt is not null || !RunLock.IsHeld(conn, r.Id)))
-            .Select(r => r.Id)];
+        List<long> doomed = DeletableRunsBefore(conn, runId);
 
         using SqliteTransaction tx = conn.BeginTransaction();
         foreach (long id in doomed)
@@ -842,5 +840,24 @@ public static class Repository
         }
         tx.Commit();
         return doomed.Count;
+    }
+
+    /// <summary>
+    /// What <see cref="DeleteScrapeRunsBefore"/> would delete for the same <paramref name="runId"/>, deleting
+    /// nothing: the number of runs and of their snapshots, so a caller can say both before asking.
+    /// </summary>
+    public static (int Runs, int Snapshots) CountScrapeRunsBefore(SqliteConnection conn, long runId)
+    {
+        List<long> doomed = DeletableRunsBefore(conn, runId);
+        Dictionary<long, int> byRun = CountSnapshotsByRun(conn);
+        return (doomed.Count, doomed.Sum(id => byRun.GetValueOrDefault(id)));
+    }
+
+    /// <summary>The runs below <paramref name="runId"/>, less any being scraped right now.</summary>
+    private static List<long> DeletableRunsBefore(SqliteConnection conn, long runId)
+    {
+        return [.. ListScrapeRuns(conn)
+            .Where(r => r.Id < runId && (r.FinishedAt is not null || !RunLock.IsHeld(conn, r.Id)))
+            .Select(r => r.Id)];
     }
 }

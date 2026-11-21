@@ -62,7 +62,9 @@ qsr --delete-scrape-run 3
 ```
 
 Maintenance commands (`--list-scrape-runs`, `--delete-scrape-run`,
-`--delete-scrape-runs-before-id`) run alone and cannot be combined.
+`--delete-scrape-runs-before-id`) run alone and cannot be combined. Both deletes
+say what they would delete and ask `Confirm? [y/N]`; anything but `y`, or no
+answer at all, deletes nothing.
 
 **UI**
 ```
